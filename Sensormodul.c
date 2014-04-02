@@ -10,12 +10,14 @@ char dRight_Back;
 char dLeft_Front;
 char dLeft_Back;
 char dDist;
-char dGyro;
+float dGyro;
 
-long testgyro = 0;
+char gyroref;
+float testgyro = 0;
+float dummy;
 long n = 0;
-long hej;
-
+long hej = 0;
+long j = 0;
 
 int main(void)
 {
@@ -60,33 +62,68 @@ ISR(ADC_vect)
 	
 	
 	//clock_t start = clock(), diff;
-	if(n < 1000)
+	
+	if(n == 0)
+	{
+		gyroref = ADC >> 2;
+	}
+	if(n < 20000)
 	{
 		
 		n = n + 1;
 		dGyro = ADC >> 2;
-		testgyro = testgyro + dGyro;
-		if ((dGyro < 131) && (dGyro > 125))
+		if ((dGyro < gyroref + 2) && (dGyro > gyroref - 2))
 		{
-			testgyro = testgyro - dGyro;
+			testgyro = testgyro;
 		}
 		else
 		{
-			testgyro = testgyro - 128;
+			dGyro= dGyro - gyroref;
+			hej = TCNT0;
+			dGyro = dGyro * hej;
+			TCNT0 = 0x00; //set count
+			//dGyro = dGyro / 244000;
+			if(dGyro >= 0)
+			{
+				dGyro = dGyro * 9.33;
+			}
+			else
+			{
+				dGyro = dGyro * 5,04;
+			}
+			testgyro = testgyro + dGyro;
 		}
 		ADCSRA = 0b11001011;
+		
 	}
 	else
 	{
 		//diff = clock() - start;
 		//int msec = diff * 1000 / CLOCKS_PER_SEC;
-		hej = TCNT0;
-		testgyro = testgyro / 1500;
+		//hej = TCNT0;
+		//testgyro = testgyro / n;
+
+		/*if(testgyro >= 0)
+		{
+			dummy = testgyro * 9.33;
+		}
+		else
+		{
+			dummy = testgyro * 5,04;
+		}*/
+		testgyro /= 244000;
+		
+		/*while (j < 700)
+		{
+			j++;
+		}*/
+		dummy = testgyro;
+		gyroref = 0;
 		ADCSRA = 0b10001011;
+		
 		n = 0;
 		testgyro = 0;
-	}
-	
+	}	
 }
 
 
