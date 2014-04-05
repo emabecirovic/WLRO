@@ -3,13 +3,17 @@
 
 
 char i = 0; //Vilken sensor jag använder
+char m = 0; //Hur många gånger jag har gått igenom sensorn.
+char calibrated = 0;
 
-char dFront;
-char dRight_Front;
-char dRight_Back;
-char dLeft_Front;
-char dLeft_Back;
-char dDist;
+unsigned char dFront[10];
+unsigned char dRight_Front[10];
+unsigned char dRight_Back[10];
+unsigned char dLeft_Front[10];
+unsigned char dLeft_Back[10];
+unsigned char dDist;
+unsigned char tempDistance;
+char Distance = 0;
 float dGyro;
 
 char gyroref;
@@ -19,37 +23,53 @@ long n = 0;
 long hej = 0;
 long j = 0;
 
-int main(void)
+void bubble_sort(unsigned char a[], int size)
 {
-	//MCUCR = 0b00000011; //atmega16
-	//GICR = 0b01000000; //atmega16
+	int k, l, temp;
+	for (k = 0; k < (size - 1); ++k)
+	{
+		for (l = 0; l < size - 1 - k; ++l )
+		{
+			if (a[l] > a[l+1])
+			{
+				temp = a[l+1];
+				a[l+1] = a[l];
+				a[l] = temp;
+			}
+		}
+	}
+}
 
+void initiate_sensormodul(void)
+{
 	MCUCR = 0b00000000;
 	EIMSK = 0b00000001;
 	EICRA = 0b00000011;
 
-	ADMUX = 0;
+	ADMUX = 6;
 	DDRA = 0x00;
-	//DDRC = 0x06;
-	//DDRD = 0x00;
+	DDRD = 0x00;
 	ADCSRA = 0b10001011;
 
-
-
-
-
 	sei();
+	
+	ADCSRA = 0b11001011;
+}
 
+int main(void)
+{
+
+	initiate_sensormodul();
 	while(1)
 	{
 		//TODO:: Please write your application code
 	}
 }
 
+
 ISR(INT0_vect) //knapp
 {
-	ADMUX = 6;
-	//ADMUX = 0;
+	ADMUX = 0;
 	ADCSRA = 0b11001011;
 	TCCR0B = 0x00; //stop
 	TCNT0 = 0x00; //set count
@@ -57,153 +77,131 @@ ISR(INT0_vect) //knapp
 	TCCR0B = 0x01; //start timer
 }
 
+
+
+
 ISR(ADC_vect)
 {
-	
-	
-	//clock_t start = clock(), diff;
-	
-	if(n == 0)
+	if(calibrated == 0)
 	{
 		gyroref = ADC >> 2;
+		ADMUX = 0;
+		ADCSRA = 0b10001011;
+		calibrated = 1;
 	}
-	if(n < 20000)
+	else
 	{
-		
-		n = n + 1;
-		dGyro = ADC >> 2;
-		if ((dGyro < gyroref + 2) && (dGyro > gyroref - 2))
+		if(i == 0)
 		{
-			testgyro = testgyro;
+			dFront[m] = ADC >> 2;
+		}
+		if(i == 1)
+		{
+			dRight_Front[m] = ADC >> 2;
+		}
+		if(i == 2)
+		{
+			dRight_Back[m] = ADC >> 2;
+		}
+		if(i == 3)
+		{
+			dLeft_Front[m] = ADC >> 2;
+		}
+		if(i == 4)
+		{
+			dLeft_Back[m] = ADC >> 2;
+		}
+		if(i == 5)
+		{
+			tempDistance = dDist;
+			dDist = ADC >> 2;
+			if (((tempDistance <= 150) && (dDist > 150)) | ((tempDistance >= 150) && (dDist < 150)))
+			{
+				Distance = Distance + 1;
+			}
+		}
+		if(i == 6)
+		{
+			dGyro = ADC >> 2;
+		}
+		if(i == 6)
+		{
+			i = 0;
+			m = 0;
+			bubble_sort(dFront, 10);
+			bubble_sort(dRight_Front, 10);
+			bubble_sort(dRight_Back, 10);
+			bubble_sort(dLeft_Front, 10);
+			bubble_sort(dLeft_Back, 10);
+			ADCSRA = 0b10001011;
 		}
 		else
 		{
-			dGyro= dGyro - gyroref;
-			hej = TCNT0;
-			dGyro = dGyro * hej;
-			TCNT0 = 0x00; //set count
-			//dGyro = dGyro / 244000;
-			if(dGyro >= 0)
+			if (m == 9)
 			{
-				dGyro = dGyro * 9.33;
+				i = i + 1;
+				ADMUX = i;
+				m = 0;
 			}
 			else
 			{
-				dGyro = dGyro * 5,04;
+				if(i < 5)
+				{
+					m = m + 1;
+				}
+				else
+				{
+					i = i + 1;
+					ADMUX = i;
+				}
 			}
-			testgyro = testgyro + dGyro;
+			ADCSRA = 0b11001011;
 		}
-		ADCSRA = 0b11001011;
-		
 	}
-	else
-	{
-		//diff = clock() - start;
-		//int msec = diff * 1000 / CLOCKS_PER_SEC;
-		//hej = TCNT0;
-		//testgyro = testgyro / n;
-
-		/*if(testgyro >= 0)
-		{
-			dummy = testgyro * 9.33;
-		}
-		else
-		{
-			dummy = testgyro * 5,04;
-		}*/
-		testgyro /= 244000;
-		
-		/*while (j < 700)
-		{
-			j++;
-		}*/
-		dummy = testgyro;
-		gyroref = 0;
-		ADCSRA = 0b10001011;
-		
-		n = 0;
-		testgyro = 0;
-	}	
 }
-
-
-/*ISR(ADC_vect)
-{
-
-	i = i + 1;
-	if(i == 1)
-	{
-		dFront = ADC >> 2;
-	}
-	if(i == 2)
-	{
-		dRight_Front = ADC >> 2;
-	}
-	if(i == 3)
-	{
-		dRight_Back = ADC >> 2;
-	}
-	if(i == 4)
-	{
-		dLeft_Front = ADC >> 2;
-	}
-	if(i == 5)
-	{
-		dLeft_Back = ADC >> 2;
-	}
-	if(i == 6)
-	{
-		dDist = ADC >> 2;
-	}
-	if(i == 7)
-	{
-		dGyro = ADC >> 2;
-		i = 0;
-		ADCSRA = 0b10001011;
-	}
-	else
-	{
-		ADMUX = i;
-		ADCSRA = 0b11001011;
-	}
-
-}*/
-
 
 
 void send_front()
 {
 	//skicka f?rst 1;
+	//dFront[2];
 }
 
-void send_fight_front()
+void send_right_front()
 {
 	//skicka f?rst 2;
+	//dRight_Front[2];
 }
 
 void send_right_back()
 {
 	//skicka f?rst 3;
+	//dRight_Back[2];
 }
 
 void send_left_front()
 {
 	//skicka f?rst 4;
+	//dLeft_Front[2];
 }
 
 void send_left_back()
 {
 	//skicka f?rst 5;
+	//dLeft_Back[2];
 }
 
 void send_dist()
 {
 	//skicka f?rst 6;
+	//Distance;
+	Distance = 0;
 }
 
 void send_gyro()
 {
 	//skicka f?rst 7;
+	//
 }
 
 void send_RFID()
@@ -238,3 +236,70 @@ void convert_dist()
 void convert_gyro()
 {
 }
+
+/* GAMMALT SOM HAR ANVÄNTS I TESTSYFTE */
+
+/*ISR(ADC_vect)
+{
+	if (n == 1)
+	{
+		tempDistance = dDist;
+		dDist = ADC >> 2;
+		if (((tempDistance <= 150) && (dDist > 150)) | ((tempDistance >= 150) && (dDist < 150)))
+		{
+			Distance = Distance + 1;
+		}
+		ADCSRA = 0b11001011;
+	}
+	if (n == 0)
+	{
+		ADCSRA = 0b10001011;
+	}
+
+}*/
+
+/*ISR(ADC_vect)
+{	
+	if(n == 0)
+	{
+		gyroref = ADC >> 2;
+	}
+	if(n < 20000)
+	{
+		
+		n = n + 1;
+		dGyro = ADC >> 2;
+		if ((dGyro < gyroref + 2) && (dGyro > gyroref - 2))
+		{
+			testgyro = testgyro;
+		}
+		else
+		{
+			dGyro= dGyro - gyroref;
+			hej = TCNT0;
+			dGyro = dGyro * hej;
+			TCNT0 = 0x00; //set count
+			//dGyro = dGyro / 244000;
+			if(dGyro >= 0)
+			{
+				dGyro = dGyro * 9.33;
+			}
+			else
+			{
+				dGyro = dGyro * 5,04;
+			}
+			testgyro = testgyro + dGyro;
+		}
+		ADCSRA = 0b11001011;
+		
+	}
+	else
+	{		
+		testgyro /= 244000;
+		dummy = testgyro;
+		gyroref = 0;
+		ADCSRA = 0b10001011;		
+		n = 0;
+		testgyro = 0;
+	}	
+}*/
