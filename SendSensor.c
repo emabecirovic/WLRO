@@ -8,7 +8,7 @@
 
 #include <avr/io.h>
 
-/***********************MASTER*****************************/
+/***********************MASTER Styr*****************************/
 
 typedef int bool;
 enum {false, true};
@@ -27,10 +27,16 @@ char rightspeed = 0b00001010;
 char leftspeed = 0b00001011;
 char stop = 0x00; //Stopbyte
 
-//Control characters
+//Control signals
+char right = 1;
+char left = 2;
+char turn = 3;
+bool remoteControl = false;
 bool regulateright = false;
 bool regulateleft = false;
 bool regulateturn = false;
+
+unsigned char storedValues[11];
 
 
 void TransmitSensor(char invalue)
@@ -39,42 +45,64 @@ void TransmitSensor(char invalue)
   
   MasterTransmit(RFID);
   //First communication will contain crap on shiftregister
+  MasterTransmit(traveldist); // Request front sensor
+  storedValues[7] = SPDR; // SensorRFID
   MasterTransmit(front); // Request front sensor
-  SensorRFID = SPDR; 
+  storedValues[5] = SPDR; // Distance
   
   if(invalue == right)
   {
     MasterTransmit(rightfront);
-    SensorFront = SPDR; // Change so that value is stored in array or whatever Patrik wants to use
+    storedValues[0] = SPDR; // Front
     MasterTransmit(rightback);
-    SensorRightFront = SPDR;
+    storedValues[1] = SPDR; // Right front
     MasterTransmit(stop);
-    SensorRightBack = SPDR;
+    storedValues[2] = SPDR; // Right back
   }
   else if(invalue == left)
   {
     MasterTransmit(leftfront);
-    SensorFront = SPDR;
+    storedValues[0] = SPDR; // Front
     MasterTransmit(leftback);
-    SensorLeftBack = SPDR;
+    storedValues[3] = SPDR; // Left front
     MasterTransmit(stop);
-    SensorLeftBack = SPDR;
+    storedValues[4] = SPDR; // Left back
   }
   else if(invalue == turn)
   {
-    MasterTransmit(gyro)
-    SensorFront = SPDR;
-    MasterTransmit(stop)
-    SensorGyro = SPDR;
+    MasterTransmit(gyro);
+    storedValues[0] = SPDR; // Front
+    MasterTransmit(stop);
+    storedValues[6] = SPDR; // Gyro
   }
   else
   {
     MasterTransmit(stop);
+    storedValues[0] = SPDR; // Front
   }
   
   PORTB ^= 0b00010000; // ss2 high
 }
 
+
+void TransmitComm(bool invalue)
+{
+  PORTB &= 0b11110111;
+  
+  if(invalue)
+  {
+    
+  }
+  else
+  {
+    for(int i = 0; i < 11;i++){
+    MasterTransmit(storedValues[i]);
+    }
+  }
+  
+  PORTB ^= 0b00001000; 
+  
+}
 
 
 int main(void)
@@ -87,10 +115,15 @@ int main(void)
     TransmitSensor(turn);
   else
     TransmitSensor(0x00);
+    
+  TransmitComm(remoteControl)
 }
 
+/***********************SLAVE Sensor*****************************/
 
-/***********************SLAVE*****************************/
+
+
+/***********************SLAVE Sensor*****************************/
 
 //Start bytes for transmition
 char front = 0b00000001;
@@ -102,10 +135,6 @@ char traveldist = 0b00000110;
 char gyro = 0b00000111;
 char RFID = 0b00001000;
 char stop = 0x00; //Stopbyte
-
-Void Recieve
-
-
 
 
 int main(void)
