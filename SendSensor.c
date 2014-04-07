@@ -46,7 +46,8 @@ bool regulateright = true;
 bool regulateleft = false;
 bool regulateturn = false;
 
-unsigned char storedValues[11];
+unsigned char storedValues[11] = {0b11111111, 0b11001100, 0b00110011, 0b00000000, 0b00011100, 0b11100011, 0b11000111
+								, 0b00111000, 0b11111111, 0b11001100, 0b00110011};
 
 
 
@@ -75,14 +76,12 @@ void MasterTransmit(char cData)
 	
 	//SPSR = (1<<SPIF);
 }
-
-// Funkar inte men borde
 void delay()
 {
 	for(int i = 0; i < 100; i++){}
 }
 
-
+/*
 void TransmitSensor(char invalue)
 {
 	PORTB &= 0b11101111; // ss2 low
@@ -132,6 +131,7 @@ void TransmitSensor(char invalue)
 	PORTB ^= 0b00010000; // ss2 high
 }
 
+*/
 
 void TransmitComm(bool invalue)
 {
@@ -159,7 +159,7 @@ int main(void)
 	MasterInit();
 	while(1)
 	{	
-	if(regulateright)
+	/*if(regulateright)
 	TransmitSensor(right);
 	else if(regulateleft)
 	TransmitSensor(left);
@@ -167,8 +167,10 @@ int main(void)
 	TransmitSensor(turn);
 	else
 	TransmitSensor(0x00);
+	*/
 	
 	TransmitComm(remoteControl);
+	for(int i = 0; i < 100; i++){}
 	}
 	return 0;
 }
