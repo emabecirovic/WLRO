@@ -11,6 +11,7 @@ unsigned char dRight_Front[10];
 unsigned char dRight_Back[10];
 unsigned char dLeft_Front[10];
 unsigned char dLeft_Back[10];
+unsigned char sortedValues[5];
 unsigned char dDist;
 unsigned char tempDistance;
 char Distance = 0;
@@ -133,6 +134,11 @@ ISR(ADC_vect)
 			bubble_sort(dRight_Back, 10);
 			bubble_sort(dLeft_Front, 10);
 			bubble_sort(dLeft_Back, 10);
+			sortedValues[0] = dFront[2];
+			sortedValues[1] = dRight_Front[2];
+			sortedValues[2] = dRight_Back[2];
+			sortedValues[3] = dLeft_Front[2];
+			sortedValues[4] = dLeft_Back[2];
 			ADCSRA = 0b10001011;
 		}
 		else
@@ -164,31 +170,31 @@ ISR(ADC_vect)
 void send_front()
 {
 	//skicka f?rst 1;
-	//dFront[2];
+	//sortedValues[0];
 }
 
 void send_right_front()
 {
 	//skicka f?rst 2;
-	//dRight_Front[2];
+	//sortedValues[1];
 }
 
 void send_right_back()
 {
 	//skicka f?rst 3;
-	//dRight_Back[2];
+	//sortedValues[2];
 }
 
 void send_left_front()
 {
 	//skicka f?rst 4;
-	//dLeft_Front[2];
+	//sortedValues[3];
 }
 
 void send_left_back()
 {
 	//skicka f?rst 5;
-	//dLeft_Back[2];
+	//sortedValues[4];
 }
 
 void send_dist()
