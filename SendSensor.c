@@ -75,6 +75,8 @@ void MasterTransmit(char cData)
 	
 	//SPSR = (1<<SPIF);
 }
+
+// Funkar inte men borde
 void delay()
 {
 	for(int i = 0; i < 100; i++){}
