@@ -15,13 +15,15 @@ unsigned char sortedValues[5];
 unsigned char dDist;
 unsigned char tempDistance;
 char Distance = 0;
-float dGyro;
+char dGyro;
+
+char isRFID = 0; //ETTA ELLER NOLLA!
 
 char gyroref;
-float testgyro = 0;
+signed int sendGyro = 0;
 float dummy;
 long n = 0;
-long hej = 0;
+long timer = 0;
 long j = 0;
 
 void bubble_sort(unsigned char a[], int size)
@@ -75,7 +77,7 @@ ISR(INT0_vect) //knapp
 	TCCR0B = 0x00; //stop
 	TCNT0 = 0x00; //set count
 	OCR0B  = 0x04;  //set compare
-	TCCR0B = 0x01; //start timer
+	TCCR0B = 0x03; //start timer
 }
 
 
@@ -124,6 +126,17 @@ ISR(ADC_vect)
 		if(i == 6)
 		{
 			dGyro = ADC >> 2;
+			if ((dGyro < gyroref + 2) && (dGyro > gyroref - 2))
+			{
+				sendGyro = sendGyro;
+			}
+			else
+			{
+				dGyro= dGyro - gyroref;
+				timer = TCNT0;
+				sendGyro = sendGyro + dGyro * timer; //64 är prescalen på timern
+				TCNT0 = 0x00; //set count
+			}
 		}
 		if(i == 6)
 		{
@@ -207,12 +220,14 @@ void send_dist()
 void send_gyro()
 {
 	//skicka f?rst 7;
-	//
+	//sendGyro;
+	sendGyro = 0;
 }
 
 void send_RFID()
 {
 	//skicka f?rst 8;
+	//isRFID;
 }
 
 void convert_front()
@@ -282,8 +297,8 @@ void convert_gyro()
 		else
 		{
 			dGyro= dGyro - gyroref;
-			hej = TCNT0;
-			dGyro = dGyro * hej;
+			timer = TCNT0;
+			dGyro = dGyro * timer;
 			TCNT0 = 0x00; //set count
 			//dGyro = dGyro / 244000;
 			if(dGyro >= 0)
@@ -309,3 +324,34 @@ void convert_gyro()
 		testgyro = 0;
 	}	
 }*/
+
+
+//I PATRIKS KOD BORDE GYROT BETE SIG SÅHÄR TYP
+/*
+
+	if(sendGyro >= 0)
+	{
+		sendGyro = sendGyro * 9.33;
+	}
+	else
+	{
+		sendGyro = sendGyro * 5,04;
+	}
+	senastgrader = sendGyro*64/244000;
+	grader = grader + senastgrader;
+	
+*/
+
+//I PATRIKS KOD BORDE FRAMSENSORN BETE SIG SÅHÄR TYP
+/*
+
+ICENTIMETER = ((1/DIGITALT) -  0,001086689563586) / 0,000191822821525;
+
+*/
+
+//I PATRIKS KOD BORDE SIDOSENSORN BETE SIG SÅHÄR TYP
+/*
+
+ICENTIMETER = ((1/DIGITALT) - 0,000741938763948) / 0,001637008132828;
+
+*/
