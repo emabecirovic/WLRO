@@ -31,7 +31,7 @@ char stop = 0x00; //Stopbyte
 char right = 1;
 char left = 2;
 char turn = 3;
-bool remoteControl = false;
+bool remoteControl = false;  // Change to Port connected to switch
 bool regulateright = false;
 bool regulateleft = false;
 bool regulateturn = false;
@@ -119,8 +119,47 @@ int main(void)
   TransmitComm(remoteControl)
 }
 
-/***********************SLAVE Sensor*****************************/
+/***********************SLAVE komm*****************************/
 
+typedef int bool;
+enum {false, true};
+
+//Lables for transmition
+char front = 0b00000001;
+char rightfront = 0b00000010;
+char rightback = 0b00000011;
+char leftfront = 0b00000100;
+char leftback = 0b00000101;
+char traveldist = 0b00000110;
+char gyro = 0b00000111;
+char RFID = 0b00001000;
+char direction = 0b00001001;
+char rightspeed = 0b00001010; 
+char leftspeed = 0b00001011;
+char stop = 0x00; //Stopbyte
+
+bool remoteControl = false; // Change to Port connected to switch
+
+unsigned char storedValues[11];
+
+int main(void)
+{
+  SlaveInit();
+  if(remoteControl)
+  {
+    
+  }
+  else
+  {
+    while(0<<PORTB3)
+    {
+      for(int i = 0; i < 11;i++)
+      {
+        storedValues[i] = SlaveRecieve();
+      }
+    }
+  }
+}
 
 
 /***********************SLAVE Sensor*****************************/
