@@ -175,6 +175,16 @@ int main(void)
 	return 0;
 }
 
+/*
+ * Recievecomm.c
+ *
+ * Created: 4/7/2014 5:08:19 PM
+ *  Author: robsv107
+ */ 
+
+
+#include <avr/io.h>
+
 /***********************SLAVE komm*****************************/
 
 typedef int bool;
@@ -190,31 +200,62 @@ char traveldist = 0b00000110;
 char gyro = 0b00000111;
 char RFID = 0b00001000;
 char direction = 0b00001001;
-char rightspeed = 0b00001010; 
+char rightspeed = 0b00001010;
 char leftspeed = 0b00001011;
 char stop = 0x00; //Stopbyte
+
+char dummy;
 
 bool remoteControl = false; // Change to Port connected to switch
 
 unsigned char storedValues[11];
 
+
+void SlaveInit(void)
+{
+	/* Set MISO output, all others input */
+	DDRB = (1<<DDB6);
+
+	/* Enable SPI */
+	SPCR = (1<<SPE);
+}
+
+char SlaveRecieve(void)
+{
+	/*Wait for reception complete */
+	while(!(SPSR & (1<<SPIF)))
+	;
+
+	/* Return Data Register */
+	return SPDR;
+}
+
+
+
 int main(void)
 {
-  SlaveInit();
-  if(remoteControl)
-  {
-    
-  }
-  else
-  {
-    while(0<<PORTB3)
-    {
-      for(int i = 0; i < 11;i++)
-      {
-        storedValues[i] = SlaveRecieve();
-      }
-    }
-  }
+	SlaveInit();
+	while(1)
+	{
+		if(remoteControl)
+		{
+		
+		}
+		else
+		{
+			while(1<<PINB3)
+			{
+				for(int i = 0; i < 11; i++)
+				{
+					storedValues[i] = SlaveRecieve();
+					dummy = 1;
+				}
+			
+			
+				dummy  = 0;
+			}
+		}
+	}
 }
 
 
