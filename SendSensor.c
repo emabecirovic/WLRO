@@ -159,7 +159,7 @@ int main(void)
 	MasterInit();
 	while(1)
 	{	
-	/*if(regulateright)
+	if(regulateright)
 	TransmitSensor(right);
 	else if(regulateleft)
 	TransmitSensor(left);
@@ -167,7 +167,7 @@ int main(void)
 	TransmitSensor(turn);
 	else
 	TransmitSensor(0x00);
-	*/
+	
 	
 	TransmitComm(remoteControl);
 	for(int i = 0; i < 100; i++){}
@@ -243,7 +243,8 @@ int main(void)
 		}
 		else
 		{
-			while(1<<PINB3)
+			int SS1 = PINB & 0b00001000;
+			while(SS1==0)
 			{
 				for(int i = 0; i < 11; i++)
 				{
