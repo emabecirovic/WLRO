@@ -81,7 +81,7 @@ void delay()
 	for(int i = 0; i < 100; i++){}
 }
 
-/*
+
 void TransmitSensor(char invalue)
 {
 	PORTB &= 0b11101111; // ss2 low
@@ -131,7 +131,7 @@ void TransmitSensor(char invalue)
 	PORTB ^= 0b00010000; // ss2 high
 }
 
-*/
+
 
 void TransmitComm(bool invalue)
 {
