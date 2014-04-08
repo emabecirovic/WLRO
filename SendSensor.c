@@ -319,8 +319,8 @@ int main(void)
 	
 	while(1)
 	{
-		
-		while(PINB4) // slave selected
+		int SS2= PINB & 0b00010000;
+		while(SS2==0) // slave selected
 		{
 			selection = SlaveRecieve();
 			SPDR = 0b11111111;
@@ -367,4 +367,3 @@ int main(void)
 		}
 	}
 }
-
