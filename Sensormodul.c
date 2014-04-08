@@ -17,6 +17,7 @@ unsigned char tempDistance;
 char Distance = 0;
 char dGyro;
 
+unsigned char rfid_data;
 char isRFID = 0; //ETTA ELLER NOLLA!
 
 char gyroref;
@@ -43,6 +44,26 @@ void bubble_sort(unsigned char a[], int size)
 	}
 }
 
+void USART_Init( unsigned int baud )
+{
+	/* Set baud rate */
+	UBRR0H = (unsigned char)(baud>>8);
+	UBRR0L = (unsigned char)baud;
+	/* Enable receiver and transmitter */
+	UCSR0B = (1<<RXEN0)|(1<<TXEN0);
+	/* Set frame format: 8data, 1stop bit */
+	UCSR0C = (0<<USBS0)|(3<<UCSZ00);
+}
+
+unsigned char USART_Receive( void )
+{
+	/* Wait for data to be received */
+	while (!(UCSR0A & (1<<RXC0)));
+	/* Get and return received data from buffer */
+	return UDR0;
+}
+
+
 void initiate_sensormodul(void)
 {
 	MCUCR = 0b00000000;
@@ -55,8 +76,23 @@ void initiate_sensormodul(void)
 	ADCSRA = 0b10001011;
 
 	sei();
+	USART_Init(25);
+	UCSR0B = (0<<RXEN0)|(0<<TXEN0); //Stäng av USART
 	
 	ADCSRA = 0b11001011;
+}
+
+void find_RFID(void) //Vet inte riktigt hur vi ska leta RFID, men det är ett mycket senare problem.
+{
+	UCSR0B = (1<<RXEN0)|(1<<TXEN0); //Starta USART
+	while(1)
+	{
+		rfid_data = USART_Receive();
+		if (rfid_data == 0x0A)
+		{
+			isRFID = 1;
+		}
+	}
 }
 
 int main(void)
@@ -65,12 +101,14 @@ int main(void)
 	initiate_sensormodul();
 	while(1)
 	{
-		//TODO:: Please write your application code
+		/*ADCSRA = 0b11001011;
+		find_RFID();*/
+		
 	}
 }
 
 
-ISR(INT0_vect) //knapp
+ISR(INT0_vect) //knapp ska vi inte ha irl, men ja.
 {
 	ADMUX = 0;
 	ADCSRA = 0b11001011;
@@ -175,6 +213,7 @@ ISR(ADC_vect)
 				}
 			}
 			ADCSRA = 0b11001011;
+			ADMUX = 0;
 		}
 	}
 }
@@ -228,6 +267,7 @@ void send_RFID()
 {
 	//skicka f?rst 8;
 	//isRFID;
+	isRFID = 0;
 }
 
 void convert_front()
