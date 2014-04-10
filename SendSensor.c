@@ -42,9 +42,10 @@ char right = 1;
 char left = 2;
 char turn = 3;
 bool remoteControl = false;  // Change to Port connected to switch
-bool regulateright = true;
+bool regulateright = false;
 bool regulateleft = false;
 bool regulateturn = false;
+int time = 18;
 
 unsigned char storedValues[11] = {0b11111111, 0b11001100, 0b00110011, 0b00000000, 0b00011100, 0b11100011, 0b11000111
 								, 0b00111000, 0b11111111, 0b11001100, 0b00110011};
@@ -57,10 +58,10 @@ void MasterInit(void)
 	/* Ersätt DDR_SPI med den port "serie" som används ex DD_SPI -> DDRB
 	samt DD_MOSI och DD_SCK med specifik pinne ex DD_MOSI -> DDB5 */
 	DDRB = (1<<DDB3)|(1<<DDB4)|(1<<DDB5)|(1<<DDB7);
-	
+
 	/* Enable SPI, Master, set clock rate fosc/16 */
 	SPCR = (1<<SPE)|(1<<MSTR)|(1<<SPR0);
-	
+
 	PORTB = (1<<PORTB3)|(1<<PORTB4);
 } 
 
@@ -69,29 +70,28 @@ void MasterTransmit(char cData)
 {
 	/* Start transmission */
 	SPDR = cData;
-	
+
 	/* Wait for transmission complete */
 	while(!(SPSR & (1<<SPIF)))
 	;
-	
+
 	//SPSR = (1<<SPIF);
 }
-
 void delay()
 {
 	for(int i = 0; i < 100; i++){}
 }
 
-
+/*
 void TransmitSensor(char invalue)
 {
 	PORTB &= 0b11101111; // ss2 low
 	
 	MasterTransmit(RFID);
 	//First communication will contain crap on shift register
-	for(int i = 0; i < 100; i++){}
+	for(int i = 0; i < time; i++){}
 	MasterTransmit(traveldist); // Request front sensor
-	for(int i = 0; i < 100; i++){}
+	for(int i = 0; i < time; i++){}
 	storedValues[7] = SPDR; // SensorRFID
 	MasterTransmit(front); // Request front sensor
 	storedValues[5] = SPDR; // Distance
@@ -101,7 +101,7 @@ void TransmitSensor(char invalue)
 		MasterTransmit(rightfront);
 		storedValues[0] = SPDR; // Front
 		MasterTransmit(rightback);
-		for(int i = 0; i < 100; i++){}
+		for(int i = 0; i < time; i++){}
 		storedValues[1] = SPDR; // Right front
 		MasterTransmit(stop);
 		storedValues[2] = SPDR; // Right back
@@ -111,6 +111,7 @@ void TransmitSensor(char invalue)
 		MasterTransmit(leftfront);
 		storedValues[0] = SPDR; // Front
 		MasterTransmit(leftback);
+		for(int i = 0; i < time; i++){}
 		storedValues[3] = SPDR; // Left front
 		MasterTransmit(stop);
 		storedValues[4] = SPDR; // Left back
@@ -118,69 +119,68 @@ void TransmitSensor(char invalue)
 	else if(invalue == turn)
 	{
 		MasterTransmit(gyro);
+		for(int i = 0; i < time; i++){}
 		storedValues[0] = SPDR; // Front
 		MasterTransmit(stop);
 		storedValues[6] = SPDR; // Gyro
 	}
 	else
 	{
+		for(int i = 0; i < time; i++){}
 		MasterTransmit(stop);
 		storedValues[0] = SPDR; // Front
 	}
 	
-	for(int i = 0; i < 100; i++){}
 	PORTB ^= 0b00010000; // ss2 high
+	for(int i = 0; i < 100; i++){}
 }
+*/
 
 
-
-void TransmitComm()
-{	
+void TransmitComm(bool invalue)
+{
 	PORTB &= 0b11110111;
-	
-	for(int i = 0; i < 11;i++)
-	{
-		MasterTransmit(storedValues[i]);
-	}
-	
-	PORTB ^= 0b00001000;
-}
 
-void RecieveComm()
-{
-	
-}
-
-int main(void)
-{
-	if(remoteControl)
+	if(invalue)
 	{
-		SlaveInit();
-		while(1)
-		{
-			int SS = PINB & 0b00010000;
-			RecieveComm();
-		}
+
 	}
 	else
 	{
-		MasterInit();
-		while(1)
-		{	
-			if(regulateright)
-			TransmitSensor(right);
-			else if(regulateleft)
-			TransmitSensor(left);
-			else if(regulateturn)
-			TransmitSensor(turn);
-			else
-			TransmitSensor(0x00);
-			
-			
-			TransmitComm();
-			for(int i = 0; i < 100; i++){}
+		for(int i = 0; i < 11;i++)
+		{
+			MasterTransmit(storedValues[i]);
+			//for(int i = 0; i < time; i++){}
 		}
 	}
+
+	PORTB ^= 0b00001000;
+
+}
+
+
+int main(void)
+{
+	MasterInit();
+	while(1)
+	{	
+	/*	
+	if(regulateright)
+	TransmitSensor(right);
+	else if(regulateleft)
+	TransmitSensor(left);
+	else if(regulateturn)
+	TransmitSensor(turn);
+	else
+	TransmitSensor(0x00);
+	*/
+	
+	TransmitComm(remoteControl);
+	//for(int i = 0; i < 100; i++){}
+	
+	
+	}
+	
 	return 0;
 }
 
@@ -244,28 +244,24 @@ char SlaveRecieve(void)
 int main(void)
 {
 	SlaveInit();
+	
 	while(1)
 	{
-		if(remoteControl)
-		{
-		
-		}
-		else
-		{
-			int SS1 = PINB & 0b00001000;
+			int SS1 = PINB & 0b00010000;
 			while(SS1==0)
 			{
-				for(int i = 0; i < 11; i++)
+				
+				for(int i = 0; i <11; i++)
 				{
 					storedValues[i] = SlaveRecieve();
-					dummy = 1;
+					SPDR = storedValues[i];
 				}
-			
-			
-				dummy  = 0;
+
+
 			}
-		}
 	}
+		
+	
 }
 
 
@@ -363,7 +359,7 @@ int main(void)
 			else if (selection == gyro)
 			{
 				SPDR = sendGyro;
-				sendGyro = 0;
+				//sendGyro = 0;
 			}
 			else if (selection == RFID)
 			{
