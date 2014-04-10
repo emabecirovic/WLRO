@@ -26,6 +26,7 @@ float dummy;
 long n = 0;
 long timer = 0;
 long j = 0;
+char start_sample = 0;
 
 void bubble_sort(unsigned char a[], int size)
 {
@@ -78,8 +79,14 @@ void initiate_sensormodul(void)
 	sei();
 	USART_Init(25);
 	UCSR0B = (0<<RXEN0)|(0<<TXEN0); //Stäng av USART
-	
+
 	ADCSRA = 0b11001011;
+	ADMUX = 0;
+
+	TCCR0B = 0x00; //stop
+	TCNT0 = 0x00; //set count
+	OCR0B  = 0x04;  //set compare
+	TCCR0B = 0x03; //start timer
 }
 
 void find_RFID(void) //Vet inte riktigt hur vi ska leta RFID, men det är ett mycket senare problem.
@@ -95,27 +102,81 @@ void find_RFID(void) //Vet inte riktigt hur vi ska leta RFID, men det är ett my
 	}
 }
 
+void initiate_sample_timer()
+{
+	TIMSK1 = 0b00000100; //Enable interupt vid matchning med OCR1B		TCCR1B =0x00;
+	TCNT1 = 0x00;
+	TCCR1B = 0x03; //Starta samplingsräknare, presscale 64.
+	OCR1BH = 0x56;
+	OCR1BL = 0x00; //RANDOM! När ska comparen triggas? SAMPLING
+}
+
 int main(void)
 {
 
 	initiate_sensormodul();
+	initiate_sample_timer();
 	while(1)
 	{
-		/*ADCSRA = 0b11001011;
-		find_RFID();*/
-		
+		if(start_sample == 1)
+		{
+			/*ADCSRA = 0b11001011;
+			find_RFID();*/
+			start_sample = 0;
+		}
+		/*if(i == 6)
+		{
+			i = 0;
+			m = 0;
+			bubble_sort(dFront, 10);
+			bubble_sort(dRight_Front, 10);
+			bubble_sort(dRight_Back, 10);
+			bubble_sort(dLeft_Front, 10);
+			bubble_sort(dLeft_Back, 10);
+			sortedValues[0] = dFront[2];
+			sortedValues[1] = dRight_Front[2];
+			sortedValues[2] = dRight_Back[2];
+			sortedValues[3] = dLeft_Front[2];
+			sortedValues[4] = dLeft_Back[2];
+			ADCSRA = 0b10001011;
+		}
+		else
+		{
+			if (m == 9)
+			{
+				i = i + 1;
+				ADMUX = i;
+				m = 0;
+			}
+			else
+			{
+				if(i < 5)
+				{
+					m = m + 1;
+				}
+				else
+				{
+					i = i + 1;
+					ADMUX = i;
+				}
+			}
+			ADCSRA = 0b11001011;
+			ADMUX = 0;
+		}*/
+
 	}
+}
+
+ISR(TIMER1_COMPB_vect)
+{
+	start_sample = 1;
+	TCNT1 = 0x00;
 }
 
 
 ISR(INT0_vect) //knapp ska vi inte ha irl, men ja.
 {
-	ADMUX = 0;
-	ADCSRA = 0b11001011;
-	TCCR0B = 0x00; //stop
-	TCNT0 = 0x00; //set count
-	OCR0B  = 0x04;  //set compare
-	TCCR0B = 0x03; //start timer
+	//:)
 }
 
 
