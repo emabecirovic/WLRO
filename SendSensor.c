@@ -76,6 +76,7 @@ void MasterTransmit(char cData)
 	
 	//SPSR = (1<<SPIF);
 }
+
 void delay()
 {
 	for(int i = 0; i < 100; i++){}
@@ -133,44 +134,52 @@ void TransmitSensor(char invalue)
 
 
 
-void TransmitComm(bool invalue)
-{
+void TransmitComm()
+{	
 	PORTB &= 0b11110111;
 	
-	if(invalue)
+	for(int i = 0; i < 11;i++)
 	{
-		
-	}
-	else
-	{
-		for(int i = 0; i < 11;i++)
-		{
-			MasterTransmit(storedValues[i]);
-		}
+		MasterTransmit(storedValues[i]);
 	}
 	
 	PORTB ^= 0b00001000;
+}
+
+void RecieveComm()
+{
 	
 }
 
-
 int main(void)
 {
-	MasterInit();
-	while(1)
-	{	
-	if(regulateright)
-	TransmitSensor(right);
-	else if(regulateleft)
-	TransmitSensor(left);
-	else if(regulateturn)
-	TransmitSensor(turn);
+	if(remoteControl)
+	{
+		SlaveInit();
+		while(1)
+		{
+			int SS = PINB & 0b00010000;
+			RecieveComm();
+		}
+	}
 	else
-	TransmitSensor(0x00);
-	
-	
-	TransmitComm(remoteControl);
-	for(int i = 0; i < 100; i++){}
+	{
+		MasterInit();
+		while(1)
+		{	
+			if(regulateright)
+			TransmitSensor(right);
+			else if(regulateleft)
+			TransmitSensor(left);
+			else if(regulateturn)
+			TransmitSensor(turn);
+			else
+			TransmitSensor(0x00);
+			
+			
+			TransmitComm();
+			for(int i = 0; i < 100; i++){}
+		}
 	}
 	return 0;
 }
