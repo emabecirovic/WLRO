@@ -218,7 +218,7 @@ char dummy;
 bool remoteControl = false; // Change to Port connected to switch
 
 unsigned char storedValues[11];
-
+int index = 0; // index for recieved storedValue from buss
 
 void SlaveInit(void)
 {
@@ -239,8 +239,15 @@ char SlaveRecieve(void)
 	return SPDR;
 }
 
+/*******************************INTERRUPTS*************************/
+ISR(SPIF) // Answer to call from Master
+{
+	storedValues[index] = SlaveRecieve();
+	SPDR = storedValues[index]; //Just for controll by oscilloscope
+	index++;;
+}
 
-
+/*******************************MAIN*******************************/
 int main(void)
 {
 	SlaveInit();
@@ -319,6 +326,53 @@ char SlaveRecieve(void)
 	return SPDR;
 }
 
+
+/*************************INTERRUPTS********************/
+ISR(SPIF)
+{
+	char selection = SlaveRecieve();
+	
+	if(selection == front)
+	{
+		SPDR = sortedValues[0];
+	}
+	else if (selection == rightfront)
+	{
+		SPDR = sortedValues[1];
+	}
+	else if (selection == rightback)
+	{
+		SPDR = sortedValues[2];
+	}
+	else if (selection == leftfront)
+	{
+		SPDR = sortedValues[3];
+	}
+	else if (selection == leftback)
+	{
+		SPDR = sortedValues[4];
+	}
+	else if (selection == traveldist)
+	{
+		SPDR = Distance;
+		//Distance = 0;
+	}
+	else if (selection == gyro)
+	{
+		SPDR = sendGyro;
+		//sendGyro = 0;
+	}
+	else if (selection == RFID)
+	{
+		SPDR = isRFID;
+	}
+	else if (selection == stop)
+	{
+		// behöver förmodligen inte göra något här
+	}
+}
+
+/****************************MAIN**********************/
 int main(void)
 {
 	SlaveInit();
