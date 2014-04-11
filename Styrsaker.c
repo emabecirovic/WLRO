@@ -177,15 +177,15 @@ void rotate90left()
 			gyro = sendGyro*64/244000;
 			degrees+=gyro;
 		}
-		else if(mydirection==1)
+		else if(mydirection==4)
 		{
 			ready=1;
-			mydirection=4;
+			mydirection=1;
 		}
 		else
 		{
 			ready=1;
-			mydirection-=1;
+			mydirection+=1;
 		}
 		
 	}
@@ -405,4 +405,249 @@ void updatepos(int traveled)
 			traveled=0;
 		}
 	}
+}
+
+void setmypos(mypos) //sätter nuvarande position till en tvåa
+{
+	map1[myposY][myposX]=2;
+}
+
+void setwall(int x,int y)
+{
+	map1[y][x]=1;
+}
+
+int findfirstzero()
+{
+	int i; //X
+	int j; //Y
+	int firstzero[2]={0,0};
+	
+	for(int j=0;j<=17;j++)
+	{
+		for(int i=0;i<=31;i++)
+		{
+			if(map1[j][i]==0)
+			{
+				firstzero[0]=i;
+				firstzero[1]=j;
+			}
+		}
+	}
+return firstzero;					
+}
+
+void prutt() //sicksacksak
+{
+	int leftturn;
+	if(myposX>0)
+	{
+		leftturn=0;
+	}	
+	else
+	{
+		leftturn=1;
+	}
+	
+	while(1)
+	{
+		if(sensorfront>50)
+		{
+			PORTC = 0x01;
+			PORTB = 0x04;
+			OCR2A = speed;
+			OCR0A = speed;
+		}
+		else if(leftturn==1)
+		{
+			rotate90left2();
+			int distance=0;
+			while(distance<40)
+			{
+				PORTC = 0x01;
+				PORTB = 0x04;
+				OCR2A = speed;
+				OCR0A = speed;
+			}
+			rotate90left2();
+		}
+		else
+		{
+			rotate90right2();
+			int distance=0;
+			while(distance<40)
+			{
+				PORTC = 0x01;
+				PORTB = 0x04;
+				OCR2A = speed;
+				OCR0A = speed;
+			}
+			rotate90right2();
+		}
+	}		
+}
+
+void driveto(int x, int y)
+{
+	if(myposX!=x)
+	{
+		if(x>myposX)
+		{
+			switch(mydirection)
+			{
+				case(1):
+				PORTC = 0x01;
+				PORTB = 0x04;
+				OCR2A = speed;
+				OCR0A = speed;
+				case(2):
+				rotate90right2();
+				case(3):
+				rotate90right2();
+				rotate90right2();
+				case(4):
+				rotate90left2();
+			}
+		}
+		else
+		{
+			switch(mydirection)
+			{
+				case(3):
+				PORTC = 0x01;
+				PORTB = 0x04;
+				OCR2A = speed;
+				OCR0A = speed;
+				case(4):
+				rotate90left2();
+				case(1):
+				rotate90right2();
+				rotate90right2();
+				case(2):
+				rotate90right2();
+			}
+		}
+		
+	}
+	else if (myposY!=y)
+	{
+		if(y>myposY)
+		{
+			switch(mydirection)
+			{
+				case(2):
+				PORTC = 0x01;
+				PORTB = 0x04;
+				OCR2A = speed;
+				OCR0A = speed;
+				case(3):
+				rotate90right2();
+				case(4):
+				rotate90right2();
+				rotate90right2();
+				case(1):
+				rotate90left2();
+			}
+		}
+		else
+		{
+			switch(mydirection)
+			{
+				case(4):
+				PORTC = 0x01;
+				PORTB = 0x04;
+				OCR2A = speed;
+				OCR0A = speed;
+				case(1):
+				rotate90left2();
+				case(2):
+				rotate90right2();
+				rotate90right2();
+				case(3):
+				rotate90right2();
+			}
+		}
+	}
+}
+
+void rotate90right2()
+{
+	int degrees=0;
+	int ready=0;
+	int gyro;
+	while(ready==0)
+	{
+		if(degrees<89)
+		{
+			PORTC = 0x01;
+			PORTD = 0x00;
+			OCR2A = 150;
+			OCR1A = 150;
+			gyro=getgyro();
+			degrees+=gyro;
+		}
+		else if(degrees>91)
+		{
+			PORTC = 0x00;
+			PORTD = 0x40;
+			OCR2A = 100;
+			OCR1A = 100;
+			gyro=getgyro();
+			degrees+=gyro;	
+		}
+		else if(mydirection==1)
+		{
+			ready=1;
+			mydirection=4;
+		}
+		else
+		{
+			ready=1;
+			mydirection-=1;
+		}
+		
+	}
+	OCR2A = 0;
+	OCR1A = 0;
+}
+
+void rotate90left2()
+{
+	int degrees=0;
+	int ready=0;
+	int gyro;
+	while(ready==0)
+	{
+		if(degrees<89)
+		{
+			PORTC = 0x00;
+			PORTD = 0x40;
+			OCR2A = 150;
+			OCR1A = 150;
+			gyro=getgyro();
+			degrees+=gyro;
+		}
+		else if(degrees>91)
+		{
+			PORTC = 0x01;
+			PORTD = 0x00;
+			OCR2A = 100;
+			OCR1A = 100;
+			gyro=getgyro();
+			degrees+=gyro;	
+		}
+		else if(mydirection==4)
+		{
+			ready=1;
+			mydirection=1;
+		}
+		else
+		{
+			ready=1;
+			mydirection+=1;
+		}
+		
+	}
+	OCR2A = 0;
+	OCR1A = 0;
 }
