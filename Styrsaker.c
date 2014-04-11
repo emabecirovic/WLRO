@@ -1,3 +1,102 @@
+#include <avr/io.h>
+#include <avr/delay.h>
+
+int speed=150; //Standardhastiget i autonomt läge
+int finished=0; //1 då hela kartan utforskad
+int onelap=0; //1 då yttervarvet körts
+int home=0; //1 då robten återvänt till startposition
+int mydirection = 2; //1=X+ ; 2=Y+ ; 3=X- ; 4=Y-
+int traveled=0; //Hur långt roboten har färdats (sedan senast vi tog emot värden från sensor?)
+unsigned myposX=0; //Robotens position i X-led
+unsigned myposY=0; //Robotens position i Y-led
+unsigned mypos[2]={0,0}; //Vektor med robotens koordinater; (x,y)
+unsigned startpos[2]={0,0}; //Startpositionen sätts till origo
+
+unsigned char gyro;
+unsigned char sensorfront;
+unsigned char sensor1right;
+unsigned char sensor2right;
+unsigned char sensor1left;
+unsigned char sensor2left;
+
+int map[17][31]; //=....
+
+
+int main(void)
+{
+	//Sätter utgångar/ingångar
+	DDRA=0b11111111;
+	DDRB=0b00000000;
+	DDRC=0b11000001;
+	DDRD=0b11100000;
+	
+	TCCR1A=0b10010001; //setup, phase correct PWM
+	TCCR1B=0b00000010; //sätter hastigheten på klockan
+	TCCR2A=0b10010001;
+	TCCR2B=0b00000010;
+	
+	//Till displayen, vet inte om det behövs men den är efterbliven
+	PORTA=0b00110000;
+	PORTC=0b00000000;
+	_delay_ms(20);
+	PORTA=0b00110000;
+	PORTC=0b10000000;
+	PORTC=0b00000000;
+	_delay_ms(5);
+	PORTA=0b00110000;
+	PORTC=0b10000000;
+	PORTC=0b00000000;
+	_delay_us(110);
+	
+	//Startar initiering
+	PORTA=0b00111100; // 2-line mode ; 5x8 Dots
+	PORTC=0b10000000;
+	PORTC=0b00000000;
+	_delay_us(400);
+	PORTA=0b00001111; // Display on ; Cursor on ; Blink on
+	PORTC=0b10000000;
+	PORTC=0b00000000;
+	_delay_us(400);
+	PORTA=0b00000001; // Clear display
+	PORTC=0b10000000;
+	PORTC=0b00000000;
+	_delay_ms(20);
+	PORTA=0b00000111; //Increment mode ; Entire shift on
+	PORTC=0b10000000;
+	_delay_ms(20);
+	//Initiering klar
+	
+	int fjarrstyrt = (PIND & 0x01); //1 då roboten är i fjärrstyrt läge
+	
+	if(fjarrstyrt==1)
+	{
+		int button=PINB;
+		fjarrstyr(button);
+	}
+	else
+	{	
+		while(home==0)
+		{
+			updatepos(traveled);
+			if(onelap==0)
+			{
+				firstlap();
+			}
+			else if(finished==0)
+			{
+				//gör massa skit
+			}
+			else
+			{
+				returntostart();
+			}
+		}		
+	}
+	return 0;
+}
+
+
+
 void fjarrstyr(int button)
 {
 	switch(button)
