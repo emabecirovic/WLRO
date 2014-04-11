@@ -149,6 +149,13 @@ void fjarrstyr(int button)
 	}
 }
 
+void writechar(unsigned char data)
+{
+	PORTA=data;
+	(PORTC |= 0b11000000);
+	(PORTC &= 0b01000001);
+	_delay_ms(30);
+}
 
 void rotate90left()
 {
