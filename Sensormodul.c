@@ -2,6 +2,20 @@
 #include <avr/interrupt.h>
 
 
+// Namn istället för massa jobbiga siffror /Robert
+char front = 0b00000001;
+char rightfront = 0b00000010;
+char rightback = 0b00000011;
+char leftfront = 0b00000100;
+char leftback = 0b00000101;
+char traveldist = 0b00000110;
+char gyro = 0b00000111;
+char RFID = 0b00001000;
+char stop = 0x00; //Stopbyte
+
+char selection; // Används i skicka avbrottet
+
+
 char i = 0; //Vilken sensor jag använder
 char m = 0; //Hur många gånger jag har gått igenom sensorn.
 char calibrated = 0;
@@ -58,7 +72,7 @@ void SlaveInit(void)
 //	sei();
 }
 
-char SlaveRecieve(void)
+char SlaveRecieve(void) // Används inte just nu men....
 {
 	/*Wait for reception complete */
 	while(!(SPSR & (1<<SPIF)))
