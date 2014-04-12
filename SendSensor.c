@@ -45,7 +45,7 @@ bool remoteControl = false;  // Change to Port connected to switch
 bool regulateright = false;
 bool regulateleft = false;
 bool regulateturn = false;
-int time = 18;
+int time = 50;
 
 unsigned char storedValues[11] = {0b11111111, 0b11001100, 0b00110011, 0b00000000, 0b00011100, 0b11100011, 0b11000111
 								, 0b00111000, 0b11111111, 0b11001100, 0b00110011};
@@ -62,6 +62,7 @@ void MasterInit(void)
 	/* Enable SPI, Master, set clock rate fosc/16 */
 	SPCR = (1<<SPE)|(1<<MSTR)|(1<<SPR0);
 
+	/* Set Slave select high */
 	PORTB = (1<<PORTB3)|(1<<PORTB4);
 } 
 
@@ -74,15 +75,10 @@ void MasterTransmit(char cData)
 	/* Wait for transmission complete */
 	while(!(SPSR & (1<<SPIF)))
 	;
-
-	//SPSR = (1<<SPIF);
-}
-void delay()
-{
-	for(int i = 0; i < 100; i++){}
 }
 
-/*
+
+
 void TransmitSensor(char invalue)
 {
 	PORTB &= 0b11101111; // ss2 low
@@ -134,7 +130,7 @@ void TransmitSensor(char invalue)
 	PORTB ^= 0b00010000; // ss2 high
 	for(int i = 0; i < 100; i++){}
 }
-*/
+
 
 
 void TransmitComm(bool invalue)
@@ -150,7 +146,6 @@ void TransmitComm(bool invalue)
 		for(int i = 0; i < 11;i++)
 		{
 			MasterTransmit(storedValues[i]);
-			//for(int i = 0; i < time; i++){}
 		}
 	}
 
@@ -164,7 +159,7 @@ int main(void)
 	MasterInit();
 	while(1)
 	{	
-	/*	
+		
 	if(regulateright)
 	TransmitSensor(right);
 	else if(regulateleft)
@@ -173,11 +168,9 @@ int main(void)
 	TransmitSensor(turn);
 	else
 	TransmitSensor(0x00);
-	*/
+	
 	
 	TransmitComm(remoteControl);
-	//for(int i = 0; i < 100; i++){}
-	
 	
 	}
 	
@@ -248,7 +241,11 @@ ISR(SPI_STC_vector) // Answer to call from Master
 {
 	storedValues[index] = SPDR;
 	SPDR = storedValues[index]; //Just for controll by oscilloscope
-	index++;
+	
+	if(indexvalue < 11)
+	indexvalue++;
+	else
+	indexvalue = 0;
 }
 
 /*******************************MAIN*******************************/
@@ -262,18 +259,6 @@ int main(void)
 		{
 			
 		}
-			/*int SS1 = PINB & 0b00010000;
-			while(SS1==0)
-			{
-				
-				for(int i = 0; i <11; i++)
-				{
-					storedValues[i] = SlaveRecieve();
-					SPDR = storedValues[i];
-				}
-
-
-			}*/
 	}
 		
 	
@@ -321,11 +306,11 @@ void SlaveInit(void)
 	/* Set MISO output, all others input */
 	DDRB = (1<<DDB6);
 
-	/* Enable SPI */
-	SPCR = (1<<SPE)|(1<<SPIE);
-	
 	/* Enable External Interrupt */
 	sei();
+
+	/* Enable SPI */
+	SPCR = (1<<SPE)|(1<<SPIE);
 }
 
 char SlaveRecieve(void)
@@ -391,51 +376,6 @@ int main(void)
 	
 	while(1)
 	{
-		/*int SS2= PINB & 0b00010000;
-		while(SS2==0) // slave selected
-		{
-			selection = SlaveRecieve();
-			SPDR = 0b11111111;
-						
-			if(selection == front)
-			{
-				SPDR = sortedValues[0];
-			}
-			else if (selection == rightfront)
-			{
-				SPDR = sortedValues[1];
-			}
-			else if (selection == rightback)
-			{
-				SPDR = sortedValues[2];
-			}
-			else if (selection == leftfront)
-			{
-				SPDR = sortedValues[3];
-			}
-			else if (selection == leftback)
-			{
-				SPDR = sortedValues[4];
-			}
-			else if (selection == traveldist)
-			{
-				SPDR = Distance;
-				//Distance = 0;
-			}
-			else if (selection == gyro)
-			{
-				SPDR = sendGyro;
-				//sendGyro = 0;
-			}
-			else if (selection == RFID)
-			{
-				SPDR = isRFID;
-			}
-			else if (selection == stop)
-			{
-				// behöver förmodligen inte göra något här
-			}
-			
-		}*/
+	
 	}
 }
