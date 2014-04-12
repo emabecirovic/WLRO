@@ -246,9 +246,9 @@ char SlaveRecieve(void)
 /*******************************INTERRUPTS*************************/
 ISR(SPI_STC_vector) // Answer to call from Master
 {
-	storedValues[index] = SlaveRecieve();
+	storedValues[index] = SPDR;
 	SPDR = storedValues[index]; //Just for controll by oscilloscope
-	index++;;
+	index++;
 }
 
 /*******************************MAIN*******************************/
@@ -342,7 +342,7 @@ char SlaveRecieve(void)
 /*************************INTERRUPTS********************/
 ISR(SPI_STC_vector)
 {
-	char selection = SlaveRecieve();
+	char selection = SPDR;
 	
 	if(selection == front)
 	{
