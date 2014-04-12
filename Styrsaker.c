@@ -1,5 +1,24 @@
 #include <avr/io.h>
 #include <avr/delay.h>
+#include <avr/interrupt.h> // Robert
+
+
+//Start bytes for transition (simplification when coding)
+char front = 0b00000001;
+char rightfront = 0b00000010;
+char rightback = 0b00000011;
+char leftfront = 0b00000100;
+char leftback = 0b00000101;
+char traveldist = 0b00000110;
+char gyro = 0b00000111;
+char RFID = 0b00001000;
+char direction = 0b00001001;
+char rightspeed = 0b00001010;
+char leftspeed = 0b00001011;
+char stop = 0x00; //Stop byte
+
+
+
 
 int speed=150; //Standardhastiget i autonomt läge
 int finished=0; //1 då hela kartan utforskad
@@ -18,15 +37,18 @@ unsigned char sensor1right;
 unsigned char sensor2right;
 unsigned char sensor1left;
 unsigned char sensor2left;
+//unsigned char SensorValues[11]; //Paketet med data som ska skickas till komm
 
 int map[17][31]; //=....
 
 
 int main(void)
 {
-	//Sätter utgångar/ingångar
+	MasterInit();
+	
+	//Sätter utgångar/ingångar    (Kanske skriva en initieringsfunktion för allt detta? /Robert)
 	DDRA=0b11111111;
-	DDRB=0b00000000;
+	DDRB=0b00000000;  //Det bör du inte göra Masterinit fixar B Poerten
 	DDRC=0b11000001;
 	DDRD=0b11100000;
 	
@@ -94,6 +116,37 @@ int main(void)
 	}
 	return 0;
 }
+
+
+
+
+void MasterInit(void) //Robert som lägger till saker
+{
+	/* Set MOSI and SCK output, alla others input*/
+	/* Ersätt DDR_SPI med den port "serie" som används ex DD_SPI -> DDRB
+	samt DD_MOSI och DD_SCK med specifik pinne ex DD_MOSI -> DDB5 */
+	DDRB = (1<<DDB3)|(1<<DDB4)|(1<<DDB5)|(1<<DDB7);
+
+	/* Enable SPI, Master, set clock rate fosc/16 */
+	SPCR = (1<<SPE)|(1<<MSTR)|(1<<SPR0);
+
+	PORTB = (1<<PORTB3)|(1<<PORTB4);
+} 
+
+
+void MasterTransmit(char cData)
+{
+	/* Start transmission */
+	SPDR = cData;
+
+	/* Wait for transmission complete */
+	while(!(SPSR & (1<<SPIF)))
+	;
+
+	//SPSR = (1<<SPIF);
+}
+
+
 
 
 
