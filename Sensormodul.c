@@ -45,6 +45,30 @@ void bubble_sort(unsigned char a[], int size)
 	}
 }
 
+
+void SlaveInit(void)
+{
+	/* Set MISO output, all others input */
+	DDRB = (1<<DDB6);
+
+	/* Enable SPI */
+	SPCR = (1<<SPE)|(1<<SPIE);
+
+	/* Enable External Interrupt */
+//	sei();
+}
+
+char SlaveRecieve(void)
+{
+	/*Wait for reception complete */
+	while(!(SPSR & (1<<SPIF)))
+	;
+
+	/* Return Data Register */
+	return SPDR;
+}
+
+
 void USART_Init( unsigned int baud )
 {
 	/* Set baud rate */
@@ -280,6 +304,53 @@ ISR(ADC_vect)
 }
 
 
+
+ISR(SPI_STC_vector) // Skicka på buss!! // Robert
+{
+	char selection = SlaveRecieve();
+
+	if(selection == front)
+	{
+		SPDR = sortedValues[0];
+	}
+	else if (selection == rightfront)
+	{
+		SPDR = sortedValues[1];
+	}
+	else if (selection == rightback)
+	{
+		SPDR = sortedValues[2];
+	}
+	else if (selection == leftfront)
+	{
+		SPDR = sortedValues[3];
+	}
+	else if (selection == leftback)
+	{
+		SPDR = sortedValues[4];
+	}
+	else if (selection == traveldist)
+	{
+		SPDR = Distance;
+		//Distance = 0;
+	}
+	else if (selection == gyro)
+	{
+		SPDR = sendGyro;
+		//sendGyro = 0;
+	}
+	else if (selection == RFID)
+	{
+		SPDR = isRFID;
+	}
+	else if (selection == stop)
+	{
+		// behöver förmodligen inte göra något här
+	}
+}
+
+
+/*   DETTA FIXAS I AVBROTTET OVAN
 void send_front()
 {
 	//skicka f?rst 1;
@@ -329,7 +400,7 @@ void send_RFID()
 	//skicka f?rst 8;
 	//isRFID;
 	isRFID = 0;
-}
+}*/
 
 void convert_front()
 {
