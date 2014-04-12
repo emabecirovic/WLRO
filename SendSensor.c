@@ -193,6 +193,7 @@ int main(void)
 
 
 #include <avr/io.h>
+#include <avr/interrupt.h>
 
 /***********************SLAVE komm*****************************/
 
@@ -226,7 +227,10 @@ void SlaveInit(void)
 	DDRB = (1<<DDB6);
 
 	/* Enable SPI */
-	SPCR = (1<<SPE);
+	SPCR = (1<<SPE)|(1<<SPIE);
+	
+	/* Enable external interrupts */
+	sei();
 }
 
 char SlaveRecieve(void)
@@ -240,7 +244,7 @@ char SlaveRecieve(void)
 }
 
 /*******************************INTERRUPTS*************************/
-ISR(SPIF) // Answer to call from Master
+ISR(SPI_STC_vector) // Answer to call from Master
 {
 	storedValues[index] = SlaveRecieve();
 	SPDR = storedValues[index]; //Just for controll by oscilloscope
@@ -254,7 +258,11 @@ int main(void)
 	
 	while(1)
 	{
-			int SS1 = PINB & 0b00010000;
+		if(remoteControl)
+		{
+			
+		}
+			/*int SS1 = PINB & 0b00010000;
 			while(SS1==0)
 			{
 				
@@ -265,7 +273,7 @@ int main(void)
 				}
 
 
-			}
+			}*/
 	}
 		
 	
@@ -282,6 +290,7 @@ int main(void)
  */ 
 
 #include <avr/io.h>
+#include <avr/interrupt.h>
 
 /***********************SLAVE Sensor*****************************/
 typedef int bool;
@@ -313,7 +322,10 @@ void SlaveInit(void)
 	DDRB = (1<<DDB6);
 
 	/* Enable SPI */
-	SPCR = (1<<SPE);
+	SPCR = (1<<SPE)|(1<<SPIE);
+	
+	/* Enable External Interrupt */
+	sei();
 }
 
 char SlaveRecieve(void)
@@ -328,7 +340,7 @@ char SlaveRecieve(void)
 
 
 /*************************INTERRUPTS********************/
-ISR(SPIF)
+ISR(SPI_STC_vector)
 {
 	char selection = SlaveRecieve();
 	
@@ -379,7 +391,7 @@ int main(void)
 	
 	while(1)
 	{
-		int SS2= PINB & 0b00010000;
+		/*int SS2= PINB & 0b00010000;
 		while(SS2==0) // slave selected
 		{
 			selection = SlaveRecieve();
@@ -424,6 +436,6 @@ int main(void)
 				// behöver förmodligen inte göra något här
 			}
 			
-		}
+		}*/
 	}
 }
