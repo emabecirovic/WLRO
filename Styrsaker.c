@@ -46,48 +46,7 @@ int main(void)
 {
 	MasterInit();
 	
-	//Sätter utgångar/ingångar    (Kanske skriva en initieringsfunktion för allt detta? /Robert)
-	DDRA=0b11111111;
-	DDRB=0b00000000;  //Det bör du inte göra Masterinit fixar B Poerten
-	DDRC=0b11000001;
-	DDRD=0b11100000;
-	
-	TCCR1A=0b10010001; //setup, phase correct PWM
-	TCCR1B=0b00000010; //sätter hastigheten på klockan
-	TCCR2A=0b10010001;
-	TCCR2B=0b00000010;
-	
-	//Till displayen, vet inte om det behövs men den är efterbliven
-	PORTA=0b00110000;
-	PORTC=0b00000000;
-	_delay_ms(20);
-	PORTA=0b00110000;
-	PORTC=0b10000000;
-	PORTC=0b00000000;
-	_delay_ms(5);
-	PORTA=0b00110000;
-	PORTC=0b10000000;
-	PORTC=0b00000000;
-	_delay_us(110);
-	
-	//Startar initiering
-	PORTA=0b00111100; // 2-line mode ; 5x8 Dots
-	PORTC=0b10000000;
-	PORTC=0b00000000;
-	_delay_us(400);
-	PORTA=0b00001111; // Display on ; Cursor on ; Blink on
-	PORTC=0b10000000;
-	PORTC=0b00000000;
-	_delay_us(400);
-	PORTA=0b00000001; // Clear display
-	PORTC=0b10000000;
-	PORTC=0b00000000;
-	_delay_ms(20);
-	PORTA=0b00000111; //Increment mode ; Entire shift on
-	PORTC=0b10000000;
-	_delay_ms(20);
-	//Initiering klar
-	
+
 	int fjarrstyrt = (PIND & 0x01); //1 då roboten är i fjärrstyrt läge
 	
 	if(fjarrstyrt==1)
@@ -117,6 +76,49 @@ int main(void)
 	return 0;
 }
 
+void initiation()
+{
+	//Sätter utgångar/ingångar    (Kanske skriva en initieringsfunktion för allt detta? /Robert)
+	DDRA=0b11111111;
+	DDRC=0b11000001;
+	DDRD=0b11100000;
+
+	TCCR1A=0b10010001; //setup, phase correct PWM
+	TCCR1B=0b00000010; //sätter hastigheten på klockan
+	TCCR2A=0b10010001;
+	TCCR2B=0b00000010;
+
+	//Till displayen, vet inte om det behövs men den är efterbliven
+	PORTA=0b00110000;
+	PORTC=0b00000000;
+	_delay_ms(20);
+	PORTA=0b00110000;
+	PORTC=0b10000000;
+	PORTC=0b00000000;
+	_delay_ms(5);
+	PORTA=0b00110000;
+	PORTC=0b10000000;
+	PORTC=0b00000000;
+	_delay_us(110);
+
+	//Startar initiering
+	PORTA=0b00111100; // 2-line mode ; 5x8 Dots
+	PORTC=0b10000000;
+	PORTC=0b00000000;
+	_delay_us(400);
+	PORTA=0b00001111; // Display on ; Cursor on ; Blink on
+	PORTC=0b10000000;
+	PORTC=0b00000000;
+	_delay_us(400);
+	PORTA=0b00000001; // Clear display
+	PORTC=0b10000000;
+	PORTC=0b00000000;
+	_delay_ms(20);
+	PORTA=0b00000111; //Increment mode ; Entire shift on
+	PORTC=0b10000000;
+	_delay_ms(20);
+	//Initiering klar
+}
 
 
 
