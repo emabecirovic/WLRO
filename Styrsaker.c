@@ -45,7 +45,7 @@ int map[17][31]; //=....
 int main(void)
 {
 	MasterInit();
-	
+	Initiation();
 
 	int fjarrstyrt = (PIND & 0x01); //1 då roboten är i fjärrstyrt läge
 	
