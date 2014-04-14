@@ -36,6 +36,7 @@ char direction = 0b00001001;
 char rightspeed = 0b00001010;
 char leftspeed = 0b00001011;
 char stop = 0x00; //Stop byte
+char start_request = 0;
 
 //Control signals
 char right = 1;
@@ -153,23 +154,33 @@ void TransmitComm(bool invalue)
 
 }
 
+void initiate_request_timer()
+{
+	TIMSK0 = 0b00000100; //Enable interupt vid matchning med OCR1B		TCCR1B =0x00;
+	TCNT0 = 0x00;
+	TCCR0B = 0x03; //Starta räknare, presscale 64.
+	OCR0BH = 0x01;
+	OCR0BL = 0x00; //RANDOM! När ska requesten triggas? 
+}
+
 
 int main(void)
 {
 	MasterInit();
 	while(1)
-	{	
-		
-	if(regulateright)
-	TransmitSensor(right);
-	else if(regulateleft)
-	TransmitSensor(left);
-	else if(regulateturn)
-	TransmitSensor(turn);
-	else
-	TransmitSensor(0x00);
-	
-	
+	{
+		if(start_request == 1)
+		{
+			start_request = 0;
+			if(regulateright)
+			TransmitSensor(right);
+			else if(regulateleft)
+			TransmitSensor(left);
+			else if(regulateturn)
+			TransmitSensor(turn);
+			else
+			TransmitSensor(0x00);
+		}
 	TransmitComm(remoteControl);
 	
 	}
@@ -183,6 +194,12 @@ int main(void)
  * Created: 4/7/2014 5:08:19 PM
  *  Author: robsv107
  */ 
+ 
+ISR(TIMER0_COMPB_vect)
+{
+	TCNT0 = 0x00;
+	start_request = 1;
+}
 
 
 #include <avr/io.h>
