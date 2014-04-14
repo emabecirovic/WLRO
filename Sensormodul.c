@@ -146,8 +146,8 @@ void initiate_sample_timer()
 	TIMSK1 = 0b00000100; //Enable interupt vid matchning med OCR1B		TCCR1B =0x00;
 	TCNT1 = 0x00;
 	TCCR1B = 0x03; //Starta samplingsräknare, presscale 64.
-	OCR1BH = 0x01;
-	OCR1BL = 0x00; //RANDOM! När ska comparen triggas? SAMPLING
+	OCR1BH = 0x00;
+	OCR1BL = 0x60; //RANDOM! När ska comparen triggas? SAMPLING
 }
 
 int main(void)
@@ -338,12 +338,14 @@ ISR(SPI_STC_vect) // Skicka på buss!! // Robert
 	else if (selection == traveldist)
 	{
 		SPDR = Distance;
-		//Distance = 0;
+		asm("");
+		Distance = 0;
 	}
 	else if (selection == gyro)
 	{
 		SPDR = sendGyro;
-		//sendGyro = 0;
+		asm("");
+		sendGyro = 0;
 	}
 	else if (selection == RFID)
 	{
