@@ -65,6 +65,8 @@ void MasterInit(void)
 
 	/* Set Slave select high */
 	PORTB = (1<<PORTB3)|(1<<PORTB4);
+	/*Set global interupts*/
+	sei();
 } 
 
 
