@@ -313,7 +313,7 @@ ISR(ADC_vect)
 
 ISR(SPI_STC_vect) // Skicka på buss!! // Robert
 {
-	char selection = SlaveRecieve();
+	char selection = SPDR;
 
 	if(selection == front)
 	{
