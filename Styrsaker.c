@@ -20,16 +20,17 @@ char stop = 0x00; //Stop byte
 
 
 
-int speed=150; //Standardhastiget i autonomt läge
-int finished=0; //1 då hela kartan utforskad
-int onelap=0; //1 då yttervarvet körts
-int home=0; //1 då robten återvänt till startposition
-int mydirection = 2; //1=X+ ; 2=Y+ ; 3=X- ; 4=Y-
-int traveled=0; //Hur långt roboten har färdats (sedan senast vi tog emot värden från sensor?)
-unsigned myposX=0; //Robotens position i X-led
-unsigned myposY=0; //Robotens position i Y-led
-unsigned mypos[2]={0,0}; //Vektor med robotens koordinater; (x,y)
-unsigned startpos[2]={0,0}; //Startpositionen sätts till origo
+char speed=150; //Standardhastiget i autonomt läge
+char finished=0; //1 då hela kartan utforskad
+char onelap=0; //1 då yttervarvet körts
+char home=0; //1 då robten återvänt till startposition
+char mydirection = 2; //1=X+ ; 2=Y+ ; 3=X- ; 4=Y-
+char traveled=0; //Hur långt roboten har färdats (sedan senast vi tog emot värden från sensor?)
+unsigned int myposX=0; //Robotens position i X-led
+unsigned int myposY=0; //Robotens position i Y-led
+unsigned int mypos[2]={15,0}; //Vektor med robotens koordinater; (x,y)
+unsigned int startpos[2]={15,0}; //Startpositionen sätts till mitten på nedre lånsidan
+int firstzero; //Första nollan om man läser matrisen uppifrån och ned
 
 unsigned char gyro;
 unsigned char sensorfront;
@@ -37,9 +38,8 @@ unsigned char sensor1right;
 unsigned char sensor2right;
 unsigned char sensor1left;
 unsigned char sensor2left;
-//unsigned char SensorValues[11]; //Paketet med data som ska skickas till komm
-
-int map[17][31]; //=....
+ 
+char map[15][29]; //=.... 0=outforskat, 1=vägg, 2=öppen yta
 
 
 int main(void)
@@ -152,55 +152,60 @@ void MasterTransmit(char cData)
 
 
 
-void fjarrstyr(int button)
+void remotecontrol()
 {
-	switch(button)
+	while(1)
 	{
-		case (0x01)://Kör framåt, W
-		PORTC = 0x01; //Sätter båda DIR till 1
-		PORTD = 0x40;
-		OCR2A = 250; //PWM vänster
-		OCR1A = 250; //PWM höger
-		writechar(0b01010111); //W
-		break;
-		case (0x04): //Backa, S
-		PORTC = 0x0; //Sätter båda DIR till 0
-		PORTD = 0x0;
-		OCR2A = 250;
-		OCR1A = 250;
-		writechar(0b01010011); //S
-		break;
-		case (0x06): //Rotera vänster, Q
-		PORTC = 0x00; //DIR vänster till 0
-		PORTD = 0x40; //DIR höger till 1
-		OCR2A = 250;
-		OCR1A = 250;
-		writechar(0b01010001); //Q
-		break;
-		case (0x05): //Rotera höger, E
-		PORTC = 0x01;
-		PORTD = 0x00;
-		OCR2A = 250;
-		OCR1A = 250;
-		writechar(0b01000101); //E
-		break;
-		case (0x03): //Sväng vänster, A
-		PORTC = 0x01;
-		PORTD = 0x40;
-		OCR2A = 100;
-		OCR1A = 250;
-		writechar(0b01000001); //A
-		break;
-		case (0x02): //Sväng höger, D
-		PORTC = 0x01;
-		PORTD = 0x40;
-		OCR2A = 250;
-		OCR1A = 100;
-		writechar(0b01000100); //D
-		break;
-		default:
-		OCR2A = 0;
-		OCR1A = 0;
+		char button; //Ta emot styrdata
+	
+		switch(button)
+		{
+			case (0x01)://Kör framåt, W
+			PORTC = 0x01; //Sätter båda DIR till 1
+			PORTD = 0x40;
+			OCR2A = 250; //PWM vänster
+			OCR1A = 250; //PWM höger
+			writechar(0b01010111); //W
+			break;
+			case (0x04): //Backa, S
+			PORTC = 0x0; //Sätter båda DIR till 0
+			PORTD = 0x0;
+			OCR2A = 250;
+			OCR1A = 250;
+			writechar(0b01010011); //S
+			break;
+			case (0x06): //Rotera vänster, Q
+			PORTC = 0x00; //DIR vänster till 0
+			PORTD = 0x40; //DIR höger till 1
+			OCR2A = 250;
+			OCR1A = 250;
+			writechar(0b01010001); //Q
+			break;
+			case (0x05): //Rotera höger, E
+			PORTC = 0x01;
+			PORTD = 0x00;
+			OCR2A = 250;
+			OCR1A = 250;
+			writechar(0b01000101); //E
+			break;
+			case (0x03): //Sväng vänster, A
+			PORTC = 0x01;
+			PORTD = 0x40;
+			OCR2A = 100;
+			OCR1A = 250;
+			writechar(0b01000001); //A
+			break;
+			case (0x02): //Sväng höger, D
+			PORTC = 0x01;
+			PORTD = 0x40;
+			OCR2A = 250;
+			OCR1A = 100;
+			writechar(0b01000100); //D
+			break;
+			default:
+			OCR2A = 0;
+			OCR1A = 0;
+		}
 	}
 }
 
@@ -434,33 +439,29 @@ void returntostart()
 	}
 }
 
-void updatepos(int traveled)
+void updatepos()
 {
 	switch(mydirection)
 	{
 		case (1): // X+
-		if (traveled>=40)
 		{
 			myposX+=1;
 			mypos[0]=myposX;
 			traveled=0;
 		}
 		case (2): // Y+
-		if (traveled>=40)
 		{
 			myposY+=1;
 			mypos[1]=myposY;
 			traveled=0;
 		}
 		case (3): // X-
-		if (traveled>=40)
 		{
 			myposX-=1;
 			mypos[0]=myposX;
 			traveled=0;
 		}
 		case (4): // Y-
-		if (traveled>=40)
 		{
 			myposY-=1;
 			mypos[1]=myposY;
@@ -469,14 +470,86 @@ void updatepos(int traveled)
 	}
 }
 
-void setmypos(mypos) //sätter nuvarande position till en tvåa
+void updatemap()
 {
-	map1[myposY][myposX]=2;
+	char w=30; //Hur långt ifrån vi ska vara för att säga att det är en vägg.
+	
+	int sensorfront;
+	int sensormeanright;
+	int sensormeanleft;
+	
+	switch(mydirection)
+	{
+		case (1): // X+
+		if(sensormeanright<=w) //Vet inte vad som är en lämplig siffra här
+		{
+			setwall(myposX,myposY-1);
+			map[myposX-1][myposY]=2;
+		}
+		else if(sensorfront<=w)
+		{
+			setwall(myposX+1,myposY);
+			map[myposX-1][myposY]=2;
+		}
+		else if(sensormeanleft<w)
+		{
+			setwall(myposX,myposY+1);
+			map[myposX-1][myposY]=2;
+		}
+		case (2): // Y+
+		if(sensormeanright<=w)
+		{
+			setwall(myposX+1,myposY);
+			map[myposX][myposY-1]=2;
+		}
+		else if(sensorfront<=w)
+		{
+			setwall(myposX,myposY+1);
+			map[myposX][myposY-1]=2;
+		}
+		else if(sensormeanleft<w)
+		{
+			setwall(myposX-1,myposY);
+			map[myposX][myposY-1]=2;
+		}
+		case (3): // X-
+		if(sensormeanright<=w) 
+		{
+			setwall(myposX,myposY+1);
+			map[myposX+1][myposY]=2;
+		}
+		else if(sensorfront<=w)
+		{
+			setwall(myposX-1,myposY);
+			map[myposX+1][myposY]=2;
+		}
+		else if(sensormeanleft<w)
+		{
+			setwall(myposX,myposY-1);
+			map[myposX+1][myposY]=2;
+		}
+		case (4): // Y-
+		if(sensormeanright<=w) 
+		{
+			setwall(myposX-1,myposY);
+			map[myposX][myposY+1]=2;
+		}
+		else if(sensorfront<=w)
+		{
+			setwall(myposX,myposY-1);
+			map[myposX][myposY+1]=2;
+		}
+		else if(sensormeanleft<w)
+		{
+			setwall(myposX+1,myposY);
+			map[myposX][myposY+1]=2;
+		}
+	}
 }
 
 void setwall(int x,int y)
 {
-	map1[y][x]=1;
+	map[y][x]=1;
 }
 
 int findfirstzero()
@@ -489,7 +562,7 @@ int findfirstzero()
 	{
 		for(int i=0;i<=31;i++)
 		{
-			if(map1[j][i]==0)
+			if(map[j][i]==0)
 			{
 				firstzero[0]=i;
 				firstzero[1]=j;
@@ -712,4 +785,40 @@ void rotate90left2()
 	}
 	OCR2A = 0;
 	OCR1A = 0;
+}
+
+int main(void)
+{
+	initiation();
+	
+	int remotecontrol = (PIND & 0x01); //1 då roboten är i fjärrstyrt läge
+	
+	if(remotecontrol==1)
+	{
+		remotecontrol();
+	}
+	else
+	{
+		while(home==0)
+		{
+			if(traveled>=40)
+			{
+				updatepos();
+				updatemap();
+			}
+			if(onelap==0)
+			{
+				firstlap();
+			}
+			else if(finished==0)
+			{
+				//gör massa skit
+			}
+			else
+			{
+				returntostart();
+			}
+		}
+	}
+	return 0;
 }
