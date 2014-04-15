@@ -152,7 +152,7 @@ void initiate_sample_timer()
 
 int main(void)
 {
-
+	SlaveInit();
 	initiate_sensormodul();
 	initiate_sample_timer();
 	while(1)
