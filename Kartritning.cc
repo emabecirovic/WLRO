@@ -20,5 +20,4 @@ for (i = 0; i < 29; i++)
   {for (j = 0; j < 15; j++)
   
     {map[i][j] = 0;
-    
-    cout <<
+     cout << 
