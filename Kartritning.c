@@ -9,7 +9,7 @@
 
 
 
-/******************* 15x29-matris med nollor *******************/
+/******************* 29x15-matris med nollor *******************/
 
 int main ()
 
@@ -23,6 +23,7 @@ int main ()
     
     printf("map[%d][%d] = %d \n", i, j, map[i][j]);
     
+    //alt: printf("%d ", map[i][j]); } printf("\n");
     }
     
   }
