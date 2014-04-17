@@ -22,7 +22,7 @@ int main ()
     {map[i][j] = 0;
     
     map[myposX][myposY] = //vad sensor säger att det är för ngt
-    //finns massa kod i patriks fil om vägg och sånt
+   
     
     printf("map[%d][%d] = %d \n", i, j, map[i][j]);
     
