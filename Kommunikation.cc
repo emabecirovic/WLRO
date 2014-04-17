@@ -1,20 +1,33 @@
 #include <SFML/Graphics.hpp>
 #include <iostream>
 #include <windows.h>
-#include <bitset>
 #include <SFML/System.hpp>
+#include "Bluetooth.h"
 
-//#include <SFML/Network.hpp>
 
 using namespace std;
-HANDLE Settup_BT()
+
+Bluetooth_Serial_comm::Bluetooth_Serial_comm()
+{
+    hSerial = Settup_BT();
+    osReadWrite.hEvent = CreateEvent(NULL,TRUE,FALSE,NULL);
+
+}
+
+Bluetooth_Serial_comm::~Bluetooth_Serial_comm()
+{
+    CloseHandle(hSerial);
+}
+
+
+HANDLE Bluetooth_Serial_comm::Settup_BT()
 {
 
 
-/***************************Hanle serial 2 st för com 8 (ut) och com 9 (in) *****/
+    /***************************Hanle serial för com 8 *********************/
     HANDLE hSerial;
     hSerial = CreateFile("COM8",
-                            GENERIC_WRITE,
+                         GENERIC_WRITE|GENERIC_READ,
                          0,
                          NULL,
                          OPEN_EXISTING,
@@ -24,187 +37,156 @@ HANDLE Settup_BT()
     {
         if(GetLastError()==ERROR_FILE_NOT_FOUND)
         {
-//serial port does not exist. Inform user.
-        cout << "No serial port\n";
+            cout << "No serial port\n";
         }
-//some other error occurred. Inform user.
-        cout << "other error occured\n";
+        cout << "other error occured hSerial Write\n";
     }
-/****************************** Timeouts **************************/
-COMMTIMEOUTS timeouts={0};
-timeouts.ReadIntervalTimeout=50;
-timeouts.ReadTotalTimeoutConstant=50;
-timeouts.ReadTotalTimeoutMultiplier=10;
-timeouts.WriteTotalTimeoutConstant=50;
-timeouts.WriteTotalTimeoutMultiplier=50;
-
-/******************* Sätter timeouts för hSerial **************************/
-
-if(!SetCommTimeouts(hSerial,&timeouts))
-{
-    cout << "SetCommTimeout error!!\n";
-}
-/**************** OVERLAPPED *****************************/ //denna del behövs ej!
-/*OVERLAPPED osWrite;
-osWrite = {0};
-osWrite.hEvent = CreateEvent(NULL, TRUE, FALSE, NULL);
-osWrite.Offset = 0xFFFFFFFF;
-osWrite.OffsetHigh = 0xFFFFFFFF;
 
 
-/********************* DCB ****************************/
-DCB dcb = {0};
-dcb.DCBlength = sizeof(dcb);
-dcb.BaudRate = 115200;     // set the baud rate
-dcb.ByteSize = 8;             // data size, xmit, and rcv
-dcb.Parity = NOPARITY;        // no parity bit
-dcb.StopBits = ONESTOPBIT;    // one stop bit
-dcb.fBinary = true;
+    /****************************** Timeouts **************************/
+    COMMTIMEOUTS timeouts= {0};
+    timeouts.ReadIntervalTimeout=50;
+    timeouts.ReadTotalTimeoutConstant=50;
+    timeouts.ReadTotalTimeoutMultiplier=10;
+    timeouts.WriteTotalTimeoutConstant=50;
+    timeouts.WriteTotalTimeoutMultiplier=50;
 
-   if(!(SetCommState(hSerial, &dcb)))
-   {
-       cout << "SetCommState error !! \n";
-   }
- //DWORD dwBytesWrite=0;
+    /******************* Settup för hSerial **************************/
 
-
-/***************************Hanle seria2l 2 st för com 9 (in) och com 9 (in) *****/
-
-    HANDLE hSerial2; //seriiell inport
-    hSerial2 = CreateFile("COM9",
-                            GENERIC_READ,
-                         0,
-                         NULL,
-                         OPEN_EXISTING,
-                         FILE_ATTRIBUTE_NORMAL|FILE_FLAG_OVERLAPPED,
-                         NULL);
-    if(hSerial2==INVALID_HANDLE_VALUE)
+    if(!SetCommTimeouts(hSerial,&timeouts))
     {
-        if(GetLastError()==ERROR_FILE_NOT_FOUND)
-        {
-//serial port does not exist. Inform user.
-        cout << "No serial port\n";
-        }
-//some other error occurred. Inform user.
-        cout << "other error occured\n";
+        cout << "SetCommTimeout error!!\n";
+    }
+    /********************* DCB ****************************/
+    DCB dcb = {0};
+    dcb.DCBlength = sizeof(dcb);
+    dcb.BaudRate = CBR_115200;     // set the baud rate
+    dcb.ByteSize = 8;             // data size, xmit, and rcv
+    dcb.Parity = NOPARITY;        // no parity bit
+    dcb.StopBits = ONESTOPBIT;    // one stop bit
+    dcb.fBinary = true;
+
+    if(!(SetCommState(hSerial, &dcb)))
+    {
+        cout << "SetCommState error !! \n";
     }
 
-/******************* Settup för hSerial **************************/
 
-if(!SetCommTimeouts(hSerial2,&timeouts))
-{
-    cout << "SetCommTimeout error!!\n";
-}
-/**************** OVERLAPPED *****************************/
-
-OVERLAPPED osRead = {0};
-//osRead.hEvent = CreateEvent(NULL, TRUE, FALSE, NULL);
-
-LPOVERLAPPED_COMPLETION_ROUTINE ReadCompletion; // denna Overlapped kommer antagligen behövas för ReadFileEx
-
-/*********************************************************/
-   if(!(SetCommState(hSerial2, &dcb)))
-   {
-       cout << "SetCommState error !! \n";
-   }
-
-//DWORD dwBytesRead=0;
-   if (INVALID_SET_FILE_POINTER != SetFilePointer(hSerial,
-                                                           0,
-                                                           0,
-                                                           FILE_BEGIN));
+    if (INVALID_SET_FILE_POINTER != SetFilePointer(hSerial,
+            0,
+            0,
+            FILE_BEGIN));
 
 
-return hSerial;
 
+    return hSerial;
 }
 
 
 /****************** Writefile *************************************/
-void Send_to_Bt(unsigned int t, HANDLE hSerial , OVERLAPPED osWrite)
+void Bluetooth_Serial_comm::Send_to_Bt(unsigned int t)
 {
-
-
-unsigned char szBuff[2] = {t};
-   cout << "szBuff innan: " << szBuff << "\n";
-    cout << "szBuff[1] innan: " << szBuff[1] << " szBuff[2] innan: " << szBuff[2] << "\n";
-    if(!WriteFileEx(hSerial,szBuff,1,&osWrite,NULL))
+    bool fWaitingOnRead = false;
+    DWORD dwByte;
+    unsigned char szBuff[2] = {t};
+    if(!fWaitingOnRead)
     {
-        cout << "Writefile error \n";
+        if(!WriteFile(hSerial,szBuff,1,&dwByte,&osReadWrite))
+        {
+            if (GetLastError() != ERROR_IO_PENDING)     // read not delayed?
+                // Error in communications; report it.
+            {
+                cout << "error in communication \n";
+            }
+            else
+            {
+                fWaitingOnRead = true;
+                //cout << "io pendeling\n";
+            }
+        }
     }
-    else
-    {
-    }
-    cout <<"szBuff[1] efter:  " << szBuff[1] <<"szBuff[2] efter :"<< szBuff[2] << "\n";
-/*****************************************************************/
-
-FlushFileBuffers(hSerial);
+    FlushFileBuffers(hSerial);
 }
-//FlushFileBuffers(hSerial2);
 
 
 /************************' Readfile **********************************/
-  /*  unsigned char szBuff2[2] = {0};
-    if(!ReadFileEx(hSerial2,szBuff2,1,&osRead,ReadCompletion))
+unsigned char Bluetooth_Serial_comm::Read_from_BT()
+{
+    //ReadCompletion
+    BOOL fWaitingOnRead = false;
+    DWORD dwByte;
+    unsigned char szBuff2[2];
+    if(!fWaitingOnRead)
     {
-        cout << "READFILE error \n";
+        if(!ReadFile(hSerial,szBuff2,1,&dwByte,&osReadWrite))
+        {
+            if (GetLastError() != ERROR_IO_PENDING)     // read not delayed?
+                // Error in communications; report it.
+            {
+                cout << "error in communication \n";
+            }
+
+            else
+            {
+                fWaitingOnRead = true;
+                //cout << "io pendeling\n";
+
+            }
+        }
+        else
+        {
+            // cout << "read complete imidietly!! \n";
+        }
     }
-    else
+
+    /*************************************TESTER************************************************/
+
+
+
+#define READ_TIMEOUT      500      // milliseconds
+DWORD dwRes;
+
+    if (fWaitingOnRead)
     {
+        dwRes = WaitForSingleObject(osReadWrite.hEvent, READ_TIMEOUT);
 
+        switch(dwRes)
+        {
+            // Read completed.
+        case WAIT_OBJECT_0:
+            if (!GetOverlappedResult(hSerial, &osReadWrite, &dwByte, FALSE))
+            {
+                cout << "error in communication \n";
+            } // Error in communications; report it.
+            else
+            {
+                // cout << "read complete success\n";
+                // cout << dwRes << "\n";
+                // Read completed successfully.
+                //  Reset flag so that another opertion can be issued.
+                fWaitingOnRead = FALSE;
+            }
+            break;
+
+        case WAIT_TIMEOUT:
+            // Operation isn't complete yet. fWaitingOnRead flag isn't
+            // changed since I'll loop back around, and I don't want
+            // to issue another read until the first one finishes.
+            //
+            // This is a good time to do some background work.
+            cout << "operation not complete Wait_TIMEOUT\n";
+            break;
+
+        default:
+            // Error in the WaitForSingleObject; abort.
+            // This indicates a problem with the OVERLAPPED structure's
+            // event handle.
+            cout << "Error in wait for single object \n";
+            break;
+        }
     }
-cout << "szBuff2 efter: " << szBuff2 << "\n";
- cout << "szBuff2[1] : " << szBuff2[1] << "  szBuff2[2] : " << szBuff2[2] <<  "\n";
-
+    /************************************************************************************************/
+    //FlushFileBuffers(hSerial);
+    return szBuff2[0];
+}
 /*****************************************************************/
-/****** Stäng serieportar ****************/
-
-
-
-
-
-
-int main()
-{
-
-   HANDLE hSerial;
-   OVERLAPPED osWrite = {0};
-    hSerial = Settup_BT();
-
-while(1)
-{
-
-if (sf::Keyboard::isKeyPressed(sf::Keyboard::W))
-    {
-       Send_to_Bt(1,hSerial,osWrite);
-    }
-else if(sf::Keyboard::isKeyPressed(sf::Keyboard::D))
-    {
-       Send_to_Bt(2,hSerial,osWrite);
-    }
-    else if(sf::Keyboard::isKeyPressed(sf::Keyboard::A))
-    {
-       Send_to_Bt(3,hSerial,osWrite);
-    }
-    else if(sf::Keyboard::isKeyPressed(sf::Keyboard::S))
-    {
-        Send_to_Bt(4,hSerial,osWrite);
-    }
-    else if(sf::Keyboard::isKeyPressed(sf::Keyboard::E))
-    {
-        Send_to_Bt(5,hSerial,osWrite);
-    }
-    else if(sf::Keyboard::isKeyPressed(sf::Keyboard::Q))
-    {
-        Send_to_Bt(6,hSerial,osWrite);
-    }
-    else
-    {
-      // Send_to_Bt(0,hSerial,osWrite);
-    }
-}
-CloseHandle(hSerial);
-
-return 0;
-
-}
