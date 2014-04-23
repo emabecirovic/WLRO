@@ -1,11 +1,3 @@
-/*
- * GccApplication1.c
- *
- * Created: 2014-04-17 11:15:24
- *  Author: Ema
- */ 
-
-
 #include <avr/io.h>
 #include <avr/delay.h>
 #include <avr/interrupt.h>
@@ -42,7 +34,7 @@ volatile unsigned char storedValues[11];
 double sensor1r, sensor2r, sensorfront;
 float sensordiff;
 volatile float sensormeanr;
-int K = 2;
+int K = 7;
 volatile float rightpwm;
 volatile float leftpwm;
 char emadistance = 0;
@@ -166,15 +158,16 @@ void initiate_request_timer()
 	OCR0B = 0xFF; // 255
 	// 261120 st klockcykler
 }
+
 void initiation()
 {
 	//Sätter utgångar/ingångar    (Kanske skriva en initieringsfunktion för allt detta? /Robert)
 	DDRA=0b11111111;
 	DDRC=0b11000001;
 	DDRD=0b11100000;
-	TCCR1A=0b10010001; //setup, phase correct PWM
+	TCCR1A=0b10000001; //setup, phase correct PWM
 	TCCR1B=0b00000010; //sätter hastigheten på klockan
-	TCCR2A=0b10010001;
+	TCCR2A=0b10000001;
 	TCCR2B=0b00000010;
 	//Till displayen, vet inte om det behövs men den är efterbliven
 	PORTA=0b00110000;
@@ -397,71 +390,22 @@ int main()
 				sensordiff = storedValues[2] - storedValues[1];
 			}
 			//sensordiff =  abs(storedValues[1]-storedValues[2]);/*sensor1r-sensor2r;*/
-			sensormeanr = (storedValues[1] + storedValues[2]) / 2;/*sensor1r+sensor2r;*/
+			sensormeanr = /*(storedValues[1] + storedValues[2]) / 2;*/ (sensor1r + sensor2r) / 2;
 		
 			//print_on_lcd(sensormeanr);
 			
 			//if(sensorfront>100)
 			//{
-				/*if((sensor1r - sensor2r) < 20) // <20cm   Byt plats på höger och vänster för att reglera mot vänster vägg
+				if((sensor1r - sensor2r) < 20) // <20cm   Byt plats på höger och vänster för att reglera mot vänster vägg
 				{
 					PORTC = 0x01;
-					//PORTC |= (1<<PORTC0);
-					PORTD |= (1<<PORTD6);
-					rightpwm = 120 + K * (-67 + sensormeanr);
-					leftpwm = 120 - K * (-67 + sensormeanr);
+					PORTD = 0x40;
+					rightpwm = 120 + K * (9 - sensormeanr);
+					leftpwm = 120 - K * (9 - sensormeanr);
 					
-					volatile char high = 255;
-					volatile char low = 0;
-					volatile char zero = 0;
 					
-					if (storedValues[1] == storedValues[2])
-					{
-						OCR2A = high;
-						asm("");
-						OCR1A = high;
-						
-						print_on_lcd(0);
-					}
-					else if (storedValues[1] < storedValues[2])
-					{
-						OCR2A = high;
-						asm("");
-						OCR1A = low;
-						print_on_lcd(10);
-					}
-					else
-					{
-						OCR2A = low;
-						asm("");
-						OCR1A = high;						
-						print_on_lcd(11);
-						//print_on_lcd(leftpwm - rightpwm);
-					}*/
 					
-					/*if (rightpwm == leftpwm)
-					{
-						OCR1A = 120;
-						OCR2A = 120;
-						
-						print_on_lcd(0);
-					}
-					else if (rightpwm < leftpwm)
-					{
-						OCR1A = 30;
-						OCR2A = 180;
-						print_on_lcd(10);
-					}
-					else
-					{
-						OCR1A = 180;
-						OCR2A = 30;
-						print_on_lcd(11);
-						//print_on_lcd(leftpwm - rightpwm);
-					}*/
-					//_delay_ms(1000);
-					
-					/*if (rightpwm > 255)
+					if (rightpwm > 255)
 					{
 						OCR1A = 255;
 						//OCR2A = 90;
@@ -487,50 +431,17 @@ int main()
 					else
 					{
 						OCR2A = leftpwm;
-					}*/
+					}
 					TransmitComm(0);
-			/*}
+				}
 				else
 				{
-					OCR1A = 30;
-					OCR2A = 30;
+					OCR1A = 0;
+					OCR2A = 0;
 					//print_on_lcd(sensordiff);
 				}
 				//print_on_lcd(OCR1A);	*/			
-			//}
-			PORTC = 0x01;
-			PORTD = 0x40;
-			for (double i = 0; i < 50000; i++)
-			{
-				OCR1A = 30;
-				OCR2A = 30;
-			}
-			for (double i = 0; i < 50000; i++)
-			{
-				OCR1A = 100;
-				OCR2A = 250;
-			}
-			for (double i = 0; i < 50000; i++)
-			{
-				OCR1A = 0;
-				OCR2A = 0;
-			}
-			for (double i = 0; i < 50000; i++)
-			{
-				OCR1A = 30;
-				OCR2A = 30;
-			}
-			for (double i = 0; i < 50000; i++)
-			{
-				OCR1A = 250;
-				OCR2A = 100;
-			}
-			for (double i = 0; i < 50000; i++)
-			{
-				OCR1A = 0;
-				OCR2A = 0;
-			}
-			
+			//}		
 		}
 	}
 	return 0;
