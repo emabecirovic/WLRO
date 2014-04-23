@@ -348,26 +348,16 @@ int main()
 				TransmitSensor(0x00);
 				start_request = 0;
 			
-				//print_on_lcd(storedValues[2]);
-				//_delay_ms(1000);
-			
-				//emadistance = emadistance + storedValues[5];
-				//print_on_lcd(storedValues[5]); 0D då stilla... Ibland 0E?
-				//_delay_ms(1000);
-			
-				/*if (storedValues[1] > storedValues[2])
-				{
-					print_on_lcd(storedValues[1] - storedValues[2]);
-				}
-				else
-				{
-					print_on_lcd(storedValues[2] - storedValues[1]);
-				}
-				_delay_ms(1000);*/
+				
+				emadistance = emadistance + storedValues[5];
+				print_on_lcd(storedValues[5]);// 0D då stilla... Ibland 0E?
+				_delay_ms(1000);
 				
 				TCCR0B = 0b0000101; // Start timer
 			}
 			
+			//REGLERING
+			//Omvandling till centimeter
 			//sensor1r = ((1/storedValues[1]) - 0.000741938763948) / 0.001637008132828;
 			sensor1r = storedValues[1];
 			sensor1r = 1/sensor1r;
@@ -380,26 +370,17 @@ int main()
 			sensor2r = sensor2r - 0.000741938763948;
 			sensor2r = sensor2r / 0.001637008132828;	
 
-			sensorfront = storedValues[0]; //((1/storedValues[0]) -  0.001086689563586) / 0.000191822821525;
-			if (storedValues[1] > storedValues[2])
-			{
-				sensordiff =  storedValues[1] - storedValues[2];
-			}
-			else
-			{
-				sensordiff = storedValues[2] - storedValues[1];
-			}
-			//sensordiff =  abs(storedValues[1]-storedValues[2]);/*sensor1r-sensor2r;*/
-			sensormeanr = /*(storedValues[1] + storedValues[2]) / 2;*/ (sensor1r + sensor2r) / 2;
-		
-			//print_on_lcd(sensormeanr);
+			sensorfront = storedValues[0]; 
+			sensormeanr = (sensor1r + sensor2r) / 2;			
 			
 			//if(sensorfront>100)
 			//{
+				//Om Skillnaden mellan första och andra större än 20 har vi stött på en högersväng
 				if((sensor1r - sensor2r) < 20) // <20cm   Byt plats på höger och vänster för att reglera mot vänster vägg
 				{
 					PORTC = 0x01;
 					PORTD = 0x40;
+					//P-reglering
 					rightpwm = 120 + K * (9 - sensormeanr);
 					leftpwm = 120 - K * (9 - sensormeanr);
 					
@@ -408,17 +389,14 @@ int main()
 					if (rightpwm > 255)
 					{
 						OCR1A = 255;
-						//OCR2A = 90;
 					}
 					else if(rightpwm < 0)
 					{					
 						OCR1A = 0;
-						//OCR2A = 180;
 					}
 					else
 					{
 						OCR1A = rightpwm;
-						//OCR2A=leftpwm;
 					}
 					if (leftpwm > 255)
 					{
@@ -438,14 +416,15 @@ int main()
 				{
 					OCR1A = 0;
 					OCR2A = 0;
-					//print_on_lcd(sensordiff);
 				}
-				//print_on_lcd(OCR1A);	*/			
+				
+					
 			//}		
 		}
 	}
 	return 0;
 }
+
 ISR(TIMER0_COMPB_vect)
 {
 	TCCR0B = 0b0000000; //stop timer
