@@ -1,5 +1,6 @@
 #include <avr/io.h>
 #include <avr/interrupt.h>
+
 // Namn istället för massa jobbiga siffror /Robert
 char front = 0b00000001;
 char rightfront = 0b00000010;
@@ -11,8 +12,11 @@ char gyro = 0b00000111;
 char RFID = 0b00001000;
 char stop = 0x00; //Stopbyte
 char selection; // Används i skicka avbrottet
+
 char i = 0; //Vilken sensor jag använder
 char m = 0; //Hur många gånger jag har gått igenom sensorn.
+const char samplings = 8;
+
 char calibrated = 0;
 unsigned char dFront[8];
 unsigned char dRight_Front[8];
@@ -32,8 +36,10 @@ float dummy;
 long n = 0;
 long timer = 0;
 long j = 0;
+
 char start_sample = 0;
 volatile char ad_complete = 0;
+
 void bubble_sort(unsigned char a[], int size)
 {
 	int k, l, temp;
@@ -96,8 +102,10 @@ void initiate_sensormodul(void)
 	sei();
 	USART_Init(25);
 	UCSR0B = (0<<RXEN0)|(0<<TXEN0); //Stäng av USART
+	//Kalibrera gyro, sätt sedan ADMUX till 0 så att vi får Frontsensor
 	ADCSRA = 0b11001011;
 	ADMUX = 0;
+	
 	TCCR0B = 0x00; //stop
 	TCNT0 = 0x00; //set count
 	OCR0B  = 0x04;  //set compare
@@ -115,6 +123,8 @@ void find_RFID(void) //Vet inte riktigt hur vi ska leta RFID, men det är ett my
 		}
 	}
 }
+
+//Timer för samplehastighet
 void initiate_sample_timer()
 {
 	TIMSK1 = 0b00000100; //Enable interupt vid matchning med OCR1B	TCCR1B =0x00;
@@ -123,6 +133,7 @@ void initiate_sample_timer()
 	OCR1BH = 0x00;
 	OCR1BL = 0x60; //RANDOM! När ska comparen triggas? SAMPLING
 }
+
 int main(void)
 {
 	SlaveInit();
@@ -139,7 +150,9 @@ int main(void)
 		{
 			dummy = 1;
 		}
+		
 		asm("");
+		
 		if(ad_complete == 1)
 		{
 			ad_complete = 0;
@@ -155,9 +168,9 @@ int main(void)
 				if(i == 0)
 				{
 					dFront[m] = ADC >> 2;
-					if (m == 7)
+					if (m == samplings - 1)
 					{
-						bubble_sort(dFront, 8);
+						bubble_sort(dFront, samplings);
 						sortedValues[0] = dFront[1];
 						i = i + 1;
 						m = 0;
@@ -168,12 +181,12 @@ int main(void)
 						m = m + 1;
 					}
 				}
-				if(i == 1)
+				else if(i == 1)
 				{
 					dRight_Front[m] = ADC >> 2;
-					if (m == 7)
+					if (m == samplings - 1)
 					{
-						bubble_sort(dRight_Front, 8);
+						bubble_sort(dRight_Front, samplings);
 						sortedValues[1] = dRight_Front[1];
 						i = i + 1;
 						m = 0;
@@ -184,12 +197,12 @@ int main(void)
 						m = m + 1;
 					}
 				}
-				if(i == 2)
+				else if(i == 2)
 				{
 					dRight_Back[m] = ADC >> 2;
-					if (m == 7)
+					if (m == samplings - 1)
 					{
-						bubble_sort(dRight_Back, 8);
+						bubble_sort(dRight_Back, samplings);
 						sortedValues[2] = dRight_Back[1];
 						i = i + 1;
 						m = 0;
@@ -200,12 +213,12 @@ int main(void)
 						m = m + 1;
 					}
 				}
-				if(i == 3)
+				else if(i == 3)
 				{
 					dLeft_Front[m] = ADC >> 2;
-					if (m == 7)
+					if (m == samplings - 1)
 					{
-						bubble_sort(dLeft_Front, 8);
+						bubble_sort(dLeft_Front, samplings);
 						sortedValues[3] = dLeft_Front[1];
 						i = i + 1;
 						m = 0;
@@ -216,12 +229,12 @@ int main(void)
 						m = m + 1;
 					}
 				}
-				if(i ==	4)
+				else if(i ==	4)
 				{
 					dLeft_Back[m] = ADC >> 2;
-					if (m == 7)
+					if (m == samplings - 1)
 					{
-						bubble_sort(dLeft_Back, 8);
+						bubble_sort(dLeft_Back, samplings);
 						sortedValues[4] = dLeft_Back[1];
 						i = i + 1;
 						m = 0;
@@ -232,7 +245,7 @@ int main(void)
 						m = m + 1;
 					}
 				}
-				if(i == 5)
+				else if(i == 5)
 				{
 					tempDistance = dDist;
 					dDist = ADC >> 2;
@@ -243,7 +256,7 @@ int main(void)
 					i = i + 1;
 					ADMUX = i;
 				}
-				if(i == 6)
+				else if(i == 6)
 				{
 					dGyro = ADC >> 2;
 					if ((dGyro < gyroref + 2) && (dGyro > gyroref - 2))
@@ -310,7 +323,7 @@ ISR(SPI_STC_vect) // Skicka på buss!! // Robert
 	{
 		SPDR = Distance;
 		asm("");
-		Distance = 0;
+		//Distance = 0;
 	}
 	else if (selection == gyro)
 	{
