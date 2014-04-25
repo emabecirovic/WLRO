@@ -15,11 +15,11 @@ char leftback = 0b00000101;
 char traveldist = 0b00000110;
 char gyro = 0b00000111;
 char RFID = 0b00001000;
+char stop = 0x00; //Stop byte
 
 char direction = 0b00001001;
 char rightspeed = 0b00001010;
 char leftspeed = 0b00001011;
-char stop = 0x00; //Stop byte
 char start_request = 0;
 //Control signals
 char right = 1;
@@ -29,7 +29,7 @@ bool remoteControl = false;  // Change to Port connected to switch
 bool regulateright = true;
 bool regulateleft = false;
 bool regulateturn = false;
-int time = 50;
+int time = 200;
 volatile unsigned char storedValues[11];
 double sensor1r, sensor2r, sensorfront;
 float sensordiff;
@@ -69,6 +69,7 @@ void MasterInit(void)
 	DDRB = (1<<DDB3)|(1<<DDB4)|(1<<DDB5)|(1<<DDB7);
 	/* Enable SPI, Master, set clock rate fosc/16 */
 	SPCR = (1<<SPE)|(1<<MSTR)|(1<<SPR0);
+	SPCR &=~((1<<CPOL)|(1<<CPHA));
 	/* Set Slave select high */
 	PORTB = (1<<PORTB3)|(1<<PORTB4);
 	/* Enable External Interrupts */
@@ -350,8 +351,8 @@ int main()
 			
 				
 				emadistance = emadistance + storedValues[5];
-				print_on_lcd(storedValues[5]);// 0D då stilla... Ibland 0E?
-				_delay_ms(1000);
+				//print_on_lcd(storedValues[5]);// 0D då stilla... Ibland 0E?
+				//_delay_ms(1000);
 				
 				TCCR0B = 0b0000101; // Start timer
 			}
@@ -410,7 +411,7 @@ int main()
 					{
 						OCR2A = leftpwm;
 					}
-					TransmitComm(0);
+					//TransmitComm(0);
 				}
 				else
 				{
