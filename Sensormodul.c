@@ -11,7 +11,7 @@ char traveldist = 0b00000110;
 char gyro = 0b00000111;
 char RFID = 0b00001000;
 char stop = 0x00; //Stopbyte
-char selection; // Används i skicka avbrottet
+volatile char selection; // Används i skicka avbrottet
 
 char i = 0; //Vilken sensor jag använder
 char m = 0; //Hur många gånger jag har gått igenom sensorn.
@@ -62,7 +62,7 @@ void SlaveInit(void)
 	DDRB = (1<<DDB6);
 	/* Enable SPI */
 	SPCR = (1<<SPE)|(1<<SPIE);
-	/* Enable External Interrupt */
+	SPCR &=~((1<<CPOL)|(1<<CPHA));	/* Enable External Interrupt */
 	//	sei();
 }
 char SlaveRecieve(void) // Används inte just nu men....
@@ -72,6 +72,7 @@ char SlaveRecieve(void) // Används inte just nu men....
 	;
 	/* Return Data Register */
 	return SPDR;
+	
 }
 void USART_Init( unsigned int baud )
 {
@@ -297,7 +298,8 @@ ISR(ADC_vect)
 }
 ISR(SPI_STC_vect) // Skicka på buss!! // Robert
 {
-	char selection = SPDR;
+	SPDR = 0; //Dummyskrivning
+	selection = SPDR;
 	if(selection == front)
 	{
 		SPDR = sortedValues[0];
@@ -337,6 +339,7 @@ ISR(SPI_STC_vect) // Skicka på buss!! // Robert
 	}
 	else if (selection == stop)
 	{
+		dummy = 1;
 		// behöver förmodligen inte göra något här
 	}
 }
