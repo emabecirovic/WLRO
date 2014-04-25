@@ -120,37 +120,37 @@ for(int i = 0; i < 11; i++)
 	{
 		USARTWriteChar(front);
 	}
-	else if (i == 0)
+	else if (i == 1)
 	{
 		USARTWriteChar(rightfront);
 	}
-	else if (i == 0)
+	else if (i == 2)
 	{
 		USARTWriteChar(rightback);
 	}
-	else if (i == 0)
+	else if (i == 3)
 	{
 		USARTWriteChar(leftfront);
 	}
-	else if (i == 0)
+	else if (i == 4)
 	{
 		USARTWriteChar(leftback);
 	}
-	else if (i == 0)
+	else if (i == 5)
 	{
 		USARTWriteChar(traveldist);
 		//Distance = 0;
 	}
-	else if (i == 0)
+	else if (i == 6)
 	{
 		USARTWriteChar(gyro);
 		//sendGyro = 0;
 	}
-	else if (i == 0)
+	else if (i == 7)
 	{
 		USARTWriteChar(RFID);
 	}
-	else if (i == 0)
+	else if (i == 8)
 	{
 		// behöver förmodligen inte göra något här
 	}
