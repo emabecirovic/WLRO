@@ -61,13 +61,10 @@ void MasterInit(void)
 	DDRB = (1<<DDB3)|(1<<DDB4)|(1<<DDB5)|(1<<DDB7);
 
 	/* Enable SPI, Master, set clock rate fosc/16 */
-	SPCR = (1<<SPE)|(1<<MSTR)|(1<<SPR0);
+	SPCR = (1<<SPE)|(1<<MSTR)|(1<<SPI2X)|(1<<SPR1)|(0<<SPR0)|(1<<CPHA)|(1<<CPOL);
 
-	/* Set Slave select high */
 	PORTB = (1<<PORTB3)|(1<<PORTB4);
-	/*Set global interupts*/
-	sei();
-} 
+}  
 
 
 void MasterTransmit(char cData)
@@ -235,14 +232,15 @@ int index = 0; // index for recieved storedValue from buss
 
 void SlaveInit(void)
 {
+	
 	/* Set MISO output, all others input */
 	DDRB = (1<<DDB6);
-
-	/* Enable SPI */
-	SPCR = (1<<SPE)|(1<<SPIE);
 	
-	/* Enable external interrupts */
+	/* Enable Global Interrupt */
 	sei();
+	
+	/* Enable SPI and interrupts */
+	SPCR = (1<<SPE)|(1<<SPIE)|(1<<CPHA)|(1<<CPOL);
 }
 
 char SlaveRecieve(void)
@@ -322,14 +320,15 @@ bool isRFID = true;
 
 void SlaveInit(void)
 {
+	
 	/* Set MISO output, all others input */
 	DDRB = (1<<DDB6);
-
-	/* Enable External Interrupt */
+	
+	/* Enable Global Interrupt */
 	sei();
-
-	/* Enable SPI */
-	SPCR = (1<<SPE)|(1<<SPIE);
+	
+	/* Enable SPI and interrupts */
+	SPCR = (1<<SPE)|(1<<SPIE)|(1<<CPHA)|(1<<CPOL);
 }
 
 char SlaveRecieve(void)
