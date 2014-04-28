@@ -34,7 +34,7 @@ volatile unsigned char storedValues[11];
 double sensor1r, sensor2r, sensorfront;
 float sensordiff;
 volatile float sensormeanr;
-int K = 7;
+int K = 4;
 volatile float rightpwm;
 volatile float leftpwm;
 char emadistance = 0;
@@ -67,14 +67,16 @@ void MasterInit(void)
 	/* Ersätt DDR_SPI med den port "serie" som används ex DD_SPI -> DDRB
 	samt DD_MOSI och DD_SCK med specifik pinne ex DD_MOSI -> DDB5 */
 	DDRB = (1<<DDB3)|(1<<DDB4)|(1<<DDB5)|(1<<DDB7);
+
 	/* Enable SPI, Master, set clock rate fosc/16 */
-	SPCR = (1<<SPE)|(1<<MSTR)|(1<<SPR0);
-	SPCR &=~((1<<CPOL)|(1<<CPHA));
-	/* Set Slave select high */
+	SPCR = (1<<SPE)|(1<<MSTR)|(0<<SPI2X)|(1<<SPR1)|(0<<SPR0)|(1<<CPHA)|(1<<CPOL);
+
 	PORTB = (1<<PORTB3)|(1<<PORTB4);
+	
 	/* Enable External Interrupts */
 	sei();
 }
+
 void MasterTransmit(char cData)
 {
 	/* Start transmission */
@@ -83,6 +85,7 @@ void MasterTransmit(char cData)
 	while(!(SPSR & (1<<SPIF)))
 	;
 }
+
 void TransmitSensor(char invalue)
 {
 	PORTB &= 0b11101111; // ss2 low
