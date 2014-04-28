@@ -31,7 +31,7 @@ bool remoteControl = false;  // Change to Port connected to switch
 bool regulateright = true;
 bool regulateleft = false;
 bool regulateturn = false;
-int time = 50;
+int time = 100;
 
 unsigned char storedValues[11] = {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1};
 
@@ -49,7 +49,7 @@ void MasterInit(void)
 	DDRB = (1<<DDB3)|(1<<DDB4)|(1<<DDB5)|(1<<DDB7);
 
 	/* Enable SPI, Master, set clock rate fosc/16 */
-	SPCR = (1<<SPE)|(1<<MSTR)|(1<<SPR0);
+	SPCR = (1<<SPE)|(1<<MSTR)(1<<SPI2X)|(1<<SPR1)|(1<<SPR0)|(1<<CPHA)|(1<<CPOL);
 
 	/* Set Slave select high */
 	PORTB = (1<<PORTB3)|(1<<PORTB4);
@@ -74,7 +74,8 @@ void MasterTransmit(char cData)
 void TransmitSensor(char invalue)
 {
 	PORTB &= 0b11101111; // ss2 low
-
+	
+	for(int i = 0; i < time; i++){}
 	MasterTransmit(RFID);
 	//First communication will contain crap on shift register
 	for(int i = 0; i < time; i++){}
@@ -82,26 +83,31 @@ void TransmitSensor(char invalue)
 	for(int i = 0; i < time; i++){}
 	storedValues[7] = SPDR; // SensorRFID
 	MasterTransmit(front); // Request front sensor
+	for(int i = 0; i < time; i++){}
 	storedValues[5] = SPDR; // Distance
 
 	if(invalue == right)
 	{
 		MasterTransmit(rightfront);
+		for(int i = 0; i < time; i++){}
 		storedValues[0] = SPDR; // Front
 		MasterTransmit(rightback);
 		for(int i = 0; i < time; i++){}
 		storedValues[1] = SPDR; // Right front
 		MasterTransmit(stop);
+		for(int i = 0; i < time; i++){}
 		storedValues[2] = SPDR; // Right back
 	}
 	else if(invalue == left)
 	{
 		MasterTransmit(leftfront);
+		for(int i = 0; i < time; i++){}
 		storedValues[0] = SPDR; // Front
 		MasterTransmit(leftback);
 		for(int i = 0; i < time; i++){}
 		storedValues[3] = SPDR; // Left front
 		MasterTransmit(stop);
+		for(int i = 0; i < time; i++){}
 		storedValues[4] = SPDR; // Left back
 	}
 	else if(invalue == turn)
@@ -110,12 +116,14 @@ void TransmitSensor(char invalue)
 		for(int i = 0; i < time; i++){}
 		storedValues[0] = SPDR; // Front
 		MasterTransmit(stop);
+		for(int i = 0; i < time; i++){}
 		storedValues[6] = SPDR; // Gyro
 	}
 	else
 	{
 		for(int i = 0; i < time; i++){}
 		MasterTransmit(stop);
+		for(int i = 0; i < time; i++){}
 		storedValues[0] = SPDR; // Front
 	}
 
