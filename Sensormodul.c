@@ -61,8 +61,8 @@ void SlaveInit(void)
 	/* Set MISO output, all others input */
 	DDRB = (1<<DDB6);
 	/* Enable SPI */
-	SPCR = (1<<SPE)|(1<<SPIE);
-	SPCR &=~((1<<CPOL)|(1<<CPHA));	/* Enable External Interrupt */
+	SPCR = (1<<SPE)|(1<<SPIE)|(1<<CPHA)|(1<<CPOL);
+	/* Enable External Interrupt */
 	//	sei();
 }
 char SlaveRecieve(void) // Används inte just nu men....
@@ -331,7 +331,7 @@ ISR(SPI_STC_vect) // Skicka på buss!! // Robert
 	{
 		SPDR = sendGyro;
 		asm("");
-		sendGyro = 0;
+		//sendGyro = 0;
 	}
 	else if (selection == RFID)
 	{
