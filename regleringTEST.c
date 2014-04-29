@@ -391,8 +391,8 @@ int main()
 					//rightpwm = 120 + K * (9 - sensormeanr);
 					//leftpwm = 120 - K * (9 - sensormeanr);
 					//PD-reglering
-					rightpwm = 120 + K * (9-sensormeanr + Td * (sensormeanr-sensormeanr_old))
-					leftpwm = 120 - K * (9-sensormeanr + Td * (sensormeanr-sensormeanr_old))
+					rightpwm = 120 + K * (9-sensormeanr + Td * (sensormeanr-sensormeanr_old));
+					leftpwm = 120 - K * (9-sensormeanr + Td * (sensormeanr-sensormeanr_old));
 					
 					
 					if (rightpwm > 255)
