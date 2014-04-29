@@ -27,11 +27,17 @@ unsigned char sortedValues[5];
 unsigned char dDist;
 unsigned char tempDistance;
 char Distance = 0;
-char dGyro;
+
 unsigned char rfid_data;
 char isRFID = 0; //ETTA ELLER NOLLA!
+
+char dGyro;
 char gyroref;
-signed int sendGyro = 0;
+char sendGyro = 0;
+signed long digital_angle = 0;
+float angle = 0;
+float ef = 1;
+
 float dummy;
 long n = 0;
 long timer = 0;
@@ -63,7 +69,7 @@ void SlaveInit(void)
 	/* Enable SPI */
 	SPCR = (1<<SPE)|(1<<SPIE)|(1<<CPHA)|(1<<CPOL);
 	/* Enable External Interrupt */
-	//	sei();
+	// sei();
 }
 char SlaveRecieve(void) // Används inte just nu men....
 {
@@ -72,7 +78,7 @@ char SlaveRecieve(void) // Används inte just nu men....
 	;
 	/* Return Data Register */
 	return SPDR;
-	
+
 }
 void USART_Init( unsigned int baud )
 {
@@ -106,10 +112,10 @@ void initiate_sensormodul(void)
 	//Kalibrera gyro, sätt sedan ADMUX till 0 så att vi får Frontsensor
 	ADCSRA = 0b11001011;
 	ADMUX = 0;
-	
+
 	TCCR0B = 0x00; //stop
 	TCNT0 = 0x00; //set count
-	OCR0B  = 0x04;  //set compare
+	OCR0B = 0x04; //set compare
 	TCCR0B = 0x03; //start timer
 }
 void find_RFID(void) //Vet inte riktigt hur vi ska leta RFID, men det är ett mycket senare problem.
@@ -128,11 +134,104 @@ void find_RFID(void) //Vet inte riktigt hur vi ska leta RFID, men det är ett my
 //Timer för samplehastighet
 void initiate_sample_timer()
 {
-	TIMSK1 = 0b00000100; //Enable interupt vid matchning med OCR1B	TCCR1B =0x00;
+	TIMSK1 = 0b00000100; //Enable interupt vid matchning med OCR1B TCCR1B =0x00;
 	TCNT1 = 0x00;
 	//TCCR1B = 0x03; //Starta samplingsräknare, presscale 64.
 	OCR1BH = 0x00;
 	OCR1BL = 0x60; //RANDOM! När ska comparen triggas? SAMPLING
+}
+
+void calculate_angle()
+{
+	if(digital_angle >= 0)
+	{
+		digital_angle = digital_angle * 9.33;
+	}
+	else
+	{
+		digital_angle = digital_angle * 5,04;
+	}
+	
+	angle = angle + digital_angle * 64 / 244000;
+}
+
+void calculate_sendGyro()
+{
+	sendGyro = 0;
+	
+	if (angle < -180 - ef)
+	{
+		angle = angle + 360;
+	}
+	else if (angle > 180 + ef)
+	{
+		angle = angle - 360;
+	}
+	
+	if(angle >= -180 - ef && angle < -180 + ef)
+	{
+		sendGyro = 0x00;
+	}
+	else if (angle >= -180 + ef && angle < -90 - ef)
+	{
+		sendGyro = 0x10;
+		for(char i = 0; i < 16; i++)
+		{
+			if(angle + 180 >= i * 5.625 && angle + 180 < (i + 1) * 5.625)
+			{
+				sendGyro = sendGyro + i;
+			}
+		}
+	}
+	else if(angle >= -90 - ef && angle < -90 + ef)
+	{
+		sendGyro = 0x20;
+	}
+	else if (angle >= -90 + ef && angle < 0 - ef)
+	{
+		sendGyro = 0x30;
+		for(char i = 0; i < 16; i++)
+		{
+			if(angle + 90 >= i * 5.625 && angle + 90 < (i + 1) * 5.625)
+			{
+				sendGyro = sendGyro + i;
+			}
+		}
+	}
+	else if(angle >= 0 - ef && angle < 0 + ef)
+	{
+		sendGyro = 0x40;
+	}
+	else if (angle >= 0 + ef && angle < 90 - ef)
+	{
+		sendGyro = 0x50;
+		for(char i = 0; i < 16; i++)
+		{
+			if(angle >= i * 5.625 && angle < (i + 1) * 5.625)
+			{
+				sendGyro = sendGyro + i;
+			}
+		}
+	}
+	else if(angle >= 90 - ef && angle < 90 + ef)
+	{
+		sendGyro = 0x60;
+	}
+	else if (angle >= 90 + ef && angle < 180 - ef)
+	{
+		sendGyro = 0x70;
+		for(char i = 0; i < 16; i++)
+		{
+			if(angle - 90 >= i * 5.625 && angle - 90 < (i + 1) * 5.625)
+			{
+				sendGyro = sendGyro + i;
+			}
+		}
+	}
+	else if(angle >= 180 - ef && angle < 180 + ef)
+	{
+		sendGyro = 0x80;
+	}	
 }
 
 int main(void)
@@ -151,9 +250,9 @@ int main(void)
 		{
 			dummy = 1;
 		}
-		
+
 		asm("");
-		
+
 		if(ad_complete == 1)
 		{
 			ad_complete = 0;
@@ -262,15 +361,18 @@ int main(void)
 					dGyro = ADC >> 2;
 					if ((dGyro < gyroref + 2) && (dGyro > gyroref - 2))
 					{
-						sendGyro = sendGyro;
+						digital_angle = 0;
+						TCNT0 = 0x00;
 					}
 					else
 					{
-						dGyro= dGyro - gyroref;
+						digital_angle = dGyro - gyroref;
 						timer = TCNT0;
-						sendGyro = sendGyro + dGyro * timer; //64 är prescalen på timern
+						digital_angle = digital_angle * timer; //64 är prescalen på timern
 						TCNT0 = 0x00; //set count
 					}
+					calculate_angle();
+					calculate_sendGyro();
 					i = 0;
 					ADMUX = i;
 				}
@@ -326,6 +428,7 @@ ISR(SPI_STC_vect) // Skicka på buss!! // Robert
 		SPDR = Distance;
 		asm("");
 		//Distance = 0;
+		
 	}
 	else if (selection == gyro)
 	{
@@ -419,7 +522,7 @@ grader = grader + senastgrader;
 */
 //I PATRIKS KOD BORDE FRAMSENSORN BETE SIG SÅHÄR TYP
 /*
-ICENTIMETER = ((1/DIGITALT) -  0,001086689563586) / 0,000191822821525;
+ICENTIMETER = ((1/DIGITALT) - 0,001086689563586) / 0,000191822821525;
 */
 //I PATRIKS KOD BORDE SIDOSENSORN BETE SIG SÅHÄR TYP
 /*
