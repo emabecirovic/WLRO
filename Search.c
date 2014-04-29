@@ -24,7 +24,7 @@
 
 int[][] createMatrix()
 {
-  int martrix[29][15], i, j;
+  int matrix[29][15], i, j;
 
   for (i = 0; i < 29; i++)
     {
