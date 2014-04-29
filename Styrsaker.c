@@ -834,3 +834,82 @@ int main(void)
 	}
 	return 0;
 }
+
+
+
+
+void rotate90left() // <- NY!
+{	
+	switch(mydirection)
+	case(1):
+	{
+		wanted=0x40
+	}
+	case(2):
+	{
+		wanted=0x60
+	}
+	case(3):
+	{
+		wanted=0x80
+	}
+	case(4):
+	{
+		wanted=0x20
+	}
+	
+	if(gyroema==wanted)
+	{
+		ready=1;
+		OCR2A = 0;
+		OCR1A = 0;
+		if(mydirection==1)
+		{
+			mydirection=4;
+		}
+		else
+		{
+			mydirection-=1;
+		}
+	}
+	else
+	{
+		if(mydirection!=3)
+		{
+			if(gyroema<wanted)
+			{
+				pwmspeed=120-konst*(gyroema-wanted);
+				PORTC = 0x00;
+				PORTD = 0x40;
+				OCR2A = pwmspeed;
+				OCR1A = pwmspeed;
+			}
+			else
+			{
+				pwmspeed=120+konst*(gyroema-wanted);
+				PORTC = 0x01;
+				PORTD = 0x00;
+				OCR2A = pwmspeed;
+				OCR1A = pwmspeed;
+			}
+		}
+		else if(gyroema<0x20)
+		{
+			pwmspeed=120+konst*(wanted);
+			PORTC = 0x01;
+			PORTD = 0x00;
+			OCR2A = pwmspeed;
+			OCR1A = pwmspeed;
+		}
+		else
+		{
+			pwmspeed=120-konst*(gyroema-wanted);
+			PORTC = 0x00;
+			PORTD = 0x40;
+			OCR2A = pwmspeed;
+			OCR1A = pwmspeed;
+		}
+	}
+	OCR2A = 0;
+	OCR1A = 0;
+}
