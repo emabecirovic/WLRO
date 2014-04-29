@@ -309,6 +309,18 @@ int getgyro()
 	return gyro;
 }
 
+void firstlap()
+{
+	if(mypos==startpos)
+	{
+		onelap=1;
+	}
+	else
+	{
+		regleringright();
+	}
+}
+
 void regleringright()
 {
 	DDRC=0b00000001;
