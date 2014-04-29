@@ -375,7 +375,10 @@ int main()
 			sensor2r = sensor2r / 0.001637008132828;	
 
 			sensorfront = storedValues[0]; 
-			sensormeanr = (sensor1r + sensor2r) / 2;			
+			sensormeanr = (sensor1r + sensor2r) / 2;
+			//till PD-reglering
+			float sensormeanr_old;
+			int Td = 1;
 			
 			//if(sensorfront>100)
 			//{
@@ -385,9 +388,11 @@ int main()
 					PORTC = 0x01;
 					PORTD = 0x40;
 					//P-reglering
-					rightpwm = 120 + K * (9 - sensormeanr);
-					leftpwm = 120 - K * (9 - sensormeanr);
-					
+					//rightpwm = 120 + K * (9 - sensormeanr);
+					//leftpwm = 120 - K * (9 - sensormeanr);
+					//PD-reglering
+					rightpwm = 120 + K * (9-sensormeanr + Td * (sensormeanr-sensormeanr_old))
+					leftpwm = 120 - K * (9-sensormeanr + Td * (sensormeanr-sensormeanr_old))
 					
 					
 					if (rightpwm > 255)
@@ -415,6 +420,7 @@ int main()
 						OCR2A = leftpwm;
 					}
 					//TransmitComm(0);
+					sensormeanr_old = sensormeanr;
 				}
 				else
 				{
