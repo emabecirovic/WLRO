@@ -26,15 +26,15 @@ char right = 1;
 char left = 2;
 char turn = 3;
 bool remoteControl = false;  // Change to Port connected to switch
-bool regulateright = true;
+bool regulateright = false;
 bool regulateleft = false;
-bool regulateturn = false;
+bool regulateturn = true;
 int time = 200;
 volatile unsigned char storedValues[11];
 double sensor1r, sensor2r, sensorfront;
 float sensordiff;
 volatile float sensormeanr;
-int K = 4;
+int K = 2;
 volatile float rightpwm;
 volatile float leftpwm;
 char emadistance = 0;
@@ -58,7 +58,8 @@ char lcde = 0b01000101;
 char lcdf = 0b01000110;
 char lcdspace = 0b00100000;
 
-
+char turnready = 0;
+char mydirection = 2;
 
 
 void MasterInit(void)
@@ -72,7 +73,7 @@ void MasterInit(void)
 	SPCR = (1<<SPE)|(1<<MSTR)|(0<<SPI2X)|(1<<SPR1)|(0<<SPR0)|(1<<CPHA)|(1<<CPOL);
 
 	PORTB = (1<<PORTB3)|(1<<PORTB4);
-	
+
 	/* Enable External Interrupts */
 	sei();
 }
@@ -202,22 +203,11 @@ void initiation()
 	PORTC=0b10000000;
 	_delay_ms(20);
 	//Initiering klar
+	
+	storedValues[6] = 0x40;
+	
 }
-int getgyro()
-{
-	unsigned char sendGyro;
-	//Robert, ge mig sendGyro
-	if(sendGyro >= 0)
-	{
-		sendGyro = sendGyro * 9.33;
-	}
-	else
-	{
-		sendGyro = sendGyro * 5.04;
-	}
-	gyro = sendGyro*64/244000;
-	return gyro;
-}
+
 void writechar(unsigned char data)
 {
 	PORTA=data;
@@ -313,7 +303,7 @@ void print_on_lcd(char number)
 	char highnumber = number >> 4;
 	highnumber = highnumber & 0b00001111;
 	char lownumber = number & 0b00001111;
-	
+
 	writechar(what_lcd_number(highnumber));
 	//shift(1);
 	writechar(what_lcd_number(lownumber));
@@ -326,6 +316,96 @@ void print_on_lcd(char number)
 
 
 
+void rotate90left() // <- NY!
+{
+	char wanted;
+	char konst = 3;
+	char pwmspeed;
+	
+	switch(mydirection)
+	{
+		case(1):
+		{
+			wanted = 0x40;
+		}
+		case(2):
+		{
+			wanted = 0x60;
+		}
+		case(3):
+		{
+			wanted = 0x80;
+		}
+		case(4):
+		{
+			wanted = 0x20;
+		}
+		default:
+		{
+			OCR2A = 0;
+			OCR1A = 0;
+		}
+	}
+
+	if(storedValues[6] == wanted)
+	{
+		turnready = 1;
+		OCR2A = 0;
+		OCR1A = 0;
+		if(mydirection == 1)
+		{
+			mydirection = 4;
+		}
+		else
+		{
+			mydirection -= 1;
+		}
+	}
+	else
+	{
+		if(mydirection != 3)
+		{
+			if(storedValues[6] < wanted)
+			{
+				pwmspeed = 120 - konst * (storedValues[6] - wanted);
+				PORTC = 0x00;
+				PORTD = 0x40;
+				OCR2A = pwmspeed;
+				OCR1A = pwmspeed;
+			}
+			else
+			{
+				pwmspeed = 120 + konst * (storedValues[6] - wanted);
+				PORTC = 0x01;
+				PORTD = 0x00;
+				OCR2A = pwmspeed;
+				OCR1A = pwmspeed;
+			}
+		}
+		else if(storedValues[6] < 0x20)
+		{
+			pwmspeed = 120 + konst * (wanted);
+			PORTC = 0x01;
+			PORTD = 0x00;
+			OCR2A = pwmspeed;
+			OCR1A = pwmspeed;
+		}
+		else
+		{
+			pwmspeed = 120 - konst * (storedValues[6] - wanted);
+			PORTC = 0x00;
+			PORTD = 0x40;
+			OCR2A = pwmspeed;
+			OCR1A = pwmspeed;
+		}
+	}
+}
+
+
+
+
+
+
 int main()
 {
 	initiation();
@@ -333,12 +413,12 @@ int main()
 	_delay_ms(40000);
 	initiate_request_timer();
 	int fjarrstyrt = (PIND & 0x01); //1 då roboten är i fjärrstyrt läge
-	
+
 	if(fjarrstyrt==1)
 	{
 		while(1)
 		{
-		
+
 			if(start_request == 1)
 			{
 				start_request = 0;
@@ -351,25 +431,36 @@ int main()
 				else
 				TransmitSensor(0x00);
 				start_request = 0;
-			
 				
-				emadistance = emadistance + storedValues[5];
-				//print_on_lcd(storedValues[5]);// 0D då stilla... Ibland 0E?
-				//_delay_ms(1000);
-				
+				print_on_lcd(storedValues[6]);
+				_delay_ms(1000);
+
 				TCCR0B = 0b0000101; // Start timer
 			}
+			
+			/*
+			//VÄNSTERSVÄNG!
+			if (turnready == 0)
+			{
+				rotate90left();
+			}
+			else
+			{
+				OCR2A = 0;
+				OCR1A = 0;
+			}
+			*/
 			
 			//REGLERING
 			//Omvandling till centimeter
 			//sensor1r = ((1/storedValues[1]) - 0.000741938763948) / 0.001637008132828;
-			sensor1r = storedValues[1];
+			sensor1r = storedValues[3];
 			sensor1r = 1/sensor1r;
 			sensor1r = sensor1r - 0.000741938763948;
 			sensor1r = sensor1r / 0.001637008132828;
 
 			//sensor2r = ((1/storedValues[2]) - 0.000741938763948) / 0.001637008132828;
-			sensor2r = storedValues[2];
+			sensor2r = storedValues[4];
 			sensor2r= 1/sensor2r;
 			sensor2r = sensor2r - 0.000741938763948;
 			sensor2r = sensor2r / 0.001637008132828;	
@@ -377,9 +468,9 @@ int main()
 			sensorfront = storedValues[0]; 
 			sensormeanr = (sensor1r + sensor2r) / 2;
 			//till PD-reglering
-			float sensormeanr_old;
-			int Td = 1;
-			
+			//float sensormeanr_old;
+			//float Td = 2;
+
 			//if(sensorfront>100)
 			//{
 				//Om Skillnaden mellan första och andra större än 20 har vi stött på en högersväng
@@ -388,13 +479,13 @@ int main()
 					PORTC = 0x01;
 					PORTD = 0x40;
 					//P-reglering
-					//rightpwm = 120 + K * (9 - sensormeanr);
-					//leftpwm = 120 - K * (9 - sensormeanr);
+					rightpwm = 120 - K * (9 - sensormeanr);
+					leftpwm = 120 + K * (9 - sensormeanr);
 					//PD-reglering
-					rightpwm = 120 + K * (9-sensormeanr + Td * (sensormeanr-sensormeanr_old));
-					leftpwm = 120 - K * (9-sensormeanr + Td * (sensormeanr-sensormeanr_old));
-					
-					
+					//rightpwm = 120 - K * (9-sensormeanr + Td * (9-(sensormeanr-sensormeanr_old)));
+					//leftpwm = 120 + K * (9-sensormeanr + Td * (9-(sensormeanr-sensormeanr_old)));
+
+
 					if (rightpwm > 255)
 					{
 						OCR1A = 255;
@@ -420,7 +511,7 @@ int main()
 						OCR2A = leftpwm;
 					}
 					//TransmitComm(0);
-					sensormeanr_old = sensormeanr;
+					//sensormeanr_old = sensormeanr;
 				}
 				else
 				{
@@ -428,7 +519,7 @@ int main()
 					OCR2A = 0;
 				}
 				
-					
+
 			//}		
 		}
 	}
