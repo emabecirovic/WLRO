@@ -33,7 +33,7 @@ char isRFID = 0; //ETTA ELLER NOLLA!
 
 char dGyro;
 char gyroref;
-char sendGyro = 0;
+char sendGyro = 0x40;
 signed long digital_angle = 0;
 float angle = 0;
 float ef = 1;
@@ -151,14 +151,14 @@ void calculate_angle()
 	{
 		digital_angle = digital_angle * 5,04;
 	}
-	
+
 	angle = angle + digital_angle * 64 / 244000;
 }
 
 void calculate_sendGyro()
 {
 	sendGyro = 0;
-	
+
 	if (angle < -180 - ef)
 	{
 		angle = angle + 360;
@@ -167,7 +167,7 @@ void calculate_sendGyro()
 	{
 		angle = angle - 360;
 	}
-	
+
 	if(angle >= -180 - ef && angle < -180 + ef)
 	{
 		sendGyro = 0x00;
@@ -180,6 +180,7 @@ void calculate_sendGyro()
 			if(angle + 180 >= i * 5.625 && angle + 180 < (i + 1) * 5.625)
 			{
 				sendGyro = sendGyro + i;
+				break;
 			}
 		}
 	}
@@ -195,6 +196,7 @@ void calculate_sendGyro()
 			if(angle + 90 >= i * 5.625 && angle + 90 < (i + 1) * 5.625)
 			{
 				sendGyro = sendGyro + i;
+				break;
 			}
 		}
 	}
@@ -210,6 +212,7 @@ void calculate_sendGyro()
 			if(angle >= i * 5.625 && angle < (i + 1) * 5.625)
 			{
 				sendGyro = sendGyro + i;
+				break;
 			}
 		}
 	}
@@ -225,13 +228,14 @@ void calculate_sendGyro()
 			if(angle - 90 >= i * 5.625 && angle - 90 < (i + 1) * 5.625)
 			{
 				sendGyro = sendGyro + i;
+				break;
 			}
 		}
 	}
 	else if(angle >= 180 - ef && angle < 180 + ef)
 	{
 		sendGyro = 0x80;
-	}	
+	}
 }
 
 int main(void)
@@ -428,7 +432,7 @@ ISR(SPI_STC_vect) // Skicka på buss!! // Robert
 		SPDR = Distance;
 		asm("");
 		//Distance = 0;
-		
+
 	}
 	else if (selection == gyro)
 	{
