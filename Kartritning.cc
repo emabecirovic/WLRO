@@ -13,14 +13,14 @@
 
 int main()
 
-{int map[29][15], i, j;
+{int array[29][15], i, j;
 
 for (i = 0; i < 29; i++)
   
   {for (j = 0; j < 15; j++)
   
-    {map[i][j] = 0;
-     cout << map[i][j];
+    {array[i][j] = 0;
+     cout << array[i][j];
     }
     
   }
