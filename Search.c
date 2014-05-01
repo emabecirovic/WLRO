@@ -8,6 +8,7 @@
 #include <avr/io.h>
 #include <avr/delay.h>
 #include <avr/interrupt.h> // Robert
+ #define F_CPU 1000000UL
 
  typedef int bool;
  enum{false, true};
@@ -27,6 +28,10 @@ char rightspeed = 0b00001010;
 char leftspeed = 0b00001011;
 char stop = 0x00; //Stop byte
 
+unsigned char storedValues[5];
+char traveled = 0;
+bool RFID;
+char gyro;
 
 
 
@@ -106,17 +111,21 @@ void writechar(unsigned char data)
 
 
 /*********************************BUSSFUNKTIONER******************************/
-void MasterInit(void) //Robert som lägger till saker
+void MasterInit(void)
 {
 	/* Set MOSI and SCK output, alla others input*/
 	/* Ersätt DDR_SPI med den port "serie" som används ex DD_SPI -> DDRB
 	samt DD_MOSI och DD_SCK med specifik pinne ex DD_MOSI -> DDB5 */
 	DDRB = (1<<DDB3)|(1<<DDB4)|(1<<DDB5)|(1<<DDB7);
 
-	/* Enable SPI, Master, set clock rate fosc/16 */
-	SPCR = (1<<SPE)|(1<<MSTR)|(1<<SPR0);
-
+	/* Enable SPI, Master, set clock rate fosc/64 and mode 3 */
+	SPCR = (1<<SPE)|(1<<MSTR)(1<<SPI2X)|(1<<SPR1)|(1<<SPR0)|(1<<CPHA)|(1<<CPOL);;
+	
+	/* Set Slave select high */
 	PORTB = (1<<PORTB3)|(1<<PORTB4);
+	
+	/* Enable External Interrupts */
+	sei();
 } 
 
 
@@ -131,6 +140,109 @@ void MasterTransmit(char cData)
 	;
 
 	//SPSR = (1<<SPIF);
+}
+
+void bussdelay()
+{
+	for(int i = 0; i < time; i++){}
+}
+
+void TransmitSensor(char invalue)
+{
+	PORTB &= 0b11101111; // ss2 low
+
+	for(int i = 0; i < time; i++){}
+	MasterTransmit(RFID);
+	//First communication will contain crap on shift register
+	for(int i = 0; i < time; i++){}
+	MasterTransmit(traveldist); // Request front sensor
+	for(int i = 0; i < time; i++){}
+	RFID = SPDR; // SensorRFID
+	MasterTransmit(front); // Request front sensor
+	for(int i = 0; i < time; i++){}
+	traveled = SPDR; // Distance
+
+	if(invalue == right)
+	{
+		MasterTransmit(rightfront);
+		for(int i = 0; i < time; i++){}
+		storedValues[0] = SPDR; // Front
+		MasterTransmit(rightback);
+		for(int i = 0; i < time; i++){}
+		storedValues[1] = SPDR; // Right front
+		MasterTransmit(stop);
+		for(int i = 0; i < time; i++){}
+		storedValues[2] = SPDR; // Right back
+	}
+	else if(invalue == left)
+	{
+		MasterTransmit(leftfront);
+		for(int i = 0; i < time; i++){}
+		storedValues[0] = SPDR; // Front
+		MasterTransmit(leftback);
+		for(int i = 0; i < time; i++){}
+		storedValues[3] = SPDR; // Left front
+		MasterTransmit(stop);
+		for(int i = 0; i < time; i++){}
+		storedValues[4] = SPDR; // Left back
+	}
+	else if(invalue == turn)
+	{
+		MasterTransmit(gyro);
+		for(int i = 0; i < time; i++){}
+		storedValues[0] = SPDR; // Front
+		MasterTransmit(stop);
+		for(int i = 0; i < time; i++){}
+		gyro = SPDR; // Gyro
+	}
+	else
+	{
+		MasterTransmit(stop);
+		for(int i = 0; i < time; i++){}
+		storedValues[0] = SPDR; // Front
+	}
+
+	PORTB ^= 0b00010000; // ss2 high
+	//for(int i = 0; i < 100; i++){}
+}
+
+void getAllSensor()
+{
+	PORTB &= 0b11101111; // ss2 low
+
+	for(int i = 0; i < time; i++){}
+	MasterTransmit(RFID);
+	//First communication will contain crap on shift register
+	for(int i = 0; i < time; i++){}
+	MasterTransmit(traveldist); // Request front sensor
+	for(int i = 0; i < time; i++){}
+	RFID = SPDR; // SensorRFID
+	MasterTransmit(front); // Request front sensor
+	for(int i = 0; i < time; i++){}
+	traveled = SPDR; // Distance
+	MasterTransmit(rightfront);
+		for(int i = 0; i < time; i++){}
+		storedValues[0] = SPDR; // Front
+		MasterTransmit(rightback);
+		for(int i = 0; i < time; i++){}
+		storedValues[1] = SPDR; // Right front
+		MasterTransmit(leftfront);
+		for(int i = 0; i < time; i++){}
+		storedValues[2] = SPDR; // Right back
+		MasterTransmit(leftback);
+		for(int i = 0; i < time; i++){}
+		storedValues[3] = SPDR; // Left front
+		MasterTransmit(gyro);
+		for(int i = 0; i < time; i++){}
+		storedValues[4] = SPDR; // Left back
+		MasterTransmit(stop);
+		for(int i = 0; i < time; i++){}
+		gyro = SPDR; // Gyro
+		
+			PORTB ^= 0b00010000; // ss2 high
+		
+		
+	
 }
 
 /******************************FJÄRSTYRNING**********************/
@@ -199,25 +311,25 @@ void updatepos()
 		case (1): // X+
 		{
 			myposX+=1;
-			mypos[0]=myposX;
+			//mypos[0]=myposX;
 			traveled=0;
 		}
 		case (2): // Y+
 		{
 			myposY+=1;
-			mypos[1]=myposY;
+			//mypos[1]=myposY;
 			traveled=0;
 		}
 		case (3): // X-
 		{
 			myposX-=1;
-			mypos[0]=myposX;
+			//mypos[0]=myposX;
 			traveled=0;
 		}
 		case (4): // Y-
 		{
 			myposY-=1;
-			mypos[1]=myposY;
+			//mypos[1]=myposY;
 			traveled=0;
 		}
 	}
@@ -637,6 +749,10 @@ int main(void)
 {
 	MasterInit();
 	Initiation();
+	_delay_ms(40000);
+	initiate_request_timer();
+	
+	getAllSensor();
 
 	int fjarrstyrt = (PIND & 0x01); //1 då roboten är i fjärrstyrt läge
 	
@@ -649,7 +765,10 @@ int main(void)
 	{	
 		while(home==0)
 		{
-			updatepos(traveled);
+			if(traveled >= 40/0.8125) //dividera med sektor 0.8125
+			updatepos();
+			
+			
 			if(onelap==0)
 			{
 				firstlap();
