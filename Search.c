@@ -4,136 +4,13 @@
  * Created: 4/29/2014 9:26 AM
  *  Author: robsv107
  */
- 
- 
- typedef int bool;
- enum{false, true};
- 
- bool onelap = false; //1 då yttervarvet körts
- bool finished = false; //1 då hela kartan utforskad
- bool home = false; //1 då robten återvänt till startposition
- char mydirection = 2; //1=X+ ; 2=Y+ ; 3=X- ; 4=Y-
- char traveled=0; //Hur långt roboten har färdats (sedan senast vi tog emot värden från sensor?)
- unsigned int myposX=0; //Robotens position i X-led
- unsigned int myposY=0; //Robotens position i Y-led
- unsigned int mypos[2]={15,0}; //Vektor med robotens koordinater; (x,y)
- unsigned int startpos[2]={15,0}; //Startpositionen sätts till mitten på nedre lånsidan
- int firstzero; //Första nollan om man läser matrisen uppifrån och ned
- 
- int[][] room = createMatrix();
-
-int[][] createMatrix()
-{
-  int matrix[29][15], i, j;
-
-  for (i = 0; i < 29; i++)
-    {
-      for (j = 0; j < 15; j++)
-      {
-        matrix[i][j] = 0;
-      }
-    }
-    return matrix;
-}
-
-void firstlap();
-{
- //REGLERING
-			//Omvandling till centimeter
-			//sensor1r = ((1/storedValues[1]) - 0.000741938763948) / 0.001637008132828;
-			sensor1r = storedValues[1];
-			sensor1r = 1/sensor1r;
-			sensor1r = sensor1r - 0.000741938763948;
-			sensor1r = sensor1r / 0.001637008132828;
-
-			//sensor2r = ((1/storedValues[2]) - 0.000741938763948) / 0.001637008132828;
-			sensor2r = storedValues[2];
-			sensor2r= 1/sensor2r;
-			sensor2r = sensor2r - 0.000741938763948;
-			sensor2r = sensor2r / 0.001637008132828;	
-
-			sensorfront = storedValues[0]; 
-			sensormeanr = (sensor1r + sensor2r) / 2;
-			//till PD-reglering
-			float sensormeanr_old;
-			int Td = 1;
- 
- 
-}
-
-
-int main()
-{
-  MasterInit();
- 	Initiation();
-
- 	int fjarrstyrt = (PIND & 0x01); //1 då roboten är i fjärrstyrt läge
-
- 	if(fjarrstyrt==1)
- 	 {
- 	 	int button=PINB;
- 	 	fjarrstyr(button);
-	  }
- 	else
-  	{	
-  	 while(1)
-  	 {
-  	  
-  	  if(start_request == 1)
-	    	{
-	   	 	//writechar(0b01001100); //L
-	    		start_request = 0;
-	    		if(regulateright)
-		    	TransmitSensor(right);
-	    		else if(regulateleft)
-	    		TransmitSensor(left);
-	    		else if(regulateturn)
-	    		TransmitSensor(turn);
-	    		else
-	    		TransmitSensor(0x00);
- 
-		    	start_request =	0;
-	    		TCCR0B = 0b0000101; // Start timer
-    		}
-    		
-    		if(onelap)
-    		{
-    		 regulateright=true;
-    		 firstlap();
-    		}
-    		
-    		
-    		
-  	  
-  	  while(home==0)
-   		 {
-	   	 	
-	   	 	if(oneSquare)
-	   	 	updatepos();
-	   	 	
-	   	 	
-	 	   	if(onelap==0)
-	      	{
- 	     		firstlap();
- 	     	}
-	     	else if(finished==0)
-			     {
- 			     	//gör massa skit
-		     	}
-	     	else
-		     	{
- 		     	returntostart();
-			     }
-	   	 }		
- 	  }
-  	}
-	return 0;
-}
-
 
 #include <avr/io.h>
 #include <avr/delay.h>
 #include <avr/interrupt.h> // Robert
+
+ typedef int bool;
+ enum{false, true};
 
 
 //Start bytes for transition (simplification when coding)
@@ -161,7 +38,6 @@ char mydirection = 2; //1=X+ ; 2=Y+ ; 3=X- ; 4=Y-
 char traveled=0; //Hur långt roboten har färdats (sedan senast vi tog emot värden från sensor?)
 unsigned int myposX=0; //Robotens position i X-led
 unsigned int myposY=0; //Robotens position i Y-led
-unsigned int mypos[2]={15,0}; //Vektor med robotens koordinater; (x,y)
 unsigned int startpos[2]={15,0}; //Startpositionen sätts till mitten på nedre lånsidan
 int firstzero; //Första nollan om man läser matrisen uppifrån och ned
 
@@ -172,43 +48,10 @@ unsigned char sensor2right;
 unsigned char sensor1left;
 unsigned char sensor2left;
  
-char map[15][29]; //=.... 0=outforskat, 1=vägg, 2=öppen yta
+char room[15][29]; //=.... 0=outforskat, 1=vägg, 2=öppen yta
 
 
-int main(void)
-{
-	MasterInit();
-	Initiation();
-
-	int fjarrstyrt = (PIND & 0x01); //1 då roboten är i fjärrstyrt läge
-	
-	if(fjarrstyrt==1)
-	{
-		int button=PINB;
-		fjarrstyr(button);
-	}
-	else
-	{	
-		while(home==0)
-		{
-			updatepos(traveled);
-			if(onelap==0)
-			{
-				firstlap();
-			}
-			else if(finished==0)
-			{
-				//gör massa skit
-			}
-			else
-			{
-				returntostart();
-			}
-		}		
-	}
-	return 0;
-}
-
+/***********************************************LCDSKÄRM*********************************/
 void initiation()
 {
 	//Sätter utgångar/ingångar    (Kanske skriva en initieringsfunktion för allt detta? /Robert)
@@ -253,8 +96,16 @@ void initiation()
 	//Initiering klar
 }
 
+void writechar(unsigned char data)
+{
+	PORTA=data;
+	(PORTC |= 0b11000000);
+	(PORTC &= 0b01000001);
+	_delay_ms(30);
+}
 
 
+/*********************************BUSSFUNKTIONER******************************/
 void MasterInit(void) //Robert som lägger till saker
 {
 	/* Set MOSI and SCK output, alla others input*/
@@ -269,6 +120,7 @@ void MasterInit(void) //Robert som lägger till saker
 } 
 
 
+
 void MasterTransmit(char cData)
 {
 	/* Start transmission */
@@ -281,10 +133,7 @@ void MasterTransmit(char cData)
 	//SPSR = (1<<SPIF);
 }
 
-
-
-
-
+/******************************FJÄRSTYRNING**********************/
 void remotecontrol()
 {
 	while(1)
@@ -342,89 +191,142 @@ void remotecontrol()
 	}
 }
 
-void writechar(unsigned char data)
+/****************************POSITIONSHANTERING*********************/
+void updatepos()
 {
-	PORTA=data;
-	(PORTC |= 0b11000000);
-	(PORTC &= 0b01000001);
-	_delay_ms(30);
+	switch(mydirection)
+	{
+		case (1): // X+
+		{
+			myposX+=1;
+			mypos[0]=myposX;
+			traveled=0;
+		}
+		case (2): // Y+
+		{
+			myposY+=1;
+			mypos[1]=myposY;
+			traveled=0;
+		}
+		case (3): // X-
+		{
+			myposX-=1;
+			mypos[0]=myposX;
+			traveled=0;
+		}
+		case (4): // Y-
+		{
+			myposY-=1;
+			mypos[1]=myposY;
+			traveled=0;
+		}
+	}
 }
 
-void rotate90left()
+/***********************************KARTHANTERING***********************************/
+void setwall(int x,int y)
 {
-	int degrees=0;
-	int ready=0;
+	room[y][x]=1;
+}
+
+
+int findfirstzero()
+{
+	int i; //X
+	int j; //Y
+	int firstzero[2]={0,0};
 	
-	while(ready==0)
+	for(int j=0;j<=17;j++)
 	{
-		//ta emot data
-		gyro=0;
-		int sendGyro=0;
-		if(degrees<90)
+		for(int i=0;i<=31;i++)
 		{
-			PORTC = 0x00;
-			PORTD = 0x40;
-			OCR2A = 150;
-			OCR1A = 150;
-			if(sendGyro >= 0)
+			if(map[j][i]==0)
 			{
-				sendGyro = sendGyro * 9.33;
+				firstzero[0]=i;
+				firstzero[1]=j;
 			}
-			else
-			{
-				sendGyro = sendGyro * 5,04;
-			}
-			gyro = sendGyro*64/244000;
-			degrees+=gyro;
 		}
-		else if(mydirection==4)
-		{
-			ready=1;
-			mydirection=1;
-		}
-		else
-		{
-			ready=1;
-			mydirection+=1;
-		}
-		
 	}
-	OCR2A = 0;
-	OCR1A = 0;
+return firstzero;					
 }
 
-
-void rotate90right()
+void updatemap()
 {
-	int degrees=0;
-	int ready=0;
-	int gyro;
-	while(ready==0)
+	char w=30; //Hur långt ifrån vi ska vara för att säga att det är en vägg.
+	
+	int sensorfront;
+	int sensormeanright;
+	int sensormeanleft;
+	
+	switch(mydirection)
 	{
-		if(degrees<90)
+		case (1): // X+
+		if(sensormeanright<=w) //Vet inte vad som är en lämplig siffra här
 		{
-			PORTC = 0x01;
-			PORTD = 0x00;
-			OCR2A = 150;
-			OCR1A = 150;
-			gyro=getgyro();
-			degrees+=gyro;
+			setwall(myposX,myposY-1);
+			room[myposX-1][myposY]=2;
 		}
-		else if(mydirection==1)
+		else if(sensorfront<=w)
 		{
-			ready=1;
-			mydirection=4;
+			setwall(myposX+1,myposY);
+			room[myposX-1][myposY]=2;
 		}
-		else
+		else if(sensormeanleft<w)
 		{
-			ready=1;
-			mydirection-=1;
+			setwall(myposX,myposY+1);
+			room[myposX-1][myposY]=2;
 		}
-		
+		case (2): // Y+
+		if(sensormeanright<=w)
+		{
+			setwall(myposX+1,myposY);
+			room[myposX][myposY-1]=2;
+		}
+		else if(sensorfront<=w)
+		{
+			setwall(myposX,myposY+1);
+			room[myposX][myposY-1]=2;
+		}
+		else if(sensormeanleft<w)
+		{
+			setwall(myposX-1,myposY);
+			room[myposX][myposY-1]=2;
+		}
+		case (3): // X-
+		if(sensormeanright<=w) 
+		{
+			setwall(myposX,myposY+1);
+			room[myposX+1][myposY]=2;
+		}
+		else if(sensorfront<=w)
+		{
+			setwall(myposX-1,myposY);
+			room[myposX+1][myposY]=2;
+		}
+		else if(sensormeanleft<w)
+		{
+			setwall(myposX,myposY-1);
+			room[myposX+1][myposY]=2;
+		}
+		case (4): // Y-
+		if(sensormeanright<=w) 
+		{
+			setwall(myposX-1,myposY);
+			room[myposX][myposY+1]=2;
+		}
+		else if(sensorfront<=w)
+		{
+			setwall(myposX,myposY-1);
+			room[myposX][myposY+1]=2;
+		}
+		else if(sensormeanleft<w)
+		{
+			setwall(myposX+1,myposY);
+			room[myposX][myposY+1]=2;
+		}
 	}
-	OCR2A = 0;
-	OCR1A = 0;
 }
+
 
 int getgyro()
 {	
@@ -594,138 +496,7 @@ void returntostart()
 	}
 }
 
-void updatepos()
-{
-	switch(mydirection)
-	{
-		case (1): // X+
-		{
-			myposX+=1;
-			mypos[0]=myposX;
-			traveled=0;
-		}
-		case (2): // Y+
-		{
-			myposY+=1;
-			mypos[1]=myposY;
-			traveled=0;
-		}
-		case (3): // X-
-		{
-			myposX-=1;
-			mypos[0]=myposX;
-			traveled=0;
-		}
-		case (4): // Y-
-		{
-			myposY-=1;
-			mypos[1]=myposY;
-			traveled=0;
-		}
-	}
-}
 
-void updatemap()
-{
-	char w=30; //Hur långt ifrån vi ska vara för att säga att det är en vägg.
-	
-	int sensorfront;
-	int sensormeanright;
-	int sensormeanleft;
-	
-	switch(mydirection)
-	{
-		case (1): // X+
-		if(sensormeanright<=w) //Vet inte vad som är en lämplig siffra här
-		{
-			setwall(myposX,myposY-1);
-			map[myposX-1][myposY]=2;
-		}
-		else if(sensorfront<=w)
-		{
-			setwall(myposX+1,myposY);
-			map[myposX-1][myposY]=2;
-		}
-		else if(sensormeanleft<w)
-		{
-			setwall(myposX,myposY+1);
-			map[myposX-1][myposY]=2;
-		}
-		case (2): // Y+
-		if(sensormeanright<=w)
-		{
-			setwall(myposX+1,myposY);
-			map[myposX][myposY-1]=2;
-		}
-		else if(sensorfront<=w)
-		{
-			setwall(myposX,myposY+1);
-			map[myposX][myposY-1]=2;
-		}
-		else if(sensormeanleft<w)
-		{
-			setwall(myposX-1,myposY);
-			map[myposX][myposY-1]=2;
-		}
-		case (3): // X-
-		if(sensormeanright<=w) 
-		{
-			setwall(myposX,myposY+1);
-			map[myposX+1][myposY]=2;
-		}
-		else if(sensorfront<=w)
-		{
-			setwall(myposX-1,myposY);
-			map[myposX+1][myposY]=2;
-		}
-		else if(sensormeanleft<w)
-		{
-			setwall(myposX,myposY-1);
-			map[myposX+1][myposY]=2;
-		}
-		case (4): // Y-
-		if(sensormeanright<=w) 
-		{
-			setwall(myposX-1,myposY);
-			map[myposX][myposY+1]=2;
-		}
-		else if(sensorfront<=w)
-		{
-			setwall(myposX,myposY-1);
-			map[myposX][myposY+1]=2;
-		}
-		else if(sensormeanleft<w)
-		{
-			setwall(myposX+1,myposY);
-			map[myposX][myposY+1]=2;
-		}
-	}
-}
-
-void setwall(int x,int y)
-{
-	map[y][x]=1;
-}
-
-int findfirstzero()
-{
-	int i; //X
-	int j; //Y
-	int firstzero[2]={0,0};
-	
-	for(int j=0;j<=17;j++)
-	{
-		for(int i=0;i<=31;i++)
-		{
-			if(map[j][i]==0)
-			{
-				firstzero[0]=i;
-				firstzero[1]=j;
-			}
-		}
-	}
-return firstzero;					
-}
 
 void prutt() //sicksacksak
 {
@@ -860,165 +631,44 @@ void driveto(int x, int y)
 	}
 }
 
-void rotate90right2()
+
+
+int main(void)
 {
-	int degrees=0;
-	int ready=0;
-	int gyro;
-	while(ready==0)
-	{
-		if(degrees<89)
-		{
-			PORTC = 0x01;
-			PORTD = 0x00;
-			OCR2A = 150;
-			OCR1A = 150;
-			gyro=getgyro();
-			degrees+=gyro;
-		}
-		else if(degrees>91)
-		{
-			PORTC = 0x00;
-			PORTD = 0x40;
-			OCR2A = 100;
-			OCR1A = 100;
-			gyro=getgyro();
-			degrees+=gyro;	
-		}
-		else if(mydirection==1)
-		{
-			ready=1;
-			mydirection=4;
-		}
-		else
-		{
-			ready=1;
-			mydirection-=1;
-		}
-		
-	}
-	OCR2A = 0;
-	OCR1A = 0;
-}
+	MasterInit();
+	Initiation();
 
-void rotate90left2()
-{
-	int degrees=0;
-	int ready=0;
-	int gyro;
-	while(ready==0)
-	{
-		if(degrees<89)
-		{
-			PORTC = 0x00;
-			PORTD = 0x40;
-			OCR2A = 150;
-			OCR1A = 150;
-			gyro=getgyro();
-			degrees+=gyro;
-		}
-		else if(degrees>91)
-		{
-			PORTC = 0x01;
-			PORTD = 0x00;
-			OCR2A = 100;
-			OCR1A = 100;
-			gyro=getgyro();
-			degrees+=gyro;	
-		}
-		else if(mydirection==4)
-		{
-			ready=1;
-			mydirection=1;
-		}
-		else
-		{
-			ready=1;
-			mydirection+=1;
-		}
-		
-	}
-	OCR2A = 0;
-	OCR1A = 0;
-}
-
-
-
-void rotate90left() // <- NY!
-{	
-	switch(mydirection)
-	case(1):
-	{
-		wanted=0x40
-	}
-	case(2):
-	{
-		wanted=0x60
-	}
-	case(3):
-	{
-		wanted=0x80
-	}
-	case(4):
-	{
-		wanted=0x20
-	}
+	int fjarrstyrt = (PIND & 0x01); //1 då roboten är i fjärrstyrt läge
 	
-	if(gyroema==wanted)
+	if(fjarrstyrt==1)
 	{
-		ready=1;
-		OCR2A = 0;
-		OCR1A = 0;
-		if(mydirection==1)
-		{
-			mydirection=4;
-		}
-		else
-		{
-			mydirection-=1;
-		}
+		int button=PINB;
+		remotecontrol();
 	}
 	else
-	{
-		if(mydirection!=3)
+	{	
+		while(home==0)
 		{
-			if(gyroema<wanted)
+			updatepos(traveled);
+			if(onelap==0)
 			{
-				pwmspeed=120-konst*(gyroema-wanted);
-				PORTC = 0x00;
-				PORTD = 0x40;
-				OCR2A = pwmspeed;
-				OCR1A = pwmspeed;
+				firstlap();
+			}
+			else if(finished==0)
+			{
+				//gör massa skit
 			}
 			else
 			{
-				pwmspeed=120+konst*(gyroema-wanted);
-				PORTC = 0x01;
-				PORTD = 0x00;
-				OCR2A = pwmspeed;
-				OCR1A = pwmspeed;
+				returntostart();
 			}
-		}
-		else if(gyroema<0x20)
-		{
-			pwmspeed=120+konst*(wanted);
-			PORTC = 0x01;
-			PORTD = 0x00;
-			OCR2A = pwmspeed;
-			OCR1A = pwmspeed;
-		}
-		else
-		{
-			pwmspeed=120-konst*(gyroema-wanted);
-			PORTC = 0x00;
-			PORTD = 0x40;
-			OCR2A = pwmspeed;
-			OCR1A = pwmspeed;
-		}
+		}		
 	}
-	OCR2A = 0;
-	OCR1A = 0;
+	return 0;
 }
+
+
+
 
 ISR(TIMER0_COMPB_vect)
 {
