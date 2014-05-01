@@ -221,25 +221,25 @@ void getAllSensor()
 	for(int i = 0; i < time; i++){}
 	traveled = SPDR; // Distance
 	MasterTransmit(rightfront);
-		for(int i = 0; i < time; i++){}
-		storedValues[0] = SPDR; // Front
-		MasterTransmit(rightback);
-		for(int i = 0; i < time; i++){}
-		storedValues[1] = SPDR; // Right front
-		MasterTransmit(leftfront);
-		for(int i = 0; i < time; i++){}
-		storedValues[2] = SPDR; // Right back
-		MasterTransmit(leftback);
-		for(int i = 0; i < time; i++){}
-		storedValues[3] = SPDR; // Left front
-		MasterTransmit(gyro);
-		for(int i = 0; i < time; i++){}
-		storedValues[4] = SPDR; // Left back
-		MasterTransmit(stop);
-		for(int i = 0; i < time; i++){}
-		gyro = SPDR; // Gyro
+	for(int i = 0; i < time; i++){}
+	storedValues[0] = SPDR; // Front
+	MasterTransmit(rightback);
+	for(int i = 0; i < time; i++){}
+	storedValues[1] = SPDR; // Right front
+	MasterTransmit(leftfront);
+	for(int i = 0; i < time; i++){}
+	storedValues[2] = SPDR; // Right back
+	MasterTransmit(leftback);
+	for(int i = 0; i < time; i++){}
+	storedValues[3] = SPDR; // Left front
+	MasterTransmit(gyro);
+	for(int i = 0; i < time; i++){}
+	storedValues[4] = SPDR; // Left back
+	MasterTransmit(stop);
+	for(int i = 0; i < time; i++){}
+	gyro = SPDR; // Gyro
 		
-			PORTB ^= 0b00010000; // ss2 high
+	PORTB ^= 0b00010000; // ss2 high
 		
 		
 	
@@ -352,7 +352,7 @@ int findfirstzero()
 	{
 		for(int i=0;i<=31;i++)
 		{
-			if(map[j][i]==0)
+			if(room[j][i]==0)
 			{
 				firstzero[0]=i;
 				firstzero[1]=j;
@@ -489,37 +489,33 @@ void regleringright()
 			TCCR0B = 0b0000101; // Start timer
 		}
 	
-	
-	while(regleramotvagg==1)
-	{
 		int sensordiffr = sensor1r-sensor2r;
 		int sensormeanr = (sensor1r+sensor2r)/2;
 		
 		if (sensorfront>10)
 		{
-			if(sensordiff<20) //Byt plats på höger och vänster för att reglera mot vänster vägg
-			{
-				OCR1A = 180+K*(9-sensormeanr); //PWM höger
-				OCR2A = 180-K*(9-sensormeanr); //PWM vänster
-			}
-			else //sensordiff>20 innebär att ett hörn kommer
-			{
-				while(traveled<20)
-				{
-					OCR2A = 180;
-					OCR1A = 180;	
-				}
-				rotate90right();	
-				while(traveled<20)
-				{
-					OCR2A = 180;
-					OCR1A = 180;
-				}		
-			}
+		if(sensordiff<20) //Byt plats på höger och vänster för att reglera mot vänster vägg
+		{
+			OCR1A = 180+K*(9-sensormeanr); //PWM höger
+			OCR2A = 180-K*(9-sensormeanr); //PWM vänster
 		}
-		else
-		rotate90left();
+		else //sensordiff>20 innebär att ett hörn kommer
+		{
+			while(traveled<20)
+			{
+				OCR2A = 180;
+				OCR1A = 180;	
+			}
+			rotate90right();	
+			while(traveled<20)
+			{
+				OCR2A = 180;
+				OCR1A = 180;
+			}		
+		}
 	}
+	else
+	rotate90left();
 }
 
 
@@ -612,52 +608,51 @@ void returntostart()
 
 void prutt() //sicksacksak
 {
-	int leftturn;
-	if(myposX>0)
-	{
-		leftturn=0;
-	}	
-	else
-	{
-		leftturn=1;
-	}
+	bool leftturn = true;
+	bool first = true;
 	
-	while(1)
-	{
 		if(sensorfront>50)
 		{
 			PORTC = 0x01;
-			PORTB = 0x04;
+			PORTD = 0x40;
 			OCR2A = speed;
-			OCR0A = speed;
+			OCR1A = speed;
 		}
-		else if(leftturn==1)
+		else if(first)
 		{
+			first = false;
+			rotate90left2();
+		}
+		else if(leftturn)
+		{
+			leftturn = false;
 			rotate90left2();
 			int distance=0;
 			while(distance<40)
 			{
 				PORTC = 0x01;
-				PORTB = 0x04;
+				PORTD = 0x40;
 				OCR2A = speed;
-				OCR0A = speed;
+				OCR1A = speed;
 			}
 			rotate90left2();
 		}
 		else
 		{
+			leftturn = true;
 			rotate90right2();
 			int distance=0;
 			while(distance<40)
 			{
 				PORTC = 0x01;
-				PORTB = 0x04;
+				PORTD = 0x40;
 				OCR2A = speed;
-				OCR0A = speed;
+				OCR1A = speed;
 			}
 			rotate90right2();
+			
 		}
-	}		
+			
 }
 
 void driveto(int x, int y)
@@ -775,7 +770,10 @@ int main(void)
 			}
 			else if(finished==0)
 			{
-				//gör massa skit
+				prutt();
+				//Printa till lcd att roboten har pruttat klart
+				
+				
 			}
 			else
 			{
