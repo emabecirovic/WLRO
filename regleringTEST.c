@@ -35,8 +35,9 @@ float sensor1r, sensor2r, sensorfront;
 float sensordiff;
 volatile float sensormeanr;
 volatile float sensormeanr_old;
-float K = 2.7;
-int Td = 3;
+int K;
+int Td;
+float sensormeanr_old;
 volatile float rightpwm;
 volatile float leftpwm;
 char emadistance = 0;
@@ -489,8 +490,7 @@ int main()
 				first=0;
 			}
 			//till PD-reglering
-			//float sensormeanr_old;
-			//float Td = 2;
+			Td = 3;
 
 			//if(sensorfront>100)
 			//{
@@ -499,6 +499,11 @@ int main()
 				{
 					PORTC = 0x01;
 					PORTD = 0x40;
+					K = 2;
+					if (fabs(sensor1r-sensor2r) > 2)
+					{
+					K = K + 4
+					}
 					//P-reglering
 					//rightpwm = 100 + K * (18 - sensormeanr);// + regulate right
 					//leftpwm = 100 - K * (18 - sensormeanr);// - regulate right
@@ -531,8 +536,7 @@ int main()
 					{
 						OCR2A = leftpwm;
 					}
-					
-					//sensormeanr_old = sensormeanr;
+
 					print_on_lcd(sensor1r);
 					_delay_ms(4000);
 					
