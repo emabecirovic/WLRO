@@ -31,10 +31,12 @@ bool regulateleft = false;
 bool regulateturn = true;
 int time = 200;
 volatile unsigned char storedValues[11];
-double sensor1r, sensor2r, sensorfront;
+float sensor1r, sensor2r, sensorfront;
 float sensordiff;
 volatile float sensormeanr;
-int K = 2;
+volatile float sensormeanr_old;
+float K = 2.7;
+int Td = 3;
 volatile float rightpwm;
 volatile float leftpwm;
 char emadistance = 0;
@@ -413,14 +415,21 @@ int main()
 	_delay_ms(40000);
 	initiate_request_timer();
 	int fjarrstyrt = (PIND & 0x01); //1 då roboten är i fjärrstyrt läge
+	int first=1;
 
 	if(fjarrstyrt==1)
 	{
+		
 		while(1)
 		{
 
 			if(start_request == 1)
 			{
+				if(first==0)
+				{
+				sensormeanr_old=sensormeanr;
+				}
+				
 				start_request = 0;
 				if(regulateright)
 				TransmitSensor(right);
@@ -432,12 +441,15 @@ int main()
 				TransmitSensor(0x00);
 				start_request = 0;
 				
-				print_on_lcd(storedValues[6]);
-				_delay_ms(1000);
+				TransmitComm();
+
+				//print_on_lcd(storedValues[6]);
+				//_delay_ms(1000);
 
 				TCCR0B = 0b0000101; // Start timer
 			}
 			
+
 			/*
 			//VÄNSTERSVÄNG!
 			if (turnready == 0)
@@ -450,23 +462,32 @@ int main()
 				OCR1A = 0;
 			}
 			*/
-			
+
 			//REGLERING
 			//Omvandling till centimeter
 			//sensor1r = ((1/storedValues[1]) - 0.000741938763948) / 0.001637008132828;
-			sensor1r = storedValues[3];
+			sensor1r = storedValues[1];
 			sensor1r = 1/sensor1r;
 			sensor1r = sensor1r - 0.000741938763948;
 			sensor1r = sensor1r / 0.001637008132828;
+			sensor1r = sensor1r + 9;
 
+			//sensor2r = ((1/storedValues[2]) - 0.00
 			//sensor2r = ((1/storedValues[2]) - 0.000741938763948) / 0.001637008132828;
-			sensor2r = storedValues[4];
-			sensor2r= 1/sensor2r;
+			sensor2r = storedValues[2];
+			sensor2r = 1/sensor2r;
 			sensor2r = sensor2r - 0.000741938763948;
-			sensor2r = sensor2r / 0.001637008132828;	
+			sensor2r = sensor2r / 0.001637008132828;
+			sensor2r = sensor2r + 9;	
 
 			sensorfront = storedValues[0]; 
 			sensormeanr = (sensor1r + sensor2r) / 2;
+			
+			if(first==1)
+			{
+				sensormeanr_old=sensormeanr;
+				first=0;
+			}
 			//till PD-reglering
 			//float sensormeanr_old;
 			//float Td = 2;
@@ -474,16 +495,16 @@ int main()
 			//if(sensorfront>100)
 			//{
 				//Om Skillnaden mellan första och andra större än 20 har vi stött på en högersväng
-				if((sensor1r - sensor2r) < 20) // <20cm   Byt plats på höger och vänster för att reglera mot vänster vägg
+				if(((sensor1r-sensor2r) < 20) && ((sensor2r-sensor1r) < 20)) // <20cm   Byt plats på höger och vänster för att reglera mot vänster vägg
 				{
 					PORTC = 0x01;
 					PORTD = 0x40;
 					//P-reglering
-					rightpwm = 120 - K * (9 - sensormeanr);
-					leftpwm = 120 + K * (9 - sensormeanr);
+					//rightpwm = 100 + K * (18 - sensormeanr);// + regulate right
+					//leftpwm = 100 - K * (18 - sensormeanr);// - regulate right
 					//PD-reglering
-					//rightpwm = 120 - K * (9-sensormeanr + Td * (9-(sensormeanr-sensormeanr_old)));
-					//leftpwm = 120 + K * (9-sensormeanr + Td * (9-(sensormeanr-sensormeanr_old)));
+					rightpwm = 100 + K * (18-sensormeanr + Td * (sensormeanr_old-sensormeanr));
+					leftpwm = 100 - K * (18-sensormeanr + Td * (sensormeanr_old-sensormeanr));
 
 
 					if (rightpwm > 255)
@@ -510,14 +531,18 @@ int main()
 					{
 						OCR2A = leftpwm;
 					}
-					//TransmitComm(0);
+					
 					//sensormeanr_old = sensormeanr;
+					print_on_lcd(sensor1r);
+					_delay_ms(4000);
+					
 				}
 				else
 				{
 					OCR1A = 0;
 					OCR2A = 0;
 				}
+
 				
 
 			//}		
@@ -525,7 +550,6 @@ int main()
 	}
 	return 0;
 }
-
 ISR(TIMER0_COMPB_vect)
 {
 	TCCR0B = 0b0000000; //stop timer
