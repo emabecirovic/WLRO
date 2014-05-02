@@ -409,6 +409,26 @@ void rotate90left() // <- NY!
 
 
 
+void straight()
+{
+	if((sensor1r-sensor2r) > 0.5)
+	{
+		PORTC = 0x01; //rotera höger
+		PORTD = 0x00;
+		OCR2A = 70;
+		OCR1A = 70;
+	}
+	else if((sensor2r-sensor1r) > 0.5)
+	{
+		PORTC = 0x00; //rotera vänster
+		PORTD = 0x40;
+		OCR2A = 70;
+		OCR1A = 70;
+	}
+}
+
+
+
 int main()
 {
 	initiation();
@@ -420,7 +440,7 @@ int main()
 
 	if(fjarrstyrt==1)
 	{
-		
+
 		while(1)
 		{
 
@@ -430,7 +450,7 @@ int main()
 				{
 				sensormeanr_old=sensormeanr;
 				}
-				
+
 				start_request = 0;
 				if(regulateright)
 				TransmitSensor(right);
@@ -441,15 +461,15 @@ int main()
 				else
 				TransmitSensor(0x00);
 				start_request = 0;
-				
-				TransmitComm();
+
+				TransmitComm(0);
 
 				//print_on_lcd(storedValues[6]);
 				//_delay_ms(1000);
 
 				TCCR0B = 0b0000101; // Start timer
 			}
-			
+
 
 			/*
 			//VÄNSTERSVÄNG!
@@ -483,63 +503,72 @@ int main()
 
 			sensorfront = storedValues[0]; 
 			sensormeanr = (sensor1r + sensor2r) / 2;
-			
+
 			if(first==1)
 			{
-				sensormeanr_old=sensormeanr;
 				first=0;
+				PORTC = 0x01;
+				PORTD = 0x40;
+				OCR1A = 0;
+				OCR2A = 0;
+				sensormeanr_old=sensormeanr;
 			}
+			else
+			{
 			//till PD-reglering
-			Td = 3;
+			Td = 4; //fungerar ok med 3, 4 ej testat
+			K = 3;
 
 			//if(sensorfront>100)
 			//{
 				//Om Skillnaden mellan första och andra större än 20 har vi stött på en högersväng
 				if(((sensor1r-sensor2r) < 20) && ((sensor2r-sensor1r) < 20)) // <20cm   Byt plats på höger och vänster för att reglera mot vänster vägg
 				{
-					PORTC = 0x01;
-					PORTD = 0x40;
-					K = 2;
-					if (fabs(sensor1r-sensor2r) > 2)
+					if (fabs(sensor1r-sensor2r) > 3)
 					{
-					K = K + 4
-					}
-					//P-reglering
-					//rightpwm = 100 + K * (18 - sensormeanr);// + regulate right
-					//leftpwm = 100 - K * (18 - sensormeanr);// - regulate right
-					//PD-reglering
-					rightpwm = 100 + K * (18-sensormeanr + Td * (sensormeanr_old-sensormeanr));
-					leftpwm = 100 - K * (18-sensormeanr + Td * (sensormeanr_old-sensormeanr));
-
-
-					if (rightpwm > 255)
-					{
-						OCR1A = 255;
-					}
-					else if(rightpwm < 0)
-					{					
-						OCR1A = 0;
+					straight();
+					//K = K + 1;
 					}
 					else
 					{
-						OCR1A = rightpwm;
-					}
-					if (leftpwm > 255)
-					{
-						OCR2A = 255;
-					}
-					else if (leftpwm < 0)
-					{
-						OCR2A = 0;
-					}
-					else
-					{
-						OCR2A = leftpwm;
-					}
+						PORTC = 0x01;
+						PORTD = 0x40;
+						//P-reglering
+						//rightpwm = 100 + K * (18 - sensormeanr);// + regulate right
+						//leftpwm = 100 - K * (18 - sensormeanr);// - regulate right
+						//PD-reglering
+						rightpwm = 100 + K * (18-sensormeanr + Td * (sensormeanr_old-sensormeanr));
+						leftpwm = 100 - K * (18-sensormeanr + Td * (sensormeanr_old-sensormeanr));
 
-					print_on_lcd(sensor1r);
-					_delay_ms(4000);
-					
+
+						if (rightpwm > 255)
+						{
+							OCR1A = 255;
+						}
+						else if(rightpwm < 0)
+						{					
+							OCR1A = 0;
+						}
+						else
+						{
+							OCR1A = rightpwm;
+						}
+						if (leftpwm > 255)
+						{
+							OCR2A = 255;
+						}
+						else if (leftpwm < 0)
+						{
+							OCR2A = 0;
+						}
+						else
+						{
+							OCR2A = leftpwm;
+						}
+
+						//print_on_lcd(sensor1r);
+						//_delay_ms(4000);
+					}
 				}
 				else
 				{
@@ -547,16 +576,19 @@ int main()
 					OCR2A = 0;
 				}
 
-				
 
+			}
 			//}		
 		}
 	}
 	return 0;
 }
+
+
 ISR(TIMER0_COMPB_vect)
 {
 	TCCR0B = 0b0000000; //stop timer
 	TCNT0 = 0x00;
 	start_request = 1;
 }
+
