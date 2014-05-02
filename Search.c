@@ -119,7 +119,7 @@ void MasterInit(void)
 	DDRB = (1<<DDB3)|(1<<DDB4)|(1<<DDB5)|(1<<DDB7);
 
 	/* Enable SPI, Master, set clock rate fosc/64 and mode 3 */
-	SPCR = (1<<SPE)|(1<<MSTR)(1<<SPI2X)|(1<<SPR1)|(1<<SPR0)|(1<<CPHA)|(1<<CPOL);;
+	SPCR = (1<<SPE)|(1<<MSTR)(1<<SPI2X)|(1<<SPR1)|(1<<SPR0)|(1<<CPHA)|(1<<CPOL);
 	
 	/* Set Slave select high */
 	PORTB = (1<<PORTB3)|(1<<PORTB4);
@@ -341,27 +341,6 @@ void setwall(int x,int y)
 	room[y][x]=1;
 }
 
-
-int findfirstzero()
-{
-	int i; //X
-	int j; //Y
-	int firstzero[2]={0,0};
-	
-	for(int j=0;j<=17;j++)
-	{
-		for(int i=0;i<=31;i++)
-		{
-			if(room[j][i]==0)
-			{
-				firstzero[0]=i;
-				firstzero[1]=j;
-			}
-		}
-	}
-return firstzero;					
-}
-
 void updatemap()
 {
 	char w=30; //Hur långt ifrån vi ska vara för att säga att det är en vägg.
@@ -456,6 +435,8 @@ int getgyro()
 	return gyro;
 }
 
+
+/*********************************UPPRITNING AV FÖRSTA VARV*************************************/
 void firstlap()
 {
 	if(mypos==startpos)
@@ -563,54 +544,36 @@ void regleringleft()
 	}
 }
 
-
-void returntostart()
+void fis()
 {
-	int mydirection; //Robotens riktning
-	int myposX; //Rpbotens position i X-led
-	int starposX; //Starpositionens värde i X-led
+	// Vänd roboten posetiv y-led
+	while(mydirection != 2)
+	{
+		if(mydirection < 2)
+		rotate90right();
+		else
+		rotate90left();
+	}
 	
-	if(mydirection=4) //4=negativ y-led. x+,y+,x-,y- = 1,2,3,4
+	// Kör en sektion ut i öppen yta
+	while(distance<40)
 	{
-		while(sensorfram>10) 
-		{
-			//Kör rakt fram
-			PORTC = 0x01;
-			PORTD = 0x40;
-			OCR2A = 180;
-			OCR1A = 180;	
-		}
-		if(myposX<startposX) //Om ingången är till höger om roboten
-		{
-			while(myposX<startposX)
-			{
-				regleringright();
-			}
-		}
-		else 
-		{
-			while(myposX>startposX) //Om ingången är till vänster om roboten
-			{
-				regleringleft();
-			}
-		}
+		PORTC = 0x01;
+		PORTD = 0x40;
+		OCR2A = speed;
+		OCR1A = speed;
 	}
-	else
-	{
-		while(mydirection!=4)
-		{
-		rotate90left();  //Rotera 90 grader om vi står i fel riktning
-		}
-	}
+	
+	rotate90right();
+	
 }
-
-
 
 void prutt() //sicksacksak
 {
 	bool leftturn = true;
 	bool first = true;
 	
+
 		if(sensorfront>50)
 		{
 			PORTC = 0x01;
@@ -655,17 +618,37 @@ void prutt() //sicksacksak
 			
 }
 
-void driveto(int x, int y)
+int findfirstzero()
 {
-	if(myposX!=x)
+	int i; //X
+	int j; //Y
+	int firstzero[2]={0,0};
+	
+	for(int j=0;j<=17;j++)
 	{
-		if(x>myposX)
+		for(int i=0;i<=31;i++)
+		{
+			if(room[j][i]==0)
+			{
+				firstzero[0]=i;
+				firstzero[1]=j;
+			}
+		}
+	}
+return firstzero;					
+}
+
+void driveto(int pos[2])
+{
+	if(myposX!=pos[0])
+	{
+		if(pos[0]>myposX)
 		{
 			switch(mydirection)
 			{
 				case(1):
 				PORTC = 0x01;
-				PORTB = 0x04;
+				PORTD = 0x40;
 				OCR2A = speed;
 				OCR0A = speed;
 				case(2):
@@ -683,7 +666,7 @@ void driveto(int x, int y)
 			{
 				case(3):
 				PORTC = 0x01;
-				PORTB = 0x04;
+				PORTD = 0x40;
 				OCR2A = speed;
 				OCR0A = speed;
 				case(4):
@@ -697,15 +680,15 @@ void driveto(int x, int y)
 		}
 		
 	}
-	else if (myposY!=y)
+	else if (myposY!=pos[1])
 	{
-		if(y>myposY)
+		if(pos[1]>myposY)
 		{
 			switch(mydirection)
 			{
 				case(2):
 				PORTC = 0x01;
-				PORTB = 0x04;
+				PORTD = 0x40;
 				OCR2A = speed;
 				OCR0A = speed;
 				case(3):
@@ -739,6 +722,46 @@ void driveto(int x, int y)
 }
 
 
+void returntostart()
+{
+	int mydirection; //Robotens riktning
+	int myposX; //Rpbotens position i X-led
+	int starposX; //Starpositionens värde i X-led
+	
+	if(mydirection=4) //4=negativ y-led. x+,y+,x-,y- = 1,2,3,4
+	{
+		while(sensorfram>10) 
+		{
+			//Kör rakt fram
+			PORTC = 0x01;
+			PORTD = 0x40;
+			OCR2A = 180;
+			OCR1A = 180;	
+		}
+		if(myposX<startposX) //Om ingången är till höger om roboten
+		{
+			while(myposX<startposX)
+			{
+				regleringright();
+			}
+		}
+		else 
+		{
+			while(myposX>startposX) //Om ingången är till vänster om roboten
+			{
+				regleringleft();
+			}
+		}
+	}
+	else
+	{
+		while(mydirection!=4)
+		{
+		rotate90left();  //Rotera 90 grader om vi står i fel riktning
+		}
+	}
+}
+
 
 int main(void)
 {
@@ -770,9 +793,9 @@ int main(void)
 			}
 			else if(finished==0)
 			{
+				fis();
 				prutt();
 				//Printa till lcd att roboten har pruttat klart
-				
 				
 			}
 			else
