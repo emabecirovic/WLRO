@@ -14,6 +14,10 @@ volatile long overflow;
 volatile char ad_complete = 0;
 volatile char dummy = 0;
 
+long n = 0;
+double testgyro;
+
+
 void initiate_sensormodul(void)
 {
 	MCUCR = 0b00000000;
@@ -206,4 +210,55 @@ ISR(INT0_vect) //knapp ska vi inte ha irl, men ja.
 {
 	dummy = 1;
 	//:)
+}
+
+/*ISR(ADC_vect)
+{
+	ADCSRA = 0b10001011;
+	ad_complete = 1;
+}*/
+
+//Gammal testkod som ska omtestas för omkalibrering av gyrot.
+ISR(ADC_vect)
+{
+	if(n == 0)
+	{
+		gyroref = ADC >> 2;
+	}
+	if(n < 20000)
+	{
+		n = n + 1;
+		dGyro = ADC >> 2;
+		if ((dGyro < gyroref + 2) && (dGyro > gyroref - 2))
+		{
+			testgyro = testgyro;
+		}
+		else
+		{
+			dGyro= dGyro - gyroref;
+			timer = TCNT0;
+			dGyro = dGyro * timer;
+			TCNT0 = 0x00; //set count
+			//dGyro = dGyro / 244000;
+			if(dGyro >= 0)
+			{
+				dGyro = dGyro * 9.33;
+			}
+			else
+			{
+				dGyro = dGyro * 5,04;
+			}
+			testgyro = testgyro + dGyro;
+		}
+		ADCSRA = 0b11001011;
+	}
+	else
+	{
+		testgyro /= 244000;
+		dummy = testgyro;
+		gyroref = 0;
+		ADCSRA = 0b10001011;
+		n = 0;
+		testgyro = 0;
+	}
 }
