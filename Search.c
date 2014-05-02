@@ -36,11 +36,12 @@ char gyro;
 
 
 char speed=150; //Standardhastiget i autonomt läge
-char finished=0; //1 då hela kartan utforskad
-char onelap=0; //1 då yttervarvet körts
-char home=0; //1 då robten återvänt till startposition
+bool finished=0; //1 då hela kartan utforskad
+bool onelap=0; //1 då yttervarvet körts
+bool home=0; //1 då robten återvänt till startposition
+bool fisklar, pruttklar, shartklar;
 char mydirection = 2; //1=X+ ; 2=Y+ ; 3=X- ; 4=Y-
-char traveled=0; //Hur långt roboten har färdats (sedan senast vi tog emot värden från sensor?)
+char distance=0; //Hur långt roboten har färdats (sedan senast vi tog emot värden från sensor?)
 unsigned int myposX=0; //Robotens position i X-led
 unsigned int myposY=0; //Robotens position i Y-led
 unsigned int startpos[2]={15,0}; //Startpositionen sätts till mitten på nedre lånsidan
@@ -120,10 +121,10 @@ void MasterInit(void)
 
 	/* Enable SPI, Master, set clock rate fosc/64 and mode 3 */
 	SPCR = (1<<SPE)|(1<<MSTR)(1<<SPI2X)|(1<<SPR1)|(1<<SPR0)|(1<<CPHA)|(1<<CPOL);
-	
+
 	/* Set Slave select high */
 	PORTB = (1<<PORTB3)|(1<<PORTB4);
-	
+
 	/* Enable External Interrupts */
 	sei();
 } 
@@ -147,8 +148,13 @@ void bussdelay()
 	for(int i = 0; i < time; i++){}
 }
 
+
 void TransmitSensor(char invalue)
 {
+    if(start_request = 1)
+	{
+		start_request = 0;
+	
 	PORTB &= 0b11101111; // ss2 low
 
 	for(int i = 0; i < time; i++){}
@@ -204,6 +210,10 @@ void TransmitSensor(char invalue)
 
 	PORTB ^= 0b00010000; // ss2 high
 	//for(int i = 0; i < 100; i++){}
+	
+	distance += traveled;
+	
+	TCCR0B = 0b00000101; // Start timer
 }
 
 void getAllSensor()
@@ -238,11 +248,11 @@ void getAllSensor()
 	MasterTransmit(stop);
 	for(int i = 0; i < time; i++){}
 	gyro = SPDR; // Gyro
-		
+
 	PORTB ^= 0b00010000; // ss2 high
-		
-		
-	
+
+
+
 }
 
 /******************************FJÄRSTYRNING**********************/
@@ -251,7 +261,7 @@ void remotecontrol()
 	while(1)
 	{
 		char button; //Ta emot styrdata
-	
+
 		switch(button)
 		{
 			case (0x01)://Kör framåt, W
@@ -344,11 +354,11 @@ void setwall(int x,int y)
 void updatemap()
 {
 	char w=30; //Hur långt ifrån vi ska vara för att säga att det är en vägg.
-	
+
 	int sensorfront;
 	int sensormeanright;
 	int sensormeanleft;
-	
+
 	switch(mydirection)
 	{
 		case (1): // X+
@@ -435,8 +445,23 @@ int getgyro()
 	return gyro;
 }
 
+/********************************REGLERING*****************************************/
 
-/*********************************UPPRITNING AV FÖRSTA VARV*************************************/
+void driveDist(char length)
+{
+	distance = 0;
+	while(distance < length)
+	{
+		TransmitSensor(0x00);
+		PORTC = 0x01;
+		PORTD = 0x40;
+		OCR2A = speed;
+		OCR1A = speed;
+	}
+}
+
+
+/*********************************FÖRSTA VARV*************************************/
 void firstlap()
 {
 	if(mypos==startpos)
@@ -451,48 +476,28 @@ void firstlap()
 
 void regleringright()
 {
-	DDRC=0b00000001;
-	DDRD=0b11100000;
-	TCCR1A=0b10010001; //setup, phase correct PWM
-	TCCR1B=0b00000010; //sätter hastigheten på klockan
-	TCCR2A=0b10010001;
-	TCCR2B=0b00000010;
 	PORTC = 0x01; //sätter båda DIR till 1
 	PORTD = 0x40;
 	int K = 5; //Bestämmer hur snabbt roboten ska reagera på skillnader mellan önskat avstånd till väggen(10cm) och uppmätt avstånd
-	
-	
-	if(start_request == 1)
-		{
-			//writechar(0b01001100); //L
-			start_request = 0;
-			TransmitSensor(right);
-			TCCR0B = 0b0000101; // Start timer
-		}
-	
-		int sensordiffr = sensor1r-sensor2r;
-		int sensormeanr = (sensor1r+sensor2r)/2;
-		
-		if (sensorfront>10)
-		{
+
+
+	TransmitSensor(right);
+
+	int sensordiffr = sensor1r-sensor2r;
+	int sensormeanr = (sensor1r+sensor2r)/2;
+
+	if (sensorfront>10)
+	{
 		if(sensordiff<20) //Byt plats på höger och vänster för att reglera mot vänster vägg
 		{
 			OCR1A = 180+K*(9-sensormeanr); //PWM höger
 			OCR2A = 180-K*(9-sensormeanr); //PWM vänster
 		}
-		else //sensordiff>20 innebär att ett hörn kommer
+		else //sensordiff>20 innebär att högersväng kommer
 		{
-			while(traveled<20)
-			{
-				OCR2A = 180;
-				OCR1A = 180;	
-			}
+			driveDist(20);
 			rotate90right();	
-			while(traveled<20)
-			{
-				OCR2A = 180;
-				OCR1A = 180;
-			}		
+			driveDist(40);		
 		}
 	}
 	else
@@ -502,22 +507,17 @@ void regleringright()
 
 void regleringleft()
 {
-	DDRC=0b00000001;
-	DDRD=0b11100000;
-	TCCR1A=0b10010001; //setup, phase correct PWM
-	TCCR1B=0b00000010; //sätter hastigheten på klockan
-	TCCR2A=0b10010001;
-	TCCR2B=0b00000010;
 	PORTC = 0x01; //sätter båda DIR till 1
 	PORTD = 0x40;
 	int K = 5; //Bestämmer hur snabbt roboten ska reagera på skillnader mellan önskat avstånd till väggen(10cm) och uppmätt avstånd
+
 
 	while(regleramotvagg==1)
 	{
 		int sensordiffr = sensor1l-sensor2l;
 		int sensormeanr = (sensor1l+sensor2l)/2;
-		
-		if (sensorfront>10)
+
+		if (sensorfront>50)
 		{
 			if(sensordiff<20) 
 			{
@@ -540,41 +540,48 @@ void regleringleft()
 			}
 		}
 		else
+		driveDist(20);
 		rotate90right();
 	}
 }
 
-void fis()
+
+/*************************************Öppna Ytor********************************/
+
+void fis() // Få roboten från väggen
 {
-	// Vänd roboten posetiv y-led
-	while(mydirection != 2)
+	TransmitSensor(left);
+	
+	/* Vänd roboten posetiv x-led
+	while(mydirection != 3)
 	{
-		if(mydirection < 2)
+		if(mydirection < 3)
 		rotate90right();
 		else
 		rotate90left();
-	}
+	}*/
 	
-	// Kör en sektion ut i öppen yta
-	while(distance<40)
+	if(leftfront < 20)
 	{
-		PORTC = 0x01;
-		PORTD = 0x40;
-		OCR2A = speed;
-		OCR1A = speed;
+		regleringright();	
 	}
-	
-	rotate90right();
-	
+	else
+	{
+		driveDist(20);
+		rotate90left();
+		
+		driveDist(40); // Kör en sektion ut i öppen yta
+
+		rotate90right();
+		
+		fisklar = true;
+		 
+	}
 }
 
 void prutt() //sicksacksak
 {
-	bool leftturn = true;
-	bool first = true;
-	
-
-		if(sensorfront>50)
+		if(sensorfront>60)
 		{
 			PORTC = 0x01;
 			PORTD = 0x40;
@@ -591,13 +598,7 @@ void prutt() //sicksacksak
 			leftturn = false;
 			rotate90left2();
 			int distance=0;
-			while(distance<40)
-			{
-				PORTC = 0x01;
-				PORTD = 0x40;
-				OCR2A = speed;
-				OCR1A = speed;
-			}
+			driveDist(40);
 			rotate90left2();
 		}
 		else
@@ -613,17 +614,18 @@ void prutt() //sicksacksak
 				OCR1A = speed;
 			}
 			rotate90right2();
-			
+
 		}
-			
+
 }
 
+/*********************************MISSADE RUTOR*******************************/
 int findfirstzero()
 {
 	int i; //X
 	int j; //Y
 	int firstzero[2]={0,0};
-	
+
 	for(int j=0;j<=17;j++)
 	{
 		for(int i=0;i<=31;i++)
@@ -678,7 +680,7 @@ void driveto(int pos[2])
 				rotate90right2();
 			}
 		}
-		
+
 	}
 	else if (myposY!=pos[1])
 	{
@@ -727,7 +729,7 @@ void returntostart()
 	int mydirection; //Robotens riktning
 	int myposX; //Rpbotens position i X-led
 	int starposX; //Starpositionens värde i X-led
-	
+
 	if(mydirection=4) //4=negativ y-led. x+,y+,x-,y- = 1,2,3,4
 	{
 		while(sensorfram>10) 
@@ -769,11 +771,11 @@ int main(void)
 	Initiation();
 	_delay_ms(40000);
 	initiate_request_timer();
-	
+
 	getAllSensor();
 
 	int fjarrstyrt = (PIND & 0x01); //1 då roboten är i fjärrstyrt läge
-	
+
 	if(fjarrstyrt==1)
 	{
 		int button=PINB;
@@ -781,22 +783,31 @@ int main(void)
 	}
 	else
 	{	
+		bool leftturn = true; // Till första toppsvängen i sicksacksak
+		bool first = true; // Till första bottensväng i sicksacksak
+		
 		while(home==0)
 		{
+			
 			if(traveled >= 40/0.8125) //dividera med sektor 0.8125
 			updatepos();
-			
-			
+
+
 			if(onelap==0)
 			{
 				firstlap();
 			}
-			else if(finished==0)
+			else if(!fisklar)
 			{
 				fis();
+			}
+			else if(!pruttklar)
+			{
 				prutt();
-				//Printa till lcd att roboten har pruttat klart
-				
+			}
+			else if(!shartklar)
+			{
+				shart();
 			}
 			else
 			{
