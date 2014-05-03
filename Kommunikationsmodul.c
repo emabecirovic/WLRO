@@ -1,5 +1,5 @@
 /*
-* Bluetooth_test.c
+* Kommunikationsmodule.c
 *
 * Created: 3/27/2014 8:23:02 AM
 *  Author: poner538
@@ -15,6 +15,8 @@
 typedef int bool;
 enum {false, true};
 
+
+bool remote = false;
 //Lables for transmition
 char front = 0b00000001;
 char rightfront = 0b00000010;
@@ -29,61 +31,62 @@ char rightspeed = 0b00001010;
 char leftspeed = 0b00001011;
 char stop = 0x00; //Stopbyte
 
-unsigned char storedValues[11];
+unsigned char storedValues[11] = {10,11,12,13,14,15,16,17,18,19,20,21};
 int indexvalue = 0;
 
 void USARTInit(unsigned int ubrr_value)
 {
-//sätter en baud rate
-UBRR0H = (unsigned char)(ubrr_value>>8);
-UBRR0L = (unsigned char)ubrr_value;
+	//sätter en baud rate
+	UBRR0H = (unsigned char)(ubrr_value>>8);
+	UBRR0L = (unsigned char)ubrr_value;
 
-/*sätt frame format till 8 databitar och 1 stoppbit*/
-UCSR0C=(0<<USBS0)|(3<<UCSZ00);
+	/*sätt frame format till 8 databitar och 1 stoppbit*/
+	UCSR0C=(0<<USBS0)|(3<<UCSZ00);
 
-UCSR0A =(1<<U2X0);
+	UCSR0A =(1<<U2X0);
 
 
-/* Tillåt reciever och transmitter kl*/
-UCSR0B=(1<<RXEN0)|(1<<TXEN0);
+	/* Tillåt reciever och transmitter kl*/
+	UCSR0B=(1<<RXEN0)|(1<<TXEN0)|(1<<RXCIE0);
 
+/* */
 }
 
 unsigned char USART_Recive(void)
 {
-//väta tills det finns data i bufferten
-//while( !(UCSR0A & (1<<UDRE0)));
-//PORTB=UDR0;
-while(!(UCSR0A & (1<<RXC0)))
-{
+	//väta tills det finns data i bufferten
+	//while( !(UCSR0A & (1<<UDRE0)));
+	//PORTB=UDR0;
+	while(!(UCSR0A & (1<<RXC0)))
+	{
 
-}
+	}
 
-//returnera datan från bufferten
-return UDR0;
+	//returnera datan från bufferten
+	return UDR0;
 }
 
 void USARTWriteChar(unsigned char data)
 {
 
-//Wait until the transmitter is ready
-while(!(UCSR0A & (1<<UDRE0)))
-{
-//Do nothing
-}
-UDR0=data;
+	//Wait until the transmitter is ready
+	while(!(UCSR0A & (1<<UDRE0)))
+	{
+		//Do nothing
+	}
+	UDR0=data;
 
-//Now write the data to USART buffer
+	//Now write the data to USART buffer
 
 }
 
 void USART_Flush( void )
 {
-unsigned char dummy;
-while (UCSR0A & (1<<RXC0) )
-{
-dummy = UDR0;
-}
+	unsigned char dummy;
+	while (UCSR0A & (1<<RXC0) )
+	{
+		dummy = UDR0;
+	}
 }
 
 
@@ -93,84 +96,114 @@ void SlaveInit(void)
 	DDRB = (1<<DDB6);
 
 	/* Enable SPI */
-	SPCR = (1<<SPE)|(1<<SPIE);
+	SPCR = (1<<SPE)|(1<<SPIE)|(1<<CPHA)|(1<<CPOL);
 
 	/* Enable external interrupts */
 	sei();
 }
 
+void SendStoredVal()
+{
+	for(int i = 0; i < 11; i++)
+	{
+		if(i == 0)
+		{
+			USARTWriteChar(front);
+		}
+		else if (i == 1)
+		{
+			USARTWriteChar(rightfront);
+		}
+		else if (i == 2)
+		{
+			USARTWriteChar(rightback);
+		}
+		else if (i == 3)
+		{
+			USARTWriteChar(leftfront);
+		}
+		else if (i == 4)
+		{
+			USARTWriteChar(leftback);
+		}
+		else if (i == 5)
+		{
+			USARTWriteChar(traveldist);
+			//Distance = 0;
+		}
+		else if (i == 6)
+		{
+			USARTWriteChar(gyro);
+			//sendGyro = 0;
+		}
+		else if (i == 7)
+		{
+			USARTWriteChar(RFID);
+		}
+		else if (i == 8)
+		{
+			USARTWriteChar(direction);// behöver förmodligen inte göra något här
+		}
+		else if (i == 9)
+		{
+			USARTWriteChar(leftspeed);// behöver förmodligen inte göra något här
+		}
+		else if (i == 10)
+		{
+			USARTWriteChar(rightspeed);// behöver förmodligen inte göra något här
+		}
+		USARTWriteChar(storedValues[i]);
+	}
+}
+
 int main(void)
 {
-// char data;
-unsigned char test = '0';
-//USARTInit(8);
-SlaveInit();
+	// char data;
+	int data;
+	USARTInit(8);
+	SlaveInit();
+	bool controller = false;
+	while(1)
+	{
+		sei();
+		while(!remote)	
+		{
 
-while(1)
-{
-//Infinite Loop
+		//Infinite Loop
+		//Read data
+		//USART_Flush();
+		//data=USART_Recive();
+		//skicka data
 
-//Read data
-//USART_Flush();
-//data=USART_Recive();
-//skicka data
-for(int i = 0; i < 11; i++)
-{
-	if(i == 0)
-	{
-		USARTWriteChar(front);
+		SendStoredVal();	
+		}
+		cli();
+		controller = true;
+		while(controller)
+		{
+		
+		data = USART_Recive();
+		//USARTWriteChar(data);
+		}
+		//kicka ut bluetooth signalen till portB
+		//PORTB=tes
 	}
-	else if (i == 1)
-	{
-		USARTWriteChar(rightfront);
-	}
-	else if (i == 2)
-	{
-		USARTWriteChar(rightback);
-	}
-	else if (i == 3)
-	{
-		USARTWriteChar(leftfront);
-	}
-	else if (i == 4)
-	{
-		USARTWriteChar(leftback);
-	}
-	else if (i == 5)
-	{
-		USARTWriteChar(traveldist);
-		//Distance = 0;
-	}
-	else if (i == 6)
-	{
-		USARTWriteChar(gyro);
-		//sendGyro = 0;
-	}
-	else if (i == 7)
-	{
-		USARTWriteChar(RFID);
-	}
-	else if (i == 8)
-	{
-		// behöver förmodligen inte göra något här
-	}
-	USARTWriteChar(storedValues[i]);
-}
-//skicka ut bluetooth signalen till portB
-//PORTB=test;
-}
-
-return 0;
+	return 0;
 }
 
 /*******************************INTERRUPTS*************************/
 ISR(SPI_STC_vect) // Answer to call from Master
 {
-	storedValues[indexvalue] = SPDR;
+	//storedValues[indexvalue] = SPDR;
 	SPDR = storedValues[indexvalue]; //Just for controll by oscilloscope
 
 	if(indexvalue < 11)
 	indexvalue++;
 	else
 	indexvalue = 0;
+}
+
+ISR(USART0_RX_vect)
+{
+	remote = true;
 }
