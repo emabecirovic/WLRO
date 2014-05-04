@@ -17,7 +17,6 @@ char i = 0; //Vilken sensor jag använder
 char m = 0; //Hur många gånger jag har gått igenom sensorn.
 const char samplings = 8;
 
-char calibrated = 0;
 unsigned char dFront[8];
 unsigned char dRight_Front[8];
 unsigned char dRight_Back[8];
@@ -31,17 +30,17 @@ char Distance = 0;
 unsigned char rfid_data;
 char isRFID = 0; //ETTA ELLER NOLLA!
 
+char calibrated = 0;
 char dGyro;
 char gyroref;
 char sendGyro = 0x40;
-signed long digital_angle = 0;
-float angle = 0;
-float ef = 1;
+long double digital_angle = 0;
+long double angle = 0;
+long double ef = 5;
+long timer = 0;
+long overflow = 0;
 
 float dummy;
-long n = 0;
-long timer = 0;
-long j = 0;
 
 char start_sample = 0;
 volatile char ad_complete = 0;
@@ -112,11 +111,6 @@ void initiate_sensormodul(void)
 	//Kalibrera gyro, sätt sedan ADMUX till 0 så att vi får Frontsensor
 	ADCSRA = 0b11001011;
 	ADMUX = 0;
-
-	TCCR0B = 0x00; //stop
-	TCNT0 = 0x00; //set count
-	OCR0B = 0x04; //set compare
-	TCCR0B = 0x03; //start timer
 }
 void find_RFID(void) //Vet inte riktigt hur vi ska leta RFID, men det är ett mycket senare problem.
 {
@@ -129,6 +123,14 @@ void find_RFID(void) //Vet inte riktigt hur vi ska leta RFID, men det är ett my
 			isRFID = 1;
 		}
 	}
+}
+
+void initiate_gyro_timer()
+{
+	TIMSK0 = 0b00000001; //Enable interupt vid overflow
+	TCCR0B = 0x00; //stop
+	TCNT0 = 0x00; //set count
+	TCCR0B = 0x03; //start timer prescale 64
 }
 
 //Timer för samplehastighet
@@ -145,14 +147,14 @@ void calculate_angle()
 {
 	if(digital_angle >= 0)
 	{
-		digital_angle = digital_angle * 9.33;
+		digital_angle = digital_angle * 0.02860048303038;
 	}
 	else
 	{
-		digital_angle = digital_angle * 5,04;
+		digital_angle = digital_angle * 0.02981401732052;
 	}
 
-	angle = angle + digital_angle * 64 / 244000;
+	angle = angle + digital_angle;
 }
 
 void calculate_sendGyro()
@@ -242,6 +244,7 @@ int main(void)
 {
 	SlaveInit();
 	initiate_sensormodul();
+	initiate_gyro_timer();
 	initiate_sample_timer();
 	while(1)
 	{
@@ -366,13 +369,16 @@ int main(void)
 					if ((dGyro < gyroref + 2) && (dGyro > gyroref - 2))
 					{
 						digital_angle = 0;
+						timer = TCNT0;
 						TCNT0 = 0x00;
+						overflow = 0;
 					}
 					else
 					{
 						digital_angle = dGyro - gyroref;
 						timer = TCNT0;
-						digital_angle = digital_angle * timer; //64 är prescalen på timern
+						digital_angle = digital_angle * (timer + overflow * 64); //64 är prescalen på timern
+						overflow = 0;
 						TCNT0 = 0x00; //set count
 					}
 					calculate_angle();
@@ -385,6 +391,7 @@ int main(void)
 		}
 	}
 }
+
 ISR(TIMER1_COMPB_vect)
 {
 	TCCR1B = 0x00;
@@ -392,16 +399,25 @@ ISR(TIMER1_COMPB_vect)
 	start_sample = 1;
 	ADCSRA = 0b11001011;
 }
+
+ISR(TIMER0_OVF_vect)
+{
+	TCNT0 = 0;
+	overflow++;
+}
+
 ISR(INT0_vect) //knapp ska vi inte ha irl, men ja.
 {
-	ADCSRA = 0b11001011;
+	dummy = 0;
 	//:)
 }
+
 ISR(ADC_vect)
 {
 	ADCSRA = 0b10001011;
 	ad_complete = 1;
 }
+
 ISR(SPI_STC_vect) // Skicka på buss!! // Robert
 {
 	SPDR = 0; //Dummyskrivning
@@ -450,6 +466,7 @@ ISR(SPI_STC_vect) // Skicka på buss!! // Robert
 		// behöver förmodligen inte göra något här
 	}
 }
+
 /* GAMMALT SOM HAR ANVÄNTS I TESTSYFTE */
 /*ISR(ADC_vect)
 {
