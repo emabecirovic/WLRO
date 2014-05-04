@@ -3,11 +3,12 @@
 
 char calibrated = 0;
 char dGyro;
+long double hejsan;
 char gyroref;
 char sendGyro = 0x40;
-signed long digital_angle = 0;
-float angle = 0;
-float ef = 1;
+long double digital_angle = 0;
+long double angle = 0;
+float ef = 5;
 long timer = 0;
 volatile long overflow;
 
@@ -15,7 +16,8 @@ volatile char ad_complete = 0;
 volatile char dummy = 0;
 
 long n = 0;
-double testgyro;
+long double testgyro;
+
 
 
 void initiate_sensormodul(void)
@@ -28,9 +30,6 @@ void initiate_sensormodul(void)
 	DDRD = 0x00;
 	ADCSRA = 0b10001011;
 	sei();
-	//USART_Init(25);
-	//UCSR0B = (0<<RXEN0)|(0<<TXEN0); //Stäng av USART
-	//Kalibrera gyro, sätt sedan ADMUX till 0 så att vi får Frontsensor
 	ADCSRA = 0b11001011;
 	ADMUX = 6;
 
@@ -40,17 +39,15 @@ void initiate_sample_timer()
 {
 	TIMSK1 = 0b00000100; //Enable interupt vid matchning med OCR1B TCCR1B =0x00;
 	TCNT1 = 0x00;
-	//TCCR1B = 0x03; //Starta samplingsräknare, presscale 64.
 	OCR1BH = 0x00;
 	OCR1BL = 0x60; //RANDOM! När ska comparen triggas? SAMPLING
 }
 
 void initiate_gyro_timer()
 {
-	//GYROTIMER
+	TIMSK0 = 0b00000001; //Enable interupt vid overflow
 	TCCR0B = 0x00; //stop
 	TCNT0 = 0x00; //set count
-	OCR0B = 0x04; //set compare
 	TCCR0B = 0x03; //start timer prescale 64
 }
 
@@ -58,14 +55,14 @@ void calculate_angle()
 {
 	if(digital_angle >= 0)
 	{
-		digital_angle = digital_angle * 9.33;
+		digital_angle = digital_angle * 0.02860048303038;
 	}
 	else
 	{
-		digital_angle = digital_angle * 5,04;
+		digital_angle = digital_angle * 0.02981401732052;
 	}
 
-	angle = angle + digital_angle * 64 / 244000;
+	angle = angle + digital_angle;
 }
 
 void calculate_sendGyro()
@@ -158,6 +155,7 @@ int main(void)
 	initiate_sample_timer();
 	while(1)
 	{
+		
 		if(ad_complete == 1)
 		{
 			ad_complete = 0;
@@ -175,12 +173,13 @@ int main(void)
 				{
 					digital_angle = 0;
 					TCNT0 = 0x00;
+					overflow = 0;
 				}
 				else
 				{
-					digital_angle = dGyro - gyroref;
+					digital_angle = (dGyro - gyroref) *5/256; //5V, 8 bitar
 					timer = TCNT0;
-					digital_angle = digital_angle * (timer + overflow*64); //64 är prescalen på timern
+					digital_angle = digital_angle * (timer + overflow * 64); //64 är prescalen på timern
 					overflow = 0;
 					TCNT0 = 0x00; //set count
 				}
@@ -212,13 +211,14 @@ ISR(INT0_vect) //knapp ska vi inte ha irl, men ja.
 	//:)
 }
 
-/*ISR(ADC_vect)
+ISR(ADC_vect)
 {
 	ADCSRA = 0b10001011;
 	ad_complete = 1;
-}*/
+}
 
 //Gammal testkod som ska omtestas för omkalibrering av gyrot.
+/*
 ISR(ADC_vect)
 {
 	if(n == 0)
@@ -228,37 +228,40 @@ ISR(ADC_vect)
 	if(n < 20000)
 	{
 		n = n + 1;
-		dGyro = ADC >> 2;
+		dGyro = (ADC >> 2);
 		if ((dGyro < gyroref + 2) && (dGyro > gyroref - 2))
 		{
 			testgyro = testgyro;
 		}
 		else
 		{
-			dGyro= dGyro - gyroref;
+			hejsan = (dGyro - gyroref)*5/256; // 5V, 256 "delar"
 			timer = TCNT0;
-			dGyro = dGyro * timer;
-			TCNT0 = 0x00; //set count
-			//dGyro = dGyro / 244000;
-			if(dGyro >= 0)
+			hejsan = hejsan * (timer + 64 * overflow);
+			overflow = 0;
+			if(n !=19999)
 			{
-				dGyro = dGyro * 9.33;
+				TCNT0 = 0x00; //set count
+			}
+			if(hejsan >= 0)
+			{
+				hejsan = hejsan * 0.02860048303038;
 			}
 			else
 			{
-				dGyro = dGyro * 5,04;
+				hejsan = hejsan * 0.02981401732052;
 			}
-			testgyro = testgyro + dGyro;
+			testgyro = testgyro + hejsan;
 		}
 		ADCSRA = 0b11001011;
 	}
 	else
 	{
-		testgyro /= 244000;
+		//testgyro /= 244000;
 		dummy = testgyro;
 		gyroref = 0;
 		ADCSRA = 0b10001011;
 		n = 0;
 		testgyro = 0;
 	}
-}
+}*/
