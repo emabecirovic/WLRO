@@ -404,9 +404,27 @@ void rotate90left() // <- NY!
 	}
 }
 
+void temporary90left()
+{
+	cli();
+	PORTC = 0x00;
+	PORTD = 0x40;
+	OCR1A = 110;
+	OCR2A = 110;
+	_delay_ms(6300);
+	sei();
+} 
 
-
-
+void temporary90right()
+{
+	cli();
+	PORTC = 0x01;
+	PORTD = 0x00;
+	OCR1A = 110;
+	OCR2A = 110;
+	_delay_ms(6300);
+	sei();
+}
 
 
 void straight()
