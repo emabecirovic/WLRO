@@ -467,6 +467,67 @@ void TransmitSensor(char invalue)
 			}
 		}
 		
+		/*********************************RITA UT FÖRLÄNGD VÄGG*************************************/
+void extended_wall()
+{
+	for(int j = 0; j < 15; j++ )
+	{
+		for(int i = 0; i < 29; i++)
+		{
+			if(room[i][j] == 1 | 2)
+			{
+				i = 29;
+			}
+			else
+			{
+				room[i][j] = 1;
+			}
+		}
+	}
+	for(int i = 0; i < 29; i++ )
+	{
+		for(int j = 0; j < 15; j++)
+		{
+			if(room[i][j] == 1 | 2)
+			{
+				j = 15;
+			}
+			else
+			{
+				room[i][j] = 1;
+			}
+		}
+	}
+	for(int j = 0; j < 15; j++ )
+	{
+		for(int i = 28; i >= 0; i--)
+		{
+			if(room[i][j] == 1 | 2)
+			{
+				i = -1;
+			}
+			else
+			{
+				room[i][j] = 1;
+			}
+		}
+	}
+	for(int i = 0; i < 29; i++ )
+	{
+		for(int j = 14; j >= 0; i--)
+		{
+			if(room[i][j] == 1 | 2)
+			{
+				j = -1;
+			}
+			else
+			{
+				room[i][j] = 1;
+			}
+		}
+	}
+}
+		
 		
 		int getgyro()
 		{	
