@@ -3,6 +3,8 @@
 	*
 	* Created: 4/29/2014 9:26 AM
 	*  Author: robsv107
+	*          patsu326
+	*	   marek588
 */
 
 #include <avr/io.h>
@@ -44,7 +46,7 @@ char mydirection = 2; //1=X+ ; 2=Y+ ; 3=X- ; 4=Y-
 char distance=0; //Hur långt roboten har färdats (sedan senast vi tog emot värden från sensor?)
 unsigned int myposX=0; //Robotens position i X-led
 unsigned int myposY=0; //Robotens position i Y-led
-unsigned int startpos[2]={15,0}; //Startpositionen sätts till mitten på nedre lånsidan
+unsigned int startpos[2]={15,0}; //Startpositionen sätts till mitten på nedre långsidan
 int firstzero; //Första nollan om man läser matrisen uppifrån och ned
 
 unsigned char gyro;
@@ -256,7 +258,7 @@ void TransmitSensor(char invalue)
 		
 	}
 	
-	/******************************FJÄRSTYRNING**********************/
+	/******************************FJÄRRSTYRNING**********************/
 	void remotecontrol()
 	{
 		while(1)
@@ -352,7 +354,7 @@ void TransmitSensor(char invalue)
 			room[y][x]=1;
 		}
 		
-		void updatemap()
+		void updatemap() // Kan väl bara gälla för yttervarvet?
 		{
 			char w=30; //Hur långt ifrån vi ska vara för att säga att det är en vägg.
 			
@@ -366,65 +368,101 @@ void TransmitSensor(char invalue)
 				if(sensormeanright<=w) //Vet inte vad som är en lämplig siffra här
 				{
 					setwall(myposX,myposY-1);
+					unless room[myposX-1][myposY]==1
+					{
 					room[myposX-1][myposY]=2;
+					}
 				}
 				else if(sensorfront<=w)
 				{
 					setwall(myposX+1,myposY);
+					unless room[myposX-1][myposY]==1
+					{
 					room[myposX-1][myposY]=2;
+					}
 				}
 				else if(sensormeanleft<w)
 				{
 					setwall(myposX,myposY+1);
+					unless room[myposX-1][myposY]==1
+					{
 					room[myposX-1][myposY]=2;
+					}
 				}
 				case (2): // Y+
 				if(sensormeanright<=w)
 				{
 					setwall(myposX+1,myposY);
+					unless room[myposX][myposY-1]==1
+					{
 					room[myposX][myposY-1]=2;
+					}
 				}
 				else if(sensorfront<=w)
 				{
 					setwall(myposX,myposY+1);
+					unless room[myposX][myposY-1]==1
+					{
 					room[myposX][myposY-1]=2;
+					}
 				}
 				else if(sensormeanleft<w)
 				{
 					setwall(myposX-1,myposY);
+					unless room[myposX][myposY-1]==1
+					{
 					room[myposX][myposY-1]=2;
+					}
 				}
 				case (3): // X-
 				if(sensormeanright<=w) 
 				{
 					setwall(myposX,myposY+1);
+					unless room[myposX+1][myposY]==1
+					{
 					room[myposX+1][myposY]=2;
+					}
 				}
 				else if(sensorfront<=w)
 				{
 					setwall(myposX-1,myposY);
+					unless room[myposX+1][myposY]==1
+					{
 					room[myposX+1][myposY]=2;
+					}
 				}
 				else if(sensormeanleft<w)
 				{
 					setwall(myposX,myposY-1);
+					unless room[myposX+1][myposY]==1
+					{
 					room[myposX+1][myposY]=2;
+					}
 				}
 				case (4): // Y-
 				if(sensormeanright<=w) 
 				{
 					setwall(myposX-1,myposY);
+					unless room[myposX][myposY+1]==1
+					{
 					room[myposX][myposY+1]=2;
+					}
 				}
 				else if(sensorfront<=w)
 				{
 					setwall(myposX,myposY-1);
+					unless room[myposX][myposY+1]==1
+					{
 					room[myposX][myposY+1]=2;
+					}
 				}
 				else if(sensormeanleft<w)
 				{
 					setwall(myposX+1,myposY);
+					unless room[myposX][myposY+1]==1
+					{
 					room[myposX][myposY+1]=2;
+					}
 				}
 			}
 		}
@@ -465,7 +503,7 @@ void TransmitSensor(char invalue)
 		/*********************************FÖRSTA VARV*************************************/
 		void firstlap()
 		{
-			if(mypos==startpos)
+			if(mypos==startpos)	//Det här kommer gälla de första sekunderna roboten börjar köra också..!
 			{
 				onelap=1;
 			}
