@@ -177,9 +177,9 @@ void initiation()
 	DDRA=0b11111111;
 	DDRC=0b11000001;
 	DDRD=0b11100000;
-	TCCR1A=0b10000001; //setup, phase correct PWM
-	TCCR1B=0b00000010; //sätter hastigheten på klockan
-	TCCR2A=0b10000001;
+	//TCCR1A=0b10000001; //setup, phase correct PWM
+	//TCCR1B=0b00000010; //sätter hastigheten på klockan
+	TCCR2A=0b10100001;
 	TCCR2B=0b00000010;
 	//Till displayen, vet inte om det behövs men den är efterbliven
 	PORTA=0b00110000;
