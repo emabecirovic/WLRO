@@ -3,8 +3,6 @@
 	*
 	* Created: 4/29/2014 9:26 AM
 	*  Author: robsv107
-	*          patsu326
-	*	   marek588
 */
 
 #include <avr/io.h>
@@ -46,7 +44,7 @@ char mydirection = 2; //1=X+ ; 2=Y+ ; 3=X- ; 4=Y-
 char distance=0; //Hur långt roboten har färdats (sedan senast vi tog emot värden från sensor?)
 unsigned int myposX=0; //Robotens position i X-led
 unsigned int myposY=0; //Robotens position i Y-led
-unsigned int startpos[2]={15,0}; //Startpositionen sätts till mitten på nedre långsidan
+unsigned int startpos[2]={15,0}; //Startpositionen sätts till mitten på nedre lånsidan
 int firstzero; //Första nollan om man läser matrisen uppifrån och ned
 
 unsigned char gyro;
@@ -56,7 +54,7 @@ unsigned char sensor2right;
 unsigned char sensor1left;
 unsigned char sensor2left;
 
-char room[29][15]; //=.... 0=outforskat, 1=vägg, 2=öppen yta
+char room[15][29]; //=.... 0=outforskat, 1=vägg, 2=öppen yta
 
 
 /***********************************************LCDSKÄRM*********************************/
@@ -258,7 +256,7 @@ void TransmitSensor(char invalue)
 		
 	}
 	
-	/******************************FJÄRRSTYRNING**********************/
+	/******************************FJÄRSTYRNING**********************/
 	void remotecontrol()
 	{
 		while(1)
@@ -351,10 +349,10 @@ void TransmitSensor(char invalue)
 		/***********************************KARTHANTERING***********************************/
 		void setwall(int x,int y)
 		{
-			room[x][y]=1;
+			room[y][x]=1;
 		}
 		
-		void updatemap() // Kan väl bara gälla för yttervarvet? om det är längre än w till väggen gör den ju ingenting..
+		void updatemap()
 		{
 			char w=30; //Hur långt ifrån vi ska vara för att säga att det är en vägg.
 			
@@ -368,165 +366,68 @@ void TransmitSensor(char invalue)
 				if(sensormeanright<=w) //Vet inte vad som är en lämplig siffra här
 				{
 					setwall(myposX,myposY-1);
-					unless room[myposX-1][myposY]==1
-					{
 					room[myposX-1][myposY]=2;
-					}
 				}
 				else if(sensorfront<=w)
 				{
 					setwall(myposX+1,myposY);
-					unless room[myposX-1][myposY]==1
-					{
 					room[myposX-1][myposY]=2;
-					}
 				}
 				else if(sensormeanleft<w)
 				{
 					setwall(myposX,myposY+1);
-					unless room[myposX-1][myposY]==1
-					{
 					room[myposX-1][myposY]=2;
-					}
 				}
 				case (2): // Y+
 				if(sensormeanright<=w)
 				{
 					setwall(myposX+1,myposY);
-					unless room[myposX][myposY-1]==1
-					{
 					room[myposX][myposY-1]=2;
-					}
 				}
 				else if(sensorfront<=w)
 				{
 					setwall(myposX,myposY+1);
-					unless room[myposX][myposY-1]==1
-					{
 					room[myposX][myposY-1]=2;
-					}
 				}
 				else if(sensormeanleft<w)
 				{
 					setwall(myposX-1,myposY);
-					unless room[myposX][myposY-1]==1
-					{
 					room[myposX][myposY-1]=2;
-					}
 				}
 				case (3): // X-
 				if(sensormeanright<=w) 
 				{
 					setwall(myposX,myposY+1);
-					unless room[myposX+1][myposY]==1
-					{
 					room[myposX+1][myposY]=2;
-					}
 				}
 				else if(sensorfront<=w)
 				{
 					setwall(myposX-1,myposY);
-					unless room[myposX+1][myposY]==1
-					{
 					room[myposX+1][myposY]=2;
-					}
 				}
 				else if(sensormeanleft<w)
 				{
 					setwall(myposX,myposY-1);
-					unless room[myposX+1][myposY]==1
-					{
 					room[myposX+1][myposY]=2;
-					}
 				}
 				case (4): // Y-
 				if(sensormeanright<=w) 
 				{
 					setwall(myposX-1,myposY);
-					unless room[myposX][myposY+1]==1
-					{
 					room[myposX][myposY+1]=2;
-					}
 				}
 				else if(sensorfront<=w)
 				{
 					setwall(myposX,myposY-1);
-					unless room[myposX][myposY+1]==1
-					{
 					room[myposX][myposY+1]=2;
-					}
 				}
 				else if(sensormeanleft<w)
 				{
 					setwall(myposX+1,myposY);
-					unless room[myposX][myposY+1]==1
-					{
 					room[myposX][myposY+1]=2;
-					}
 				}
 			}
 		}
-		
-		/*********************************RITA UT FÖRLÄNGD VÄGG*************************************/
-void extended_wall()
-{
-	for(int j = 0; j < 15; j++ )
-	{
-		for(int i = 0; i < 29; i++)
-		{
-			if(room[i][j] == 1 | 2)
-			{
-				i = 29;
-			}
-			else
-			{
-				room[i][j] = 1;
-			}
-		}
-	}
-	for(int i = 0; i < 29; i++ )
-	{
-		for(int j = 0; j < 15; j++)
-		{
-			if(room[i][j] == 1 | 2)
-			{
-				j = 15;
-			}
-			else
-			{
-				room[i][j] = 1;
-			}
-		}
-	}
-	for(int j = 0; j < 15; j++ )
-	{
-		for(int i = 28; i >= 0; i--)
-		{
-			if(room[i][j] == 1 | 2)
-			{
-				i = -1;
-			}
-			else
-			{
-				room[i][j] = 1;
-			}
-		}
-	}
-	for(int i = 0; i < 29; i++ )
-	{
-		for(int j = 14; j >= 0; i--)
-		{
-			if(room[i][j] == 1 | 2)
-			{
-				j = -1;
-			}
-			else
-			{
-				room[i][j] = 1;
-			}
-		}
-	}
-}
 		
 		
 		int getgyro()
@@ -547,16 +448,22 @@ void extended_wall()
 		
 		/********************************REGLERING*****************************************/
 		
+		void driveF()
+		{
+			PORTC = 0x01;
+			PORTD = 0x20;
+			OCR2A = speed;
+			OCR2B = speed;
+		}
+		
+		// Hjälpfunktion för att köra en viss distans
 		void driveDist(char length)
 		{
 			distance = 0;
 			while(distance < length)
 			{
 				TransmitSensor(0x00);
-				PORTC = 0x01;
-				PORTD = 0x40;
-				OCR2A = speed;
-				OCR1A = speed;
+				driveF();
 			}
 		}
 		
@@ -564,7 +471,7 @@ void extended_wall()
 		/*********************************FÖRSTA VARV*************************************/
 		void firstlap()
 		{
-			if(mypos==startpos)	//Det här kommer gälla de första sekunderna roboten börjar köra också..!
+			if(mypos==startpos)
 			{
 				onelap=1;
 			}
@@ -663,11 +570,16 @@ void extended_wall()
 			
 			if(leftfront < 20)
 			{
-				regleringright();	
+				regleringright();
+				bool getinpos = true;
+				
+			}
+			else if(getinpos)
+			{
+				driveDist(20);
 			}
 			else
 			{
-				driveDist(20);
 				rotate90left();
 				
 				driveDist(40); // Kör en sektion ut i öppen yta
@@ -675,7 +587,6 @@ void extended_wall()
 				rotate90right();
 				
 				fisklar = true;
-				
 			}
 		}
 		
@@ -695,46 +606,64 @@ void extended_wall()
 			}
 			else if(leftturn)
 			{
+				TransmitSensor(left);
 				leftturn = false;
+				if(sensorvanster < 20)
+				{
+					pruttklar = true;
+					return;
+				}
 				rotate90left2();
 				driveDist(40);
+				while(sensorvanster < 20)
+				{
+					driveDist(40);
+				}
 				rotate90left2();
 			}
 			else
 			{
+				TransmitSensor(right);
 				leftturn = true;
+				if(sensorhoger < 20)
+				{
+					pruttklar = true;
+					return;
+				}
 				rotate90right2();
 				driveDist(40);
+				while(sensorhoger < 20)
+				{
+					driveDist(40);
+				}
 				rotate90right2();
 			}
-			
-			if()
-			pruttklar = true;
-			
-		}
+	}
 		
 		/*********************************MISSADE RUTOR*******************************/
 		void shart()
 		{
 			int notsearched[2] = findfirstzero();
 			
-			if(notsearched == [30, 30]) //KOLLA UPP COMPARE ARRAY!!! Det här är inte rätt storlek
-			shartklar = true;
+			if(notsearched == [15, 0]) //KOLLA UPP COMPARE ARRAY!!!
+				shartklar = true;
 			else
 			driveto(notsearched);
-		}
-				
+		}		
+		
+		
+		/************************************HITTA FÖRSTA NOLLAN I RUMMET**********************************/
 		int findfirstzero()
 		{
 			int i; //X
 			int j; //Y
-			int firstzero[2]={30,30};
+			int firstzero[2]={15,0};
 			
-			for(int j=0;j<=15;j++)
+			for(int j=0;j<=17;j++)
 			{
-				for(int i=0;i<=29;i++)
+				for(int i=0;i<=31;i++)
 				{
-					if(room[i][j]==0)
+					if(room[j][i]==0)
 					{
 						firstzero[0]=i;
 						firstzero[1]=j;
@@ -746,17 +675,69 @@ void extended_wall()
 		
 		void driveto(int pos[2])
 		{
+			getAllSensor();
+			
+			if(myposX > pos[0] && myposY < pos[1]) //Fjärde kvadranten
+			{
+				switch(mydirection)
+				{
+					case(1):
+						rotate90left();
+					case(2):
+						if(sensorfront > 50)
+							driveF();
+					case(3):
+						if(sensorfront > 50)
+							driveF();
+					case(4):
+						rotate90right();
+				}
+			}
+			else if(myposX < pos[0] && myposY < pos[1]) // Tredje kvadranten
+			{
+				switch(mydirection)
+				{
+					case(1):
+						if(sensorfront > 50)
+							driveF();
+					case(2):
+						if(sensorfront > 50)
+							driveF();
+					case(3):
+						rotate90right();
+					case(4):
+						rotate90left();
+				}
+			}
+			
+			// Fortsätt här
+			
+		}
+		
+		// RITA PÅ TAVLAN OCH FUNDERA MERA!!!!!
+		void driveto2(int pos[2])
+		{
+			TransmitSensor(0x00); //BARA FRONT TILL ATT BÖRJA MED
 			if(myposX!=pos[0])
 			{
-				if(pos[0]>myposX)
+				if(pos[0]>myposX )
 				{
 					switch(mydirection)
 					{
 						case(1):
-						PORTC = 0x01;
-						PORTD = 0x40;
-						OCR2A = speed;
-						OCR0A = speed;
+						if(sensorfront > 50)
+						{
+							PORTC = 0x01;
+							PORTD = 0x40;
+							OCR2A = speed;
+							OCR0A = speed;
+						}
+						else
+						{
+							driveDist(40);
+							rotate90left();
+							regleringright(); /// ELLEEEEEEERRRR ??????!!!!!!!!!!!
+						}
 						case(2):
 						rotate90right2();
 						case(3):
@@ -889,6 +870,8 @@ void extended_wall()
 			{	
 				bool leftturn = true; // Till första toppsvängen i sicksacksak
 				bool first = true; // Till första bottensväng i sicksacksak
+				
+				bool drivetoY = true; // Y-led är prioriterad riktining om sant i driveto
 				
 				while(home==0)
 				{
