@@ -41,6 +41,10 @@ float sensormeanr_old;
 volatile float rightpwm;
 volatile float leftpwm;
 char emadistance = 0;
+long overflow = 0;
+long time_passed = 0;
+int timer = 0;
+
 
 //LCD-saker :)
 char lcd0 = 0b00110000;
@@ -408,23 +412,13 @@ void temporary90left()
 {
 	cli();
 	PORTC = 0x00;
-	PORTD = 0x40;
-	OCR1A = 110;
+	PORTD = 0x20;
+	OCR2B = 110;
 	OCR2A = 110;
-	_delay_ms(6300);
+	_delay_ms(7100);
 	sei();
 } 
 
-void temporary90right()
-{
-	cli();
-	PORTC = 0x01;
-	PORTD = 0x00;
-	OCR1A = 110;
-	OCR2A = 110;
-	_delay_ms(6300);
-	sei();
-}
 
 
 void straight()
@@ -434,15 +428,26 @@ void straight()
 		PORTC = 0x01; //rotera höger
 		PORTD = 0x00;
 		OCR2A = 70;
-		OCR1A = 70;
+		OCR2B = 70;
 	}
 	else if((sensor2r-sensor1r) > 0.5)
 	{
 		PORTC = 0x00; //rotera vänster
-		PORTD = 0x40;
+		PORTD = 0x20;
 		OCR2A = 70;
-		OCR1A = 70;
+		OCR2B = 70;
 	}
+}
+
+void temporary90right()
+{
+	cli();
+	PORTC = 0x01;
+	PORTD = 0x00;
+	OCR2B = 110;
+	OCR2A = 110;
+	_delay_ms(7100);
+	sei();
 }
 
 
@@ -450,18 +455,21 @@ void straight()
 int main()
 {
 	initiation();
+	
+	
 	MasterInit();
 	_delay_ms(40000);
 	initiate_request_timer();
 	int fjarrstyrt = (PIND & 0x01); //1 då roboten är i fjärrstyrt läge
 	int first=1;
+	int bajs=0;
 
 	if(fjarrstyrt==1)
 	{
 
 		while(1)
 		{
-
+			
 			if(start_request == 1)
 			{
 				if(first==0)
@@ -489,18 +497,7 @@ int main()
 			}
 
 
-			/*
-			//VÄNSTERSVÄNG!
-			if (turnready == 0)
-			{
-				rotate90left();
-			}
-			else
-			{
-				OCR2A = 0;
-				OCR1A = 0;
-			}
-			*/
+		
 
 			//REGLERING
 			//Omvandling till centimeter
@@ -526,15 +523,15 @@ int main()
 			{
 				first=0;
 				PORTC = 0x01;
-				PORTD = 0x40;
-				OCR1A = 0;
+				PORTD = 0x20;
+				OCR2B = 0;
 				OCR2A = 0;
 				sensormeanr_old=sensormeanr;
 			}
 			else
 			{
 			//till PD-reglering
-			Td = 4; //fungerar ok med 3, 4 ej testat
+			Td = 400000;
 			K = 3;
 
 			//if(sensorfront>100)
@@ -549,27 +546,35 @@ int main()
 					}
 					else
 					{
+						bajs=1; 
+						timer = TCNT1;
+						dt = (time + overflow * 65536) * 64;
+						
+
+						TCNT1 = 0;
+						overflow = 0;
+						
 						PORTC = 0x01;
-						PORTD = 0x40;
+						PORTD = 0x20;
 						//P-reglering
 						//rightpwm = 100 + K * (18 - sensormeanr);// + regulate right
 						//leftpwm = 100 - K * (18 - sensormeanr);// - regulate right
 						//PD-reglering
-						rightpwm = 100 + K * (18-sensormeanr + Td * (sensormeanr_old-sensormeanr));
-						leftpwm = 100 - K * (18-sensormeanr + Td * (sensormeanr_old-sensormeanr));
+						rightpwm = 110 + K * (18-sensormeanr + Td * (sensormeanr_old-sensormeanr)/dt);
+						leftpwm = 110 - K * (18-sensormeanr + Td * (sensormeanr_old-sensormeanr)/dt);
 
 
 						if (rightpwm > 255)
 						{
-							OCR1A = 255;
+							OCR2B = 255;
 						}
 						else if(rightpwm < 0)
 						{					
-							OCR1A = 0;
+							OCR2B = 0;
 						}
 						else
 						{
-							OCR1A = rightpwm;
+							OCR2B = rightpwm;
 						}
 						if (leftpwm > 255)
 						{
@@ -590,16 +595,55 @@ int main()
 				}
 				else
 				{
-					OCR1A = 0;
-					OCR2A = 0;
+					//OCR2B = 0;
+					//OCR2A = 0;
+					if(bajs==1)
+					{
+						PORTC = 0x01;
+						PORTD = 0x20;
+						OCR2B = 110;
+						OCR2A = 110;
+						_delay_ms(6000);
+						temporary90right();
+						PORTC = 0x01;
+						PORTD = 0x20;
+						OCR2B = 110;
+						OCR2A = 110;
+						_delay_ms(9000);
+					}
+					else
+					{
+						OCR2B = 0;
+						OCR2A = 0;
+					}
 				}
 
 
 			}
-			//}		
+				
 		}
 	}
 	return 0;
+}
+
+
+void initiate_timer()
+{
+	TIMSK1 = 0b00000001; //Enable interupt vid overflow
+
+	TCCR1B = 0x00; //stop
+	TCNT1 = 0x00; //set count
+
+	TCCR1B = 0x03; //start timer prescale 64
+}
+
+
+
+ISR(TIMER1_OVF_vect)
+
+{
+	TCNT1 = 0;
+	overflow++;
 }
 
 
