@@ -424,7 +424,7 @@ int main(void)
 	}
 }
 
-//Avbrott
+//Avbrott för sampletid
 ISR(TIMER1_COMPB_vect)
 {
 	TCCR1B = 0x00;
@@ -433,24 +433,28 @@ ISR(TIMER1_COMPB_vect)
 	ADCSRA = 0b11001011;
 }
 
+//Avbrott när vi går över bitmängden för gyro-timer
 ISR(TIMER0_OVF_vect)
 {
 	TCNT0 = 0;
 	overflow++;
 }
 
+//Avbrott för knapp
 ISR(INT0_vect) //knapp ska vi inte ha irl, men ja.
 {
 	dummy = 0;
 	//:)
 }
 
+//Avbortt för AD-omvandlingen är klar
 ISR(ADC_vect)
 {
 	ADCSRA = 0b10001011;
 	ad_complete = 1;
 }
 
+//Avbrott för buss klar
 ISR(SPI_STC_vect) // Skicka på buss!! // Robert
 {
 	SPDR = 0; //Dummyskrivning
