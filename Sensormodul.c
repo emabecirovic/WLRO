@@ -1,7 +1,7 @@
 #include <avr/io.h>
 #include <avr/interrupt.h>
 
-// Namn istället för massa jobbiga siffror /Robert
+// Bussbeteckningar
 char front = 0b00000001;
 char rightfront = 0b00000010;
 char rightback = 0b00000011;
@@ -13,6 +13,7 @@ char RFID = 0b00001000;
 char stop = 0x00; //Stopbyte
 volatile char selection; // Används i skicka avbrottet
 
+//Konstanter som uppräkning i AD-omvandling
 char i = 0; //Vilken sensor jag använder
 char m = 0; //Hur många gånger jag har gått igenom sensorn.
 const char samplings = 8;
@@ -30,21 +31,24 @@ char Distance = 0;
 unsigned char rfid_data;
 char isRFID = 0; //ETTA ELLER NOLLA!
 
+//Gyrovariabler
 char calibrated = 0;
 char dGyro;
 char gyroref;
 char sendGyro = 0x40;
 long double digital_angle = 0;
 long double angle = 0;
-long double ef = 5;
+long double ef = 5; //Felmarginal
 long timer = 0;
 long overflow = 0;
 
 float dummy;
 
+//Flaggor
 char start_sample = 0;
 volatile char ad_complete = 0;
 
+//Bubble sort för att kunna ta ut medianen av avståndssensorer
 void bubble_sort(unsigned char a[], int size)
 {
 	int k, l, temp;
@@ -61,6 +65,8 @@ void bubble_sort(unsigned char a[], int size)
 		}
 	}
 }
+
+//Initiering av slave
 void SlaveInit(void)
 {
 	/* Set MISO output, all others input */
@@ -70,6 +76,7 @@ void SlaveInit(void)
 	/* Enable External Interrupt */
 	// sei();
 }
+
 char SlaveRecieve(void) // Används inte just nu men....
 {
 	/*Wait for reception complete */
@@ -79,6 +86,8 @@ char SlaveRecieve(void) // Används inte just nu men....
 	return SPDR;
 
 }
+
+//Initiering av USART för RFID-läsning
 void USART_Init( unsigned int baud )
 {
 	/* Set baud rate */
@@ -89,6 +98,7 @@ void USART_Init( unsigned int baud )
 	/* Set frame format: 8data, 1stop bit */
 	UCSR0C = (0<<USBS0)|(3<<UCSZ00);
 }
+
 unsigned char USART_Receive( void )
 {
 	/* Wait for data to be received */
@@ -96,23 +106,27 @@ unsigned char USART_Receive( void )
 	/* Get and return received data from buffer */
 	return UDR0;
 }
+
+//Sensormodulens initiering
 void initiate_sensormodul(void)
 {
 	MCUCR = 0b00000000;
-	EIMSK = 0b00000001;
-	EICRA = 0b00000011;
-	ADMUX = 6;
+	EIMSK = 0b00000001; //INT0-avbrott
+	EICRA = 0b00000011; //Avbrott på uppflank INT0
+	ADMUX = 6; //Gyro ligger på plats 6
 	DDRA = 0x00;
 	DDRD = 0x00;
 	ADCSRA = 0b10001011;
-	sei();
+	sei(); //Globala interrupts
 	USART_Init(25);
 	UCSR0B = (0<<RXEN0)|(0<<TXEN0); //Stäng av USART
 	//Kalibrera gyro, sätt sedan ADMUX till 0 så att vi får Frontsensor
-	ADCSRA = 0b11001011;
+	ADCSRA = 0b11001011; //Starta AD-omvandling
 	ADMUX = 0;
 }
-void find_RFID(void) //Vet inte riktigt hur vi ska leta RFID, men det är ett mycket senare problem.
+
+//Vet inte riktigt hur vi ska leta RFID, men det är ett mycket senare problem.
+void find_RFID(void) 
 {
 	UCSR0B = (1<<RXEN0)|(1<<TXEN0); //Starta USART
 	while(1)
@@ -125,6 +139,7 @@ void find_RFID(void) //Vet inte riktigt hur vi ska leta RFID, men det är ett my
 	}
 }
 
+//Gyro-timer för att beräkna tid som har gått sen senaste gyromätning
 void initiate_gyro_timer()
 {
 	TIMSK0 = 0b00000001; //Enable interupt vid overflow
@@ -136,13 +151,14 @@ void initiate_gyro_timer()
 //Timer för samplehastighet
 void initiate_sample_timer()
 {
-	TIMSK1 = 0b00000100; //Enable interupt vid matchning med OCR1B TCCR1B =0x00;
+	TIMSK1 = 0b00000100; //Enable interupt vid matchning med OCR1B TCCR1B =0x0060;
 	TCNT1 = 0x00;
 	//TCCR1B = 0x03; //Starta samplingsräknare, presscale 64.
 	OCR1BH = 0x00;
-	OCR1BL = 0x60; //RANDOM! När ska comparen triggas? SAMPLING
+	OCR1BL = 0x60; //RANDOM! När ska comparen triggas? SAMPLING Borde vara oftare ATM
 }
 
+//Beräkna vinkel, KALIBRERA OM
 void calculate_angle()
 {
 	if(digital_angle >= 0)
@@ -157,6 +173,7 @@ void calculate_angle()
 	angle = angle + digital_angle;
 }
 
+//Beräknar vilket värde som ska skickas till styrmodulen
 void calculate_sendGyro()
 {
 	sendGyro = 0;
@@ -170,6 +187,7 @@ void calculate_sendGyro()
 		angle = angle - 360;
 	}
 
+	//Olika koder beroende på vinkel. Felmarginal ef. Koderna har Ema.
 	if(angle >= -180 - ef && angle < -180 + ef)
 	{
 		sendGyro = 0x00;
@@ -240,6 +258,7 @@ void calculate_sendGyro()
 	}
 }
 
+//Mainfunktion
 int main(void)
 {
 	SlaveInit();
@@ -260,9 +279,12 @@ int main(void)
 
 		asm("");
 
+		//När AD-omvandling är klar så sätts ad_complete och då görs dessa beräkningar
 		if(ad_complete == 1)
 		{
 			ad_complete = 0;
+			
+			//Kalibrera gyrot första gången
 			if(calibrated == 0)
 			{
 				gyroref = ADC >> 2;
@@ -272,6 +294,7 @@ int main(void)
 			}
 			else
 			{
+				//Front
 				if(i == 0)
 				{
 					dFront[m] = ADC >> 2;
@@ -288,6 +311,7 @@ int main(void)
 						m = m + 1;
 					}
 				}
+				//Right Front
 				else if(i == 1)
 				{
 					dRight_Front[m] = ADC >> 2;
@@ -304,6 +328,7 @@ int main(void)
 						m = m + 1;
 					}
 				}
+				//Right Back
 				else if(i == 2)
 				{
 					dRight_Back[m] = ADC >> 2;
@@ -320,6 +345,7 @@ int main(void)
 						m = m + 1;
 					}
 				}
+				//Left Front
 				else if(i == 3)
 				{
 					dLeft_Front[m] = ADC >> 2;
@@ -336,7 +362,8 @@ int main(void)
 						m = m + 1;
 					}
 				}
-				else if(i ==	4)
+				//Left Back
+				else if(i == 4)
 				{
 					dLeft_Back[m] = ADC >> 2;
 					if (m == samplings - 1)
@@ -352,10 +379,12 @@ int main(void)
 						m = m + 1;
 					}
 				}
+				//Fototransistor
 				else if(i == 5)
 				{
 					tempDistance = dDist;
 					dDist = ADC >> 2;
+					//Om den nya och den gamla ligger på olika sidor på 150 så ska Distance räknas upp. Det betyder att vi har gått förbi ett segment på skivan.
 					if (((tempDistance <= 150) && (dDist > 150)) | ((tempDistance >= 150) && (dDist < 150)))
 					{
 						Distance = Distance + 1;
@@ -363,9 +392,11 @@ int main(void)
 					i = i + 1;
 					ADMUX = i;
 				}
+				//Gyro
 				else if(i == 6)
 				{
 					dGyro = ADC >> 2;
+					//Har en felmarginal på 1
 					if ((dGyro < gyroref + 2) && (dGyro > gyroref - 2))
 					{
 						digital_angle = 0;
@@ -377,7 +408,7 @@ int main(void)
 					{
 						digital_angle = dGyro - gyroref;
 						timer = TCNT0;
-						digital_angle = digital_angle * (timer + overflow * 64); //64 är prescalen på timern
+						digital_angle = digital_angle * (timer + overflow * 256); //64 är prescalen på timern
 						overflow = 0;
 						TCNT0 = 0x00; //set count
 					}
@@ -387,11 +418,13 @@ int main(void)
 					ADMUX = i;
 				}
 			}
-			TCCR1B = 0x03;
+			//Starta samplingsräknare
+			TCCR1B = 0x03; 
 		}
 	}
 }
 
+//Avbrott
 ISR(TIMER1_COMPB_vect)
 {
 	TCCR1B = 0x00;
