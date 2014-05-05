@@ -56,7 +56,7 @@ unsigned char sensor2right;
 unsigned char sensor1left;
 unsigned char sensor2left;
 
-char room[15][29]; //=.... 0=outforskat, 1=vägg, 2=öppen yta
+char room[29][15]; //=.... 0=outforskat, 1=vägg, 2=öppen yta
 
 
 /***********************************************LCDSKÄRM*********************************/
@@ -351,7 +351,7 @@ void TransmitSensor(char invalue)
 		/***********************************KARTHANTERING***********************************/
 		void setwall(int x,int y)
 		{
-			room[y][x]=1;
+			room[x][y]=1;
 		}
 		
 		void updatemap() // Kan väl bara gälla för yttervarvet?
