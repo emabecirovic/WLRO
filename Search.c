@@ -354,7 +354,7 @@ void TransmitSensor(char invalue)
 			room[x][y]=1;
 		}
 		
-		void updatemap() // Kan väl bara gälla för yttervarvet?
+		void updatemap() // Kan väl bara gälla för yttervarvet? om det är längre än w till väggen gör den ju ingenting..
 		{
 			char w=30; //Hur långt ifrån vi ska vara för att säga att det är en vägg.
 			
@@ -657,7 +657,7 @@ void TransmitSensor(char invalue)
 		{
 			int notsearched[2] = findfirstzero();
 			
-			if(notsearched == [30, 30]) //KOLLA UPP COMPARE ARRAY!!!
+			if(notsearched == [30, 30]) //KOLLA UPP COMPARE ARRAY!!! Det här är inte rätt storlek
 			shartklar = true;
 			else
 			driveto(notsearched);
@@ -669,11 +669,11 @@ void TransmitSensor(char invalue)
 			int j; //Y
 			int firstzero[2]={30,30};
 			
-			for(int j=0;j<=17;j++)
+			for(int j=0;j<=15;j++)
 			{
-				for(int i=0;i<=31;i++)
+				for(int i=0;i<=29;i++)
 				{
-					if(room[j][i]==0)
+					if(room[i][j]==0)
 					{
 						firstzero[0]=i;
 						firstzero[1]=j;
