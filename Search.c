@@ -354,118 +354,189 @@ void TransmitSensor(char invalue)
 			room[x][y]=1;
 		}
 		
-		void updatemap() // Kan väl bara gälla för yttervarvet? om det är längre än w till väggen gör den ju ingenting..
+		void updatemap() // Kan väl bara gälla för yttervarvet?
+{
+	char w=30; //Hur långt ifrån vi ska vara för att säga att det är en vägg.
+
+	int sensorfront;
+	int sensormeanright;
+	int sensormeanleft;
+
+	switch(mydirection)
+	{
+		case (1): // X+
+		if(sensormeanright<=w) //Vet inte vad som är en lämplig siffra här
 		{
-			char w=30; //Hur långt ifrån vi ska vara för att säga att det är en vägg.
-			
-			int sensorfront;
-			int sensormeanright;
-			int sensormeanleft;
-			
-			switch(mydirection)
+			setwall(myposX,myposY-1);
+			unless room[myposX-1][myposY]==1
 			{
-				case (1): // X+
-				if(sensormeanright<=w) //Vet inte vad som är en lämplig siffra här
-				{
-					setwall(myposX,myposY-1);
-					unless room[myposX-1][myposY]==1
-					{
-					room[myposX-1][myposY]=2;
-					}
-				}
-				else if(sensorfront<=w)
-				{
-					setwall(myposX+1,myposY);
-					unless room[myposX-1][myposY]==1
-					{
-					room[myposX-1][myposY]=2;
-					}
-				}
-				else if(sensormeanleft<w)
-				{
-					setwall(myposX,myposY+1);
-					unless room[myposX-1][myposY]==1
-					{
-					room[myposX-1][myposY]=2;
-					}
-				}
-				case (2): // Y+
-				if(sensormeanright<=w)
-				{
-					setwall(myposX+1,myposY);
-					unless room[myposX][myposY-1]==1
-					{
-					room[myposX][myposY-1]=2;
-					}
-				}
-				else if(sensorfront<=w)
-				{
-					setwall(myposX,myposY+1);
-					unless room[myposX][myposY-1]==1
-					{
-					room[myposX][myposY-1]=2;
-					}
-				}
-				else if(sensormeanleft<w)
-				{
-					setwall(myposX-1,myposY);
-					unless room[myposX][myposY-1]==1
-					{
-					room[myposX][myposY-1]=2;
-					}
-				}
-				case (3): // X-
-				if(sensormeanright<=w) 
-				{
-					setwall(myposX,myposY+1);
-					unless room[myposX+1][myposY]==1
-					{
-					room[myposX+1][myposY]=2;
-					}
-				}
-				else if(sensorfront<=w)
-				{
-					setwall(myposX-1,myposY);
-					unless room[myposX+1][myposY]==1
-					{
-					room[myposX+1][myposY]=2;
-					}
-				}
-				else if(sensormeanleft<w)
-				{
-					setwall(myposX,myposY-1);
-					unless room[myposX+1][myposY]==1
-					{
-					room[myposX+1][myposY]=2;
-					}
-				}
-				case (4): // Y-
-				if(sensormeanright<=w) 
-				{
-					setwall(myposX-1,myposY);
-					unless room[myposX][myposY+1]==1
-					{
-					room[myposX][myposY+1]=2;
-					}
-				}
-				else if(sensorfront<=w)
-				{
-					setwall(myposX,myposY-1);
-					unless room[myposX][myposY+1]==1
-					{
-					room[myposX][myposY+1]=2;
-					}
-				}
-				else if(sensormeanleft<w)
-				{
-					setwall(myposX+1,myposY);
-					unless room[myposX][myposY+1]==1
-					{
-					room[myposX][myposY+1]=2;
-					}
-				}
+				room[myposX-1][myposY]=2;
 			}
 		}
+		else if(sensorfront<=w)
+		{
+			setwall(myposX+1,myposY);
+			unless room[myposX-1][myposY]==1
+			{
+				room[myposX-1][myposY]=2;
+			}
+		}
+		else if(sensormeanleft<w)
+		{
+			setwall(myposX,myposY+1);
+			unless room[myposX-1][myposY]==1
+			{
+				room[myposX-1][myposY]=2;
+			}
+		}
+		if(sensormeanright>w) //Vet inte vad som är en lämplig siffra här
+		{
+			room[myposX-1][myposY]=2;
+			
+		}
+		else if(sensorfront>w)
+		{
+			
+				room[myposX-1][myposY]=2;
+			
+		}
+		else if(sensormeanleft>w)
+		{
+			
+				room[myposX-1][myposY]=2;
+			
+		}
+		case (2): // Y+
+		if(sensormeanright<=w)
+		{
+			setwall(myposX+1,myposY);
+			unless room[myposX][myposY-1]==1
+			{
+				room[myposX][myposY-1]=2;
+			}
+		}
+		else if(sensorfront<=w)
+		{
+			setwall(myposX,myposY+1);
+			unless room[myposX][myposY-1]==1
+			{
+				room[myposX][myposY-1]=2;
+			}
+		}
+		else if(sensormeanleft<w)
+		{
+			setwall(myposX-1,myposY);
+			unless room[myposX][myposY-1]==1
+			{
+				room[myposX][myposY-1]=2;
+			}
+		}
+		if(sensormeanright>w)
+		{
+		
+				room[myposX][myposY-1]=2;
+			
+		}
+		else if(sensorfront>w)
+		{
+		
+				room[myposX][myposY-1]=2;
+		
+		}
+		else if(sensormeanlef>w)
+		{
+			
+				room[myposX][myposY-1]=2;
+		
+		}
+		case (3): // X-
+		if(sensormeanright<=w)
+		{
+			setwall(myposX,myposY+1);
+			unless room[myposX+1][myposY]==1
+			{
+				room[myposX+1][myposY]=2;
+			}
+		}
+		else if(sensorfront<=w)
+		{
+			setwall(myposX-1,myposY);
+			unless room[myposX+1][myposY]==1
+			{
+				room[myposX+1][myposY]=2;
+			}
+		}
+		else if(sensormeanleft<w)
+		{
+			setwall(myposX,myposY-1);
+			unless room[myposX+1][myposY]==1
+			{
+				room[myposX+1][myposY]=2;
+			}
+		}
+		if(sensormeanright>w)
+		{
+			
+				room[myposX+1][myposY]=2;
+			
+		}
+		else if(sensorfront>w)
+		{
+			
+				room[myposX+1][myposY]=2;
+			
+		}
+		else if(sensormeanleft>w)
+		{
+		
+				room[myposX+1][myposY]=2;
+			
+		}
+		case (4): // Y-
+		if(sensormeanright<=w)
+		{
+			setwall(myposX-1,myposY);
+			unless room[myposX][myposY+1]==1
+			{
+				room[myposX][myposY+1]=2;
+			}
+		}
+		else if(sensorfront<=w)
+		{
+			setwall(myposX,myposY-1);
+			unless room[myposX][myposY+1]==1
+			{
+				room[myposX][myposY+1]=2;
+			}
+		}
+		else if(sensormeanleft<w)
+		{
+			setwall(myposX+1,myposY);
+			unless room[myposX][myposY+1]==1
+			{
+				room[myposX][myposY+1]=2;
+			}
+		}
+		if(sensormeanright>w)
+		{
+			
+				room[myposX][myposY+1]=2;
+			
+		}
+		else if(sensorfront>w)
+		{
+		
+				room[myposX][myposY+1]=2;
+			
+		}
+		else if(sensormeanleft>w)
+		{
+		
+				room[myposX][myposY+1]=2;
+			
+		}
+	}
+}
 		
 		/*********************************RITA UT FÖRLÄNGD VÄGG*************************************/
 void extended_wall()
