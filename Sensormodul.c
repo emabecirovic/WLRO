@@ -176,8 +176,6 @@ void calculate_angle()
 //Beräknar vilket värde som ska skickas till styrmodulen
 void calculate_sendGyro()
 {
-	sendGyro = 0;
-
 	if (angle < -180 - ef)
 	{
 		angle = angle + 360;
