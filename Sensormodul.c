@@ -41,6 +41,9 @@ long double angle = 0;
 long double ef = 5; //Felmarginal
 long timer = 0;
 long overflow = 0;
+volatile char gyroflag = 0;
+
+char counter_distance = 0;
 
 float dummy;
 
@@ -126,7 +129,7 @@ void initiate_sensormodul(void)
 }
 
 //Vet inte riktigt hur vi ska leta RFID, men det är ett mycket senare problem.
-void find_RFID(void) 
+void find_RFID(void)
 {
 	UCSR0B = (1<<RXEN0)|(1<<TXEN0); //Starta USART
 	while(1)
@@ -153,9 +156,9 @@ void initiate_sample_timer()
 {
 	TIMSK1 = 0b00000100; //Enable interupt vid matchning med OCR1B TCCR1B =0x0060;
 	TCNT1 = 0x00;
-	//TCCR1B = 0x03; //Starta samplingsräknare, presscale 64.
+	TCCR1B = 0x03; //Starta samplingsräknare, presscale 64.
 	OCR1BH = 0x00;
-	OCR1BL = 0x60; //RANDOM! När ska comparen triggas? SAMPLING Borde vara oftare ATM
+	OCR1BL = 0x30; //RANDOM! När ska comparen triggas? SAMPLING Borde vara oftare ATM
 }
 
 //Beräkna vinkel, KALIBRERA OM
@@ -176,15 +179,14 @@ void calculate_angle()
 //Beräknar vilket värde som ska skickas till styrmodulen
 void calculate_sendGyro()
 {
-	if (angle < -180 - ef)
+	while (angle < -180 - ef)
 	{
 		angle = angle + 360;
 	}
-	else if (angle > 180 + ef)
+	while (angle > 180 + ef)
 	{
 		angle = angle - 360;
 	}
-
 	//Olika koder beroende på vinkel. Felmarginal ef. Koderna har Ema.
 	if(angle >= -180 - ef && angle < -180 + ef)
 	{
@@ -281,7 +283,7 @@ int main(void)
 		if(ad_complete == 1)
 		{
 			ad_complete = 0;
-			
+
 			//Kalibrera gyrot första gången
 			if(calibrated == 0)
 			{
@@ -290,96 +292,109 @@ int main(void)
 				calibrated = 1;
 				TCCR1B = 0x03;
 			}
-			else
+			else if(gyroflag == 0)
 			{
-				//Front
-				if(i == 0)
+				if (counter_distance < 2)
 				{
-					dFront[m] = ADC >> 2;
-					if (m == samplings - 1)
+					//Front
+					if(i == 0)
 					{
-						bubble_sort(dFront, samplings);
-						sortedValues[0] = dFront[1];
-						i = i + 1;
-						m = 0;
-						ADMUX = i;
+						dFront[m] = ADC >> 2;
+						if (m == samplings - 1)
+						{
+							bubble_sort(dFront, samplings);
+							sortedValues[0] = dFront[1];
+							i = i + 1;
+							m = 0;
+							ADMUX = i;
+						}
+						else
+						{
+							m = m + 1;
+						}
 					}
-					else
+					//Right Front
+					else if(i == 1)
 					{
-						m = m + 1;
+						dRight_Front[m] = ADC >> 2;
+						if (m == samplings - 1)
+						{
+							bubble_sort(dRight_Front, samplings);
+							sortedValues[1] = dRight_Front[1];
+							i = i + 1;
+							m = 0;
+							ADMUX = i;
+						}
+						else
+						{
+							m = m + 1;
+						}
 					}
-				}
-				//Right Front
-				else if(i == 1)
+					//Right Back
+					else if(i == 2)
+					{
+						dRight_Back[m] = ADC >> 2;
+						if (m == samplings - 1)
+						{
+							bubble_sort(dRight_Back, samplings);
+							sortedValues[2] = dRight_Back[1];
+							i = i + 1;
+							m = 0;
+							ADMUX = i;
+						}
+						else
+						{
+							m = m + 1;
+						}
+					}
+					//Left Front
+					else if(i == 3)
+					{
+						dLeft_Front[m] = ADC >> 2;
+						if (m == samplings - 1)
+						{
+							bubble_sort(dLeft_Front, samplings);
+							sortedValues[3] = dLeft_Front[1];
+							i = i + 1;
+							m = 0;
+							ADMUX = i;
+						}
+						else
+						{
+							m = m + 1;
+						}
+					}
+					//Left Back
+					else if(i == 4)
+					{
+						dLeft_Back[m] = ADC >> 2;
+						if (m == samplings - 1)
+						{
+							bubble_sort(dLeft_Back, samplings);
+							sortedValues[4] = dLeft_Back[1];
+							i = 0;
+							m = 0;
+							ADMUX = i;
+						}
+						else
+						{
+							m = m + 1;
+						}
+					}
+					
+					if (counter_distance == 1)
+					{
+						//Nästa gång så ska vi ad-omvandla fototransistor
+						ADMUX = 5;
+					}
+					
+					counter_distance++;
+					
+				}//coutner_distance < 2
+				
+				else
 				{
-					dRight_Front[m] = ADC >> 2;
-					if (m == samplings - 1)
-					{
-						bubble_sort(dRight_Front, samplings);
-						sortedValues[1] = dRight_Front[1];
-						i = i + 1;
-						m = 0;
-						ADMUX = i;
-					}
-					else
-					{
-						m = m + 1;
-					}
-				}
-				//Right Back
-				else if(i == 2)
-				{
-					dRight_Back[m] = ADC >> 2;
-					if (m == samplings - 1)
-					{
-						bubble_sort(dRight_Back, samplings);
-						sortedValues[2] = dRight_Back[1];
-						i = i + 1;
-						m = 0;
-						ADMUX = i;
-					}
-					else
-					{
-						m = m + 1;
-					}
-				}
-				//Left Front
-				else if(i == 3)
-				{
-					dLeft_Front[m] = ADC >> 2;
-					if (m == samplings - 1)
-					{
-						bubble_sort(dLeft_Front, samplings);
-						sortedValues[3] = dLeft_Front[1];
-						i = i + 1;
-						m = 0;
-						ADMUX = i;
-					}
-					else
-					{
-						m = m + 1;
-					}
-				}
-				//Left Back
-				else if(i == 4)
-				{
-					dLeft_Back[m] = ADC >> 2;
-					if (m == samplings - 1)
-					{
-						bubble_sort(dLeft_Back, samplings);
-						sortedValues[4] = dLeft_Back[1];
-						i = i + 1;
-						m = 0;
-						ADMUX = i;
-					}
-					else
-					{
-						m = m + 1;
-					}
-				}
-				//Fototransistor
-				else if(i == 5)
-				{
+					//Fototransistor
 					tempDistance = dDist;
 					dDist = ADC >> 2;
 					//Om den nya och den gamla ligger på olika sidor på 150 så ska Distance räknas upp. Det betyder att vi har gått förbi ett segment på skivan.
@@ -387,40 +402,39 @@ int main(void)
 					{
 						Distance = Distance + 1;
 					}
-					i = i + 1;
-					ADMUX = i;
-				}
+					ADMUX = i; //Återgå till gammal i
+					counter_distance = 0;
+				}//counter_distance >= 2				
+				
+			}//gyroflag == 0
+			else if (gyroflag == 1)
+			{
 				//Gyro
-				else if(i == 6)
+				dGyro = ADC >> 2;
+				//Har en felmarginal på 1
+				if ((dGyro < gyroref + 2) && (dGyro > gyroref - 2))
 				{
-					dGyro = ADC >> 2;
-					//Har en felmarginal på 1
-					if ((dGyro < gyroref + 2) && (dGyro > gyroref - 2))
-					{
-						digital_angle = 0;
-						timer = TCNT0;
-						TCNT0 = 0x00;
-						overflow = 0;
-					}
-					else
-					{
-						digital_angle = dGyro - gyroref;
-						timer = TCNT0;
-						digital_angle = digital_angle * (timer + overflow * 256); //64 är prescalen på timern
-						overflow = 0;
-						TCNT0 = 0x00; //set count
-					}
-					calculate_angle();
-					calculate_sendGyro();
-					i = 0;
-					ADMUX = i;
+					digital_angle = 0;
+					timer = TCNT0;
+					TCNT0 = 0x00;
+					overflow = 0;
 				}
-			}
+				else
+				{
+					digital_angle = dGyro - gyroref;
+					timer = TCNT0;
+					digital_angle = digital_angle * (timer + overflow * 256); //64 är prescalen på timern
+					overflow = 0;
+					TCNT0 = 0x00; //set count
+				}
+				calculate_angle();
+				calculate_sendGyro();
+			}//gyroflag == 1
 			//Starta samplingsräknare
-			TCCR1B = 0x03; 
-		}
-	}
-}
+			TCCR1B = 0x03;
+		}//ad_complete == 1
+	}//while
+}//main
 
 //Avbrott för sampletid
 ISR(TIMER1_COMPB_vect)
@@ -441,6 +455,8 @@ ISR(TIMER0_OVF_vect)
 //Avbrott för knapp
 ISR(INT0_vect) //knapp ska vi inte ha irl, men ja.
 {
+	angle = 0;
+	sendGyro = 0x40;
 	dummy = 0;
 	//:)
 }
@@ -482,12 +498,17 @@ ISR(SPI_STC_vect) // Skicka på buss!! // Robert
 	{
 		SPDR = Distance;
 		asm("");
-		//Distance = 0;
+		Distance = 0;
 
 	}
 	else if (selection == gyro)
 	{
 		SPDR = sendGyro;
+		TCCR0B = 0x03; //starta klocka
+		TCNT0 = 0;
+		overflow = 0;
+		gyroflag = 0; //0 tills en riktig gyrostop införs
+		ADMUX = 6;
 		asm("");
 		//sendGyro = 0;
 	}
@@ -497,7 +518,12 @@ ISR(SPI_STC_vect) // Skicka på buss!! // Robert
 	}
 	else if (selection == stop)
 	{
+		gyroflag = 0;
+		ADMUX = i;
 		dummy = 1;
+		TCCR0B = 0; //stoppa klocka
+		TCNT0 = 0;
+		overflow = 0;
 		// behöver förmodligen inte göra något här
 	}
 }
