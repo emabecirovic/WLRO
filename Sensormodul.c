@@ -163,11 +163,11 @@ void calculate_angle()
 {
 	if(digital_angle >= 0)
 	{
-		digital_angle = digital_angle * 0.02860048303038;
+		digital_angle = digital_angle * 0.02530364372469;
 	}
 	else
 	{
-		digital_angle = digital_angle * 0.02981401732052;
+		digital_angle = digital_angle * 0.02197748528729;
 	}
 
 	angle = angle + digital_angle;
