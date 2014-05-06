@@ -83,6 +83,19 @@ void TransmitSensor(char invalue)
 {
 	PORTB &= 0b11101111; // ss2 low
 	
+	if(invalue == turn)
+	{
+		MasterTransmit(gyro);
+		for(int i = 0; i < time; i++){}
+		MasterTransmit(stop);
+		storedValues[6] = SPDR; // Gyro
+	}
+	else if(invalue == turnstop)
+	{
+		MasterTransmit(0b1000000);
+	}
+	else
+	{
 	MasterTransmit(RFID);
 	//First communication will contain crap on shift register
 	for(int i = 0; i < time; i++){}
@@ -90,11 +103,13 @@ void TransmitSensor(char invalue)
 	for(int i = 0; i < time; i++){}
 	storedValues[7] = SPDR; // SensorRFID
 	MasterTransmit(front); // Request front sensor
+	for(int i = 0; i < time; i++){}
 	storedValues[5] = SPDR; // Distance
 	
 	if(invalue == right)
 	{
 		MasterTransmit(rightfront);
+		for(int i = 0; i < time; i++){}
 		storedValues[0] = SPDR; // Front
 		MasterTransmit(rightback);
 		for(int i = 0; i < time; i++){}
@@ -105,6 +120,7 @@ void TransmitSensor(char invalue)
 	else if(invalue == left)
 	{
 		MasterTransmit(leftfront);
+		for(int i = 0; i < time; i++){}
 		storedValues[0] = SPDR; // Front
 		MasterTransmit(leftback);
 		for(int i = 0; i < time; i++){}
@@ -112,23 +128,14 @@ void TransmitSensor(char invalue)
 		MasterTransmit(stop);
 		storedValues[4] = SPDR; // Left back
 	}
-	else if(invalue == turn)
-	{
-		MasterTransmit(gyro);
-		for(int i = 0; i < time; i++){}
-		storedValues[0] = SPDR; // Front
-		MasterTransmit(stop);
-		storedValues[6] = SPDR; // Gyro
-	}
 	else
 	{
 		for(int i = 0; i < time; i++){}
 		MasterTransmit(stop);
 		storedValues[0] = SPDR; // Front
 	}
-	
+	}
 	PORTB ^= 0b00010000; // ss2 high
-	for(int i = 0; i < 100; i++){}
 }
 
 
