@@ -408,6 +408,70 @@ void rotate90left() // <- NY!
 	}
 }
 
+void remotecontrol()
+{
+	DDRB = 0x00;
+	
+	while(1)
+	{
+		char button = PINB & 0b00000111;
+		
+		/*
+		1 = W
+		2 = D
+		3 = A
+		4 = S
+		5 = E
+		6 = Q
+		*/
+		
+
+		switch(button)
+		{
+			case (0x01)://Kör framåt, W
+			PORTC = 0x01; //Sätter båda DIR till 1
+			PORTD = 0x20;
+			OCR2A = 255; //PWM vänster
+			OCR2B = 250; //PWM höger
+			break;
+			case (0x04): //Backa, S
+			PORTC = 0x0; //Sätter båda DIR till 0
+			PORTD = 0x0;
+			OCR2A = 255;
+			OCR2B = 250;
+			break;
+			case (0x06): //Rotera vänster, Q
+			PORTC = 0x00; //DIR vänster till 0
+			PORTD = 0x20; //DIR höger till 1
+			OCR2A = 255;
+			OCR2B = 255;
+			break;
+			case (0x05): //Rotera höger, E
+			PORTC = 0x01;
+			PORTD = 0x00;
+			OCR2A = 255;
+			OCR2B = 255;
+			break;
+			case (0x03): //Sväng vänster, A
+			PORTC = 0x01;
+			PORTD = 0x20;
+			OCR2A = 100;
+			OCR2B = 255;
+			break;
+			case (0x02): //Sväng höger, D
+			PORTC = 0x01;
+			PORTD = 0x20;
+			OCR2A = 255;
+			OCR2B = 100;
+			break;
+			default:
+			OCR2A = 0;
+			OCR2B = 0;
+		}
+	}
+}
+
+
 void straight()
 {
 	if((sensor1r-sensor2r) > 0.5)
@@ -460,20 +524,29 @@ void drive(unsigned long dist) //kör dist cm
 	OCR2A = 0;
 }
 
+void driveF()
+{
+	PORTC = 0x01;
+	PORTD = 0x20;
+	OCR2B = speed;
+	OCR2A = speed;
+}
+
 int main()
 {
-	
-
 	initiation();
-	MasterInit();
-	_delay_ms(40000);
-	initiate_request_timer();
 	int fjarrstyrt = (PIND & 0x01); //1 då roboten är i fjärrstyrt läge
-	int first=1;
-	char start=0;
-
 	if(fjarrstyrt==1)
 	{
+		remotecontrol();
+	}
+	else
+	{
+		MasterInit();
+		_delay_ms(40000);
+		initiate_request_timer();
+		int first=1;
+		char start=0;
 
 		while(1)
 		{
@@ -545,10 +618,7 @@ int main()
 				if(sensorfront<40)
 				{			
 									
-						PORTC = 0x01;
-						PORTD = 0x20;
-						OCR2B = 110;
-						OCR2A = 110;
+						driveF();
 						_delay_ms(4000);
 						OCR2B = 0;
 						OCR2A = 0;
@@ -592,8 +662,8 @@ int main()
 						//rightpwm = 100 + K * (18 - sensormeanr);// + regulate right
 						//leftpwm = 100 - K * (18 - sensormeanr);// - regulate right
 						//PD-reglering
-						rightpwm = 110 + K * (18-sensormeanr + Td * (sensormeanr_old-sensormeanr)/dt);
-						leftpwm = 110 - K * (18-sensormeanr + Td * (sensormeanr_old-sensormeanr)/dt);
+						rightpwm = speed + K * (18-sensormeanr + Td * (sensormeanr_old-sensormeanr)/dt);
+						leftpwm = speed - K * (18-sensormeanr + Td * (sensormeanr_old-sensormeanr)/dt);
 
 
 						if (rightpwm > 255)
@@ -631,16 +701,10 @@ int main()
 					//OCR2A = 0;
 					if(start==1)
 					{
-						PORTC = 0x01;
-						PORTD = 0x20;
-						OCR2B = 110;
-						OCR2A = 110;
+						driveF();
 						_delay_ms(1500);
 						temporary90right();
-						PORTC = 0x01;
-						PORTD = 0x20;
-						OCR2B = 110;
-						OCR2A = 110;
+						driveF();
 						_delay_ms(8300);
 					}
 					else
