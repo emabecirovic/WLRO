@@ -16,7 +16,7 @@ char traveldist = 0b00000110;
 char gyro = 0b00000111;
 char RFID = 0b00001000;
 char stop = 0x00; //Stop byte
-
+char button = 0x00;
 char direction = 0b00001001;
 char rightspeed = 0b00001010;
 char leftspeed = 0b00001011;
@@ -25,26 +25,26 @@ char start_request = 0;
 char right = 1;
 char left = 2;
 char turn = 3;
+char turnstop = 4;
 bool remoteControl = false;  // Change to Port connected to switch
-bool regulateright = false;
+bool regulateright = true;
 bool regulateleft = false;
-bool regulateturn = true;
+bool regulateturn = false;
 int time = 200;
+
 volatile unsigned char storedValues[11];
-float sensor1r, sensor2r, sensorfront;
-float sensordiff;
+float sensor1r, sensor2r, sensordiff, sensorfront, sensorleft, sensorright;
 volatile float sensormeanr;
 volatile float sensormeanr_old;
 int K;
-int Td;
-float sensormeanr_old;
+long Td;
 volatile float rightpwm;
 volatile float leftpwm;
-char emadistance = 0;
+volatile float emadistance = 0;
 long overflow = 0;
-long time_passed = 0;
+long dt = 0;
 int timer = 0;
-
+char speed = 110;
 
 //LCD-saker :)
 char lcd0 = 0b00110000;
@@ -96,56 +96,57 @@ void MasterTransmit(char cData)
 
 void TransmitSensor(char invalue)
 {
-	PORTB &= 0b11101111; // ss2 low
-	MasterTransmit(RFID);
-	//First communication will contain crap on shift register
-	for(int i = 0; i < time; i++){}
-	MasterTransmit(traveldist); // Request front sensor
-	for(int i = 0; i < time; i++){}
-	storedValues[7] = SPDR; // SensorRFID
-	MasterTransmit(front); // Request front sensor
-	for(int i = 0; i < time; i++){}
-	storedValues[5] = SPDR; // Distance
-	if(invalue == right)
+	if(start_request == 1)
 	{
-		MasterTransmit(rightfront);
-		for(int i = 0; i < time; i++){}
-		storedValues[0] = SPDR; // Front
-		MasterTransmit(rightback);
-		for(int i = 0; i < time; i++){}
-		storedValues[1] = SPDR; // Right front
-		MasterTransmit(stop);
-		storedValues[2] = SPDR; // Right back
+		start_request = 0;
+		
+		PORTB &= 0b11101111; // ss2 low
+
+		if(invalue == turn)
+		{
+			MasterTransmit(gyro);
+			for(int i = 0; i < time; i++){}
+			MasterTransmit(stop);
+			storedValues[6] = SPDR; // Gyro
+		}
+		else if(invalue == turnstop)
+		{
+			MasterTransmit(0b1000000);
+		}
+		else
+		{
+			MasterTransmit(RFID);
+			//First communication will contain crap on shift register
+			for(int i = 0; i < time; i++){}
+			MasterTransmit(traveldist); // Request front sensor
+			for(int i = 0; i < time; i++){}
+			storedValues[7] = SPDR; // SensorRFID
+			MasterTransmit(front); // Request front sensor
+			for(int i = 0; i < time; i++){}
+			storedValues[5] = SPDR; // Distance
+			MasterTransmit(rightfront);
+			for(int i = 0; i < time; i++){}
+			storedValues[0] = SPDR; // Front
+			MasterTransmit(rightback);
+			for(int i = 0; i < time; i++){}
+			storedValues[1] = SPDR; // Right front
+			MasterTransmit(leftfront);
+			for(int i = 0; i < time; i++){}
+			storedValues[2] = SPDR; // Right back
+			MasterTransmit(leftback);
+			for(int i = 0; i < time; i++){}
+			storedValues[3] = SPDR; // Left front
+			MasterTransmit(stop);
+			for(int i = 0; i < time; i++){}
+			storedValues[4] = SPDR; // Left back
+		}
+
+		PORTB ^= 0b00010000; // ss2 high
+		
+		emadistance += storedValues[5];
+		
+		TCCR0B = 0b00000101; // Start timer
 	}
-	else if(invalue == left)
-	{
-		MasterTransmit(leftfront);
-		for(int i = 0; i < time; i++){}
-		storedValues[0] = SPDR; // Front
-		MasterTransmit(leftback);
-		for(int i = 0; i < time; i++){}
-		storedValues[3] = SPDR; // Left front
-		MasterTransmit(stop);
-		for(int i = 0; i < time; i++){}
-		storedValues[4] = SPDR; // Left back
-	}
-	else if(invalue == turn)
-	{
-		for(int i = 0; i < time; i++){}
-		MasterTransmit(gyro);
-		for(int i = 0; i < time; i++){}
-		storedValues[0] = SPDR; // Front
-		MasterTransmit(stop);
-		storedValues[6] = SPDR; // Gyro
-	}
-	else
-	{
-		for(int i = 0; i < time; i++){}
-		MasterTransmit(stop);
-		storedValues[0] = SPDR; // Front
-	}
-	PORTB ^= 0b00010000; // ss2 high
-	//for(int i = 0; i < 100; i++){}
 }
 void TransmitComm(bool invalue)
 {
@@ -181,6 +182,7 @@ void initiation()
 	//TCCR1B=0b00000010; //sätter hastigheten på klockan
 	TCCR2A=0b10100001;
 	TCCR2B=0b00000010;
+
 	//Till displayen, vet inte om det behövs men den är efterbliven
 	PORTA=0b00110000;
 	PORTC=0b00000000;
@@ -194,7 +196,7 @@ void initiation()
 	PORTC=0b00000000;
 	_delay_us(110);
 	//Startar initiering
-	PORTA=0b00111100; // 2-line mode ; 5x8 Dots
+	PORTA=0b00110000; // 1-line mode ; 5x8 Dots
 	PORTC=0b10000000;
 	PORTC=0b00000000;
 	_delay_us(400);
@@ -210,9 +212,9 @@ void initiation()
 	PORTC=0b10000000;
 	_delay_ms(20);
 	//Initiering klar
-	
+
 	storedValues[6] = 0x40;
-	
+
 }
 
 void writechar(unsigned char data)
@@ -242,6 +244,14 @@ void shift(int steps) //
 		_delay_ms(30);
 		m+=1;
 	}
+}
+
+void shiftcursorleft()
+{
+	PORTA=0b00010000; //Shift cursor left
+	(PORTC |= 0b11000000);
+	(PORTC &= 0b01000001);
+	_delay_ms(30);
 }
 
 
@@ -328,7 +338,7 @@ void rotate90left() // <- NY!
 	char wanted;
 	char konst = 3;
 	char pwmspeed;
-	
+
 	switch(mydirection)
 	{
 		case(1):
@@ -350,7 +360,7 @@ void rotate90left() // <- NY!
 		default:
 		{
 			OCR2A = 0;
-			OCR1A = 0;
+			OCR2B = 0;
 		}
 	}
 
@@ -358,7 +368,7 @@ void rotate90left() // <- NY!
 	{
 		turnready = 1;
 		OCR2A = 0;
-		OCR1A = 0;
+		OCR2B = 0;
 		if(mydirection == 1)
 		{
 			mydirection = 4;
@@ -376,9 +386,9 @@ void rotate90left() // <- NY!
 			{
 				pwmspeed = 120 - konst * (storedValues[6] - wanted);
 				PORTC = 0x00;
-				PORTD = 0x40;
+				PORTD = 0x20;
 				OCR2A = pwmspeed;
-				OCR1A = pwmspeed;
+				OCR2B = pwmspeed;
 			}
 			else
 			{
@@ -386,7 +396,7 @@ void rotate90left() // <- NY!
 				PORTC = 0x01;
 				PORTD = 0x00;
 				OCR2A = pwmspeed;
-				OCR1A = pwmspeed;
+				OCR2B = pwmspeed;
 			}
 		}
 		else if(storedValues[6] < 0x20)
@@ -395,15 +405,15 @@ void rotate90left() // <- NY!
 			PORTC = 0x01;
 			PORTD = 0x00;
 			OCR2A = pwmspeed;
-			OCR1A = pwmspeed;
+			OCR2B = pwmspeed;
 		}
 		else
 		{
 			pwmspeed = 120 - konst * (storedValues[6] - wanted);
 			PORTC = 0x00;
-			PORTD = 0x40;
+			PORTD = 0x20;
 			OCR2A = pwmspeed;
-			OCR1A = pwmspeed;
+			OCR2B = pwmspeed;
 		}
 	}
 }
@@ -411,10 +421,15 @@ void rotate90left() // <- NY!
 void remotecontrol()
 {
 	DDRB = 0x00;
+	//PINB 5,6,7 är knappen
+	PINB = 0x00;
+	OCR2A = 0; //PWM vänster
+	OCR2B = 0; //PWM höger
+	print_on_lcd(0);
 	
 	while(1)
 	{
-		char button = PINB & 0b00000111;
+		button = PINB & 0b00000111;
 		
 		/*
 		1 = W
@@ -424,6 +439,7 @@ void remotecontrol()
 		5 = E
 		6 = Q
 		*/
+	
 		
 
 		switch(button)
@@ -432,13 +448,13 @@ void remotecontrol()
 			PORTC = 0x01; //Sätter båda DIR till 1
 			PORTD = 0x20;
 			OCR2A = 255; //PWM vänster
-			OCR2B = 250; //PWM höger
+			OCR2B = 245; //PWM höger
 			break;
 			case (0x04): //Backa, S
 			PORTC = 0x0; //Sätter båda DIR till 0
 			PORTD = 0x0;
 			OCR2A = 255;
-			OCR2B = 250;
+			OCR2B = 245;
 			break;
 			case (0x06): //Rotera vänster, Q
 			PORTC = 0x00; //DIR vänster till 0
@@ -455,14 +471,14 @@ void remotecontrol()
 			case (0x03): //Sväng vänster, A
 			PORTC = 0x01;
 			PORTD = 0x20;
-			OCR2A = 100;
+			OCR2A = 120;
 			OCR2B = 255;
 			break;
 			case (0x02): //Sväng höger, D
 			PORTC = 0x01;
 			PORTD = 0x20;
 			OCR2A = 255;
-			OCR2B = 100;
+			OCR2B = 120;
 			break;
 			default:
 			OCR2A = 0;
@@ -471,6 +487,11 @@ void remotecontrol()
 	}
 }
 
+void stopp()
+{
+	OCR2A = 0;
+	OCR2B = 0;
+}
 
 void straight()
 {
@@ -512,18 +533,6 @@ void temporary90left()
 	sei();
 }
 
-void drive(unsigned long dist) //kör dist cm
-{
-	unsigned long delaytime=dist*210;
-	PORTC = 0x01;
-	PORTD = 0x20;
-	OCR2B = 110;
-	OCR2A = 110;
-	//_delay_ms(delaytime);
-	OCR2B = 0;
-	OCR2A = 0;
-}
-
 void driveF()
 {
 	PORTC = 0x01;
@@ -532,10 +541,31 @@ void driveF()
 	OCR2A = speed;
 }
 
+void drive(float dist) //kör dist cm
+{
+	emadistance=0;
+	dist = (dist - 6.5) / 2.55;
+	//dist = dist / 2.55;
+	
+	while (emadistance < dist)
+	{
+		if(start_request == 1)
+		{
+			TransmitSensor(0);
+		}
+		driveF();
+	}
+	stopp();
+}
+
+
+
+
 int main()
 {
 	initiation();
 	int fjarrstyrt = (PIND & 0x01); //1 då roboten är i fjärrstyrt läge
+	
 	if(fjarrstyrt==1)
 	{
 		remotecontrol();
@@ -545,38 +575,23 @@ int main()
 		MasterInit();
 		_delay_ms(40000);
 		initiate_request_timer();
+		
 		int first=1;
 		char start=0;
 
 		while(1)
 		{
 			
-			if(start_request == 1)
-			{
 				if(first==0)
 				{
-				sensormeanr_old=sensormeanr;
+					sensormeanr_old=sensormeanr;
 				}
-
-				start_request = 0;
-				if(regulateright)
-				TransmitSensor(right);
-				else if(regulateleft)
-				TransmitSensor(left);
-				else if(regulateturn)
-				TransmitSensor(turn);
-				else
-				TransmitSensor(0x00);
-				start_request = 0;
-
+				TransmitSensor(0);
 				TransmitComm(0);
+			
 
 
-				TCCR0B = 0b0000101; // Start timer
-			}
-
-
-		
+			
 
 			//REGLERING
 			//Omvandling till centimeter
@@ -591,9 +606,9 @@ int main()
 			sensor2r = 1 / sensor2r;
 			sensor2r = sensor2r - 0.000741938763948;
 			sensor2r = sensor2r / 0.001637008132828;
-			sensor2r = sensor2r + 9;	
+			sensor2r = sensor2r + 9;
 
-			sensorfront = storedValues[0]; 
+			sensorfront = storedValues[0];
 			sensorfront = 1 / sensorfront;
 			sensorfront = sensorfront - 0.001086689563586;
 			sensorfront = sensorfront / 0.000191822821525;
@@ -603,48 +618,97 @@ int main()
 			if(first==1)
 			{
 				first=0;
-				PORTC = 0x01;
-				PORTD = 0x20;
-				OCR2B = 0;
-				OCR2A = 0;
+				stopp();
 				sensormeanr_old=sensormeanr;
 			}
 			else
 			{
-			//till PD-reglering
-			Td = 400000;
-			K = 3;
+				//till PD-reglering
+				Td = 400000;
+				K = 5;
 
-				if(sensorfront<40)
-				{			
-									
-						driveF();
-						_delay_ms(4000);
-						OCR2B = 0;
-						OCR2A = 0;
+				if(sensorfront<60)
+				{
+					drive(60);
+					
+					TransmitSensor(0);
+					
+					sensorright = storedValues[1];
+					sensorright = 1 / sensorright;
+					sensorright = sensorright - 0.000741938763948;
+					sensorright = sensorright / 0.001637008132828;
+					
+					if(sensorright>20)
+					{
+						temporary90right();
 						
-						//transmitleft(); eller nåt
-						sensorleft = storedValues[5]; 
-						sensorleft = 1 / sensor2r;
-						sensorleft = sensor2r - 0.000741938763948;
-						sensorleft = sensor2r / 0.001637008132828;
+						TransmitSensor(0);
+						
+						sensorfront = storedValues[0];
+						sensorfront = 1 / sensorfront;
+						sensorfront = sensorfront - 0.001086689563586;
+						sensorfront = sensorfront / 0.000191822821525;
+						
+						if(sensorfront<80)
+						{
+							drive(40);
+							TransmitSensor(0);
+							
+							sensorright = storedValues[1];
+							sensorright = 1 / sensorright;
+							sensorright = sensorright - 0.000741938763948;
+							sensorright = sensorright / 0.001637008132828;
+							
+							sensorleft = storedValues[3];
+							sensorleft = 1 / sensorleft;
+							sensorleft = sensorleft - 0.000741938763948;
+							sensorleft = sensorleft / 0.001637008132828;
+							
+							if(sensorleft<20)
+							{
+								temporary90left();
+								temporary90left();
+							}
+							else
+							{
+								temporary90left();
+							}
+						}
+						else
+						{
+							drive(40);							
+						}
+					}
+					else
+					{
+						TransmitSensor(0);
+						
+						sensorright = storedValues[1];
+						sensorright = 1 / sensorright;
+						sensorright = sensorright - 0.000741938763948;
+						sensorright = sensorright / 0.001637008132828;
+						
+						sensorleft = storedValues[3];
+						sensorleft = 1 / sensorleft;
+						sensorleft = sensorleft - 0.000741938763948;
+						sensorleft = sensorleft / 0.001637008132828;
 						
 						if(sensorleft<20)
 						{
 							temporary90left();
-							temporary90left();					
+							temporary90left();
 						}
 						else
 						{
 							temporary90left();
 						}
+					}
 				}
-				else if(((sensor1r-sensor2r) < 20) && ((sensor2r-sensor1r) < 20)) // <20cm   Byt plats på höger och vänster för att reglera mot vänster vägg
+				else if(((sensor1r-sensor2r) < 20) && ((sensor2r-sensor1r) < 20))
 				{
 					if (fabs(sensor1r-sensor2r) > 3)
 					{
-					straight();
-					//K = K + 1;
+						straight();
 					}
 					else
 					{
@@ -658,10 +722,6 @@ int main()
 						
 						PORTC = 0x01;
 						PORTD = 0x20;
-						//P-reglering
-						//rightpwm = 100 + K * (18 - sensormeanr);// + regulate right
-						//leftpwm = 100 - K * (18 - sensormeanr);// - regulate right
-						//PD-reglering
 						rightpwm = speed + K * (18-sensormeanr + Td * (sensormeanr_old-sensormeanr)/dt);
 						leftpwm = speed - K * (18-sensormeanr + Td * (sensormeanr_old-sensormeanr)/dt);
 
@@ -671,7 +731,7 @@ int main()
 							OCR2B = 255;
 						}
 						else if(rightpwm < 0)
-						{					
+						{
 							OCR2B = 0;
 						}
 						else
@@ -691,32 +751,42 @@ int main()
 							OCR2A = leftpwm;
 						}
 
-						//print_on_lcd(sensor1r);
-						//_delay_ms(4000);
 					}
 				}
 				else
 				{
-					//OCR2B = 0;
-					//OCR2A = 0;
 					if(start==1)
 					{
-						driveF();
-						_delay_ms(1500);
+						start=0;
+						drive(20);
 						temporary90right();
-						driveF();
-						_delay_ms(8300);
+						
+						TransmitSensor(0);
+						
+						sensorfront = storedValues[0];
+						sensorfront = 1 / sensorfront;
+						sensorfront = sensorfront - 0.001086689563586;
+						sensorfront = sensorfront / 0.000191822821525;
+						
+						if(sensorfront>80)
+						{
+							drive(60);
+						}
+						else
+						{
+							drive(60);
+							temporary90left();
+						}
 					}
 					else
 					{
-						OCR2B = 0;
-						OCR2A = 0;
+						stopp();
 					}
 				}
 
 
 			}
-				
+			
 		}
 	}
 	return 0;
