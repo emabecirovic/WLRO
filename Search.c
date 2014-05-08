@@ -354,8 +354,8 @@ void TransmitSensor(char invalue)
 			room[x][y]=1;
 		}
 		
-		void updatemap() // Kan väl bara gälla för yttervarvet?
-{
+	void updatemap() // Kan väl bara gälla för yttervarvet?
+	{
 	char w=30; //Hur långt ifrån vi ska vara för att säga att det är en vägg.
 
 	int sensorfront;
@@ -441,6 +441,10 @@ void TransmitSensor(char invalue)
 			room[myposX][myposY+1]=2;
 		}
 		break;
+	}
+	if (isRFID==1)
+	{
+		room[myposX][myposY]=4
 	}
 }
 		
