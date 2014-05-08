@@ -506,9 +506,7 @@ ISR(SPI_STC_vect) // Skicka på buss!! // Robert
 	{
 		SPDR = sendGyro;
 		TCCR0B = 0x03; //starta klocka
-		TCNT0 = 0;
-		overflow = 0;
-		gyroflag = 0; //0 tills en riktig gyrostop införs
+		gyroflag = 1; //0 tills en riktig gyrostop införs
 		ADMUX = 6;
 		asm("");
 		//sendGyro = 0;
@@ -516,6 +514,11 @@ ISR(SPI_STC_vect) // Skicka på buss!! // Robert
 	else if (selection == gyrostop) // här är den riktiga gyrostop
 	{
 		gyroflag = 0;
+		ADMUX = i;
+		dummy = 1;
+		TCCR0B = 0; //stoppa klocka
+		TCNT0 = 0;
+		overflow = 0;
 	}
 	else if (selection == RFID)
 	{
@@ -523,12 +526,6 @@ ISR(SPI_STC_vect) // Skicka på buss!! // Robert
 	}
 	else if (selection == stop)
 	{
-		gyroflag = 0;
-		ADMUX = i;
-		dummy = 1;
-		TCCR0B = 0; //stoppa klocka
-		TCNT0 = 0;
-		overflow = 0;
 		// behöver förmodligen inte göra något här
 	}
 }
