@@ -1,41 +1,54 @@
 /*
+
+*
+
 *Kartritning.cc
+
 *
+
 *marek588
+
 *
+
 *2014-05-07
-*
-*
-********************* 29 x 15 - matris med nollor********************
-#include <iostream>
+
+*/
 
 
+//Rita ut ett tomt (vitt) fönster, pixlar eller?, i 29*15-storlek, med RenderWindow
 
+//Rita ut roboten på kartan, i punkten (15,0) kommer den börja. Typ en fylld fyrkant eller nåt.
+sf::RectangleShape robotposition;
+robotposition.setSize(sf::Vector2f(10, 10)); //fett osäker på storleken..
+robotposition.setOutlineColor(sf::Color::Blue);
+robotposition.setOutlineThickness(5); // och tjockleken.
+robotposition.setPosition(myposX, myposY);
 
-{int themap[29][15], i, j;
+window.draw(robotposition);
 
-for (i = 0; i < 29; x++)
-  
-  {for (j = 0; j < 15; j++)
-  
-    {themap[i][j] = 0;
-     cout << themap[i][j];
-    }
-    
-  }
-  
-} Jag vet inte om denna ens behövs eftersom vi kommer rita ut ett fönster med RenderWindow.
-Sen borde man kunna använda Rectangle Shape för att göra kartans linjer. Det är ju bara att fylla rektangeln med svart.
-
- */
  
-//Rita ut ett tomt (vitt) fönster, pixlar eller?, i 29*15-storlek
+//anvönd setfillcolor för att fylla rektangel
 
-//Rita ut roboten på kartan, i punkten (15,0). Typ en svart fyrkant eller nåt
- 
-/*Kolla vilket case det är och därmed i vilken riktning roboten rör sig för att veta var en eventuell vägg ska vara
-Det finns typ i Search.c, borde funka med typ samma kod även i c++.
-Ny idé: styrmodulen vet ju var vi har setwall. Fråga var vi ska setwall och sätt wall där.*/
+//bör rita ut väggar på rätt plats när storleken är fixad
+sf::RectangleShape wall;
+wall.setSize(sf::Vector2f(10, 10));
+wall.setOutlineColor(sf::Color::Black);
+wall.setOutlineThickness(1);
+wall.setPosition(x, y); //samma x och y som i setwall 
+
+window.draw(wall);
 
 
-//måste fråga roboten var den är varje gång den förflyttat sig en ruta för att dess position ska kunna uppdateras på kartan
+//bör rita ut brandhärden
+if (isRFID==1)
+{
+sf::CircleShape fire;
+fire.setRadius(5);
+fire.setOutlineColor(sf::Color::Red);
+fire.setOutlineThickness(5);
+fire.setPosition(,);
+
+window.draw(fire);
+}
+
+
