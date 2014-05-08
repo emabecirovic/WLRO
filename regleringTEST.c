@@ -14,6 +14,7 @@ char leftfront = 0b00000100;
 char leftback = 0b00000101;
 char traveldist = 0b00000110;
 char gyro = 0b00000111;
+char gyrostop = 0b10000000;
 char RFID = 0b00001000;
 char stop = 0x00; //Stop byte
 char button = 0x00;
@@ -111,7 +112,7 @@ void TransmitSensor(char invalue)
 		}
 		else if(invalue == turnstop)
 		{
-			MasterTransmit(0b1000000);
+			MasterTransmit(gyrostop);
 		}
 		else
 		{
