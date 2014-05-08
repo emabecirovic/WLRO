@@ -9,6 +9,7 @@ char leftfront = 0b00000100;
 char leftback = 0b00000101;
 char traveldist = 0b00000110;
 char gyro = 0b00000111;
+char gyrostop = 0b10000000;
 char RFID = 0b00001000;
 char stop = 0x00; //Stopbyte
 volatile char selection; // Används i skicka avbrottet
@@ -511,6 +512,10 @@ ISR(SPI_STC_vect) // Skicka på buss!! // Robert
 		ADMUX = 6;
 		asm("");
 		//sendGyro = 0;
+	}
+	else if (selection == gyrostop) // här är den riktiga gyrostop
+	{
+		gyroflag = 0;
 	}
 	else if (selection == RFID)
 	{
