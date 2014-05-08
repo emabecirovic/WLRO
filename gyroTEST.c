@@ -1,3 +1,50 @@
+/*
+
+signed int bigvalue = 140;
+signed int smalvalue = -140;
+
+if(ad_complete == 1)
+{
+	if(gyroflag == 1)
+	{
+		TCCR1B = 0;//Stoppa ad-räkanre
+		TCNT1 = 0;//Nollställ ad-räknare
+		dGyro = ADC >> 2;
+		if((dGyro > gyroref + 2) or(dGyro > gyroref - 2))
+		{
+			angle = angle;
+		}
+		else
+		{
+			angle = angle + (dGyro - gyroref)*5/256; 
+		}
+		
+		//Kolla om vi kommit fram till önskat värde
+		if(angle >= bigvalue) 
+		{
+			sendGyro = 1;
+			angle = 0;
+		}
+		else if (angle <= smalvalue)
+		{
+			sendGyro = 2;
+			angle = 0;
+		}
+		else
+		{
+			sendGyro = 0;
+		}
+		
+		ADCSRA = 0b11001011; //Starta nästa ad-omvandling.
+	}
+}
+
+*/
+	
+
+
+
+
 #include <avr/io.h>
 #include <avr/interrupt.h>
 
