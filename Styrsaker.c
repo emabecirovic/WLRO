@@ -913,3 +913,16 @@ void rotate90left() // <- NY!
 	OCR2A = 0;
 	OCR1A = 0;
 }
+
+roteravenster()
+{
+	if (mydirection == 2)
+	{
+		while(storedValues[6] != 0x60)
+		{
+			TransmitSensor(gyro);//eller vad fan det heter
+			//snurrkod
+		}
+		TransmitSensor(gyrostop);
+	}
+}
