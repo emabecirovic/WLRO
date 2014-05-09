@@ -1,5 +1,5 @@
 /*
-* Kommunikationsmodule.c
+* Kommunikationsmodul.c
 *
 * Created: 3/27/2014 8:23:02 AM
 *  Author: poner538
@@ -30,9 +30,11 @@ char direction = 0b00001001;
 char rightspeed = 0b00001010;
 char leftspeed = 0b00001011;
 char stop = 0x00; //Stopbyte
+char room[29][15];
 
-unsigned char storedValues[11] = {10,11,12,13,14,15,16,17,18,19,20,21};
+volatile unsigned char storedValues[11] = {11,12,13,14};
 int indexvalue = 0;
+
 
 void USARTInit(unsigned int ubrr_value)
 {
@@ -47,9 +49,9 @@ void USARTInit(unsigned int ubrr_value)
 
 
 	/* Tillåt reciever och transmitter kl*/
-	UCSR0B=(1<<RXEN0)|(1<<TXEN0)|(1<<RXCIE0);
+	UCSR0B=(1<<RXEN0)|(1<<TXEN0); //|(1<<RXCIE0);
 
-/* */
+	/* */
 }
 
 unsigned char USART_Recive(void)
@@ -99,111 +101,155 @@ void SlaveInit(void)
 	SPCR = (1<<SPE)|(1<<SPIE)|(1<<CPHA)|(1<<CPOL);
 
 	/* Enable external interrupts */
-	sei();
+	//sei();
+}
+
+char SlaveRecieve(void) // Används inte just nu men....
+{
+	/*Wait for reception complete */
+	while(!(SPSR & (1<<SPIF)))
+	;
+	/* Return Data Register */
+	return SPDR;
+
 }
 
 void SendStoredVal()
 {
-	for(int i = 0; i < 11; i++)
-	{
-		if(i == 0)
+
+		
+		for(int i = 0; i < 11; i++)
 		{
-			USARTWriteChar(front);
+			if(i == 0)
+			{
+				USARTWriteChar(front);
+			}
+			else if (i == 1)
+			{
+				USARTWriteChar(rightfront);
+			}
+			else if (i == 2)
+			{
+				USARTWriteChar(rightback);
+			}
+			else if (i == 3)
+			{
+				USARTWriteChar(leftfront);
+			}
+			else if (i == 4)
+			{
+				USARTWriteChar(leftback);
+			}
+			else if (i == 5)
+			{
+				USARTWriteChar(traveldist);
+				//Distance = 0;
+			}
+			else if (i == 6)
+			{
+				USARTWriteChar(gyro);
+				//sendGyro = 0;
+			}
+			else if (i == 7)
+			{
+				USARTWriteChar(RFID);
+			}
+			else if (i == 8)
+			{
+				USARTWriteChar(direction);// behöver förmodligen inte göra något här
+			}
+			else if (i == 9)
+			{
+				USARTWriteChar(leftspeed);// behöver förmodligen inte göra något här
+			}
+			else if (i == 10)
+			{
+				USARTWriteChar(rightspeed);// behöver förmodligen inte göra något här
+			}
+			USARTWriteChar(storedValues[i]);
 		}
-		else if (i == 1)
-		{
-			USARTWriteChar(rightfront);
-		}
-		else if (i == 2)
-		{
-			USARTWriteChar(rightback);
-		}
-		else if (i == 3)
-		{
-			USARTWriteChar(leftfront);
-		}
-		else if (i == 4)
-		{
-			USARTWriteChar(leftback);
-		}
-		else if (i == 5)
-		{
-			USARTWriteChar(traveldist);
-			//Distance = 0;
-		}
-		else if (i == 6)
-		{
-			USARTWriteChar(gyro);
-			//sendGyro = 0;
-		}
-		else if (i == 7)
-		{
-			USARTWriteChar(RFID);
-		}
-		else if (i == 8)
-		{
-			USARTWriteChar(direction);// behöver förmodligen inte göra något här
-		}
-		else if (i == 9)
-		{
-			USARTWriteChar(leftspeed);// behöver förmodligen inte göra något här
-		}
-		else if (i == 10)
-		{
-			USARTWriteChar(rightspeed);// behöver förmodligen inte göra något här
-		}
-		USARTWriteChar(storedValues[i]);
-	}
+	
 }
+
+
+
 
 int main(void)
 {
 	// char data;
-	int data;
+	char data;
+	DDRB = (1<<DDB0)|(1<<DDB1)|(1<<DDB2);
 	USARTInit(8);
 	SlaveInit();
-	bool controller = false;
+	//sei();
+	remote = false;
 	while(1)
 	{
-		sei();
-		while(!remote)	
-		{
-
-		//Infinite Loop
-		//Read data
-		//USART_Flush();
-		//data=USART_Recive();
-		//skicka data
-
-		SendStoredVal();	
-		}
-		cli();
-		controller = true;
-		while(controller)
-		{
 		
-		data = USART_Recive();
-		//USARTWriteChar(data);
+		while(remote)
+		{
+
+			data = USART_Recive();
+			if(data == 'K')
+			{
+				remote = false;
+			}
+			else
+			{
+				
+			PORTB &= 0b01000000;
+			PORTB |= data;
+			}
+			//USART_Flush();
+			//data=USART_Recive();
+			//skicka data
+			
 		}
-		//kicka ut bluetooth signalen till portB
-		//PORTB=tes
+		while(!remote)
+		{
+			char ss1 = PORTB & 0b00010000;
+			while (ss1 == 0)
+			{
+				if(indexvalue<11)
+				{
+					storedValues[indexvalue]=SlaveRecieve();
+					indexvalue++;
+				}
+				else
+				{
+					indexvalue = 0;
+				}
+				ss1 = PORTB & 0b00010000;
+			}	
+			//for(int i; i)
+			
+			SendStoredVal();
+			//sei();
+			
+		
+		}
+		//USARTWriteChar(data);
 	}
-	return 0;
+	//kicka ut bluetooth signalen till portB
+	//PORTB=tes
+
+return 0;  
 }
 
 /*******************************INTERRUPTS*************************/
+/*
 ISR(SPI_STC_vect) // Answer to call from Master
 {
-	//storedValues[indexvalue] = SPDR;
-	SPDR = storedValues[indexvalue]; //Just for controll by oscilloscope
+	SPDR = 0;
+	cli();
+	//SPDR = storedValues[indexvalue]; //Just for controll by oscilloscope
 
-	if(indexvalue < 11)
-	indexvalue++;
-	else
-	indexvalue = 0;
+		storedValues[indexvalue] = SPDR;
+
+	sei();
 }
-
+/*
 ISR(USART0_RX_vect)
 {
-	remote = true;
-}
+
+}*/
