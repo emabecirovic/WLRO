@@ -35,6 +35,7 @@ char room[29][15];
 volatile unsigned char storedValues[11] = {11,12,13,14};
 int indexvalue = 0;
 
+char dummy;
 
 void USARTInit(unsigned int ubrr_value)
 {
