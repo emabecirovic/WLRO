@@ -81,84 +81,76 @@ void MasterTransmit(char cData)
 
 void TransmitSensor(char invalue)
 {
-	PORTB &= 0b11101111; // ss2 low
-	
-	if(invalue == turn)
+	if(start_request == 1)
 	{
-		MasterTransmit(gyro);
-		for(int i = 0; i < time; i++){}
-		MasterTransmit(stop);
-		storedValues[6] = SPDR; // Gyro
+		start_request = 0;
+
+		PORTB &= 0b11101111; // ss2 low
+
+		if(invalue == turn)
+		{
+			MasterTransmit(gyro);
+			for(int i = 0; i < time; i++){}
+			MasterTransmit(stop);
+			storedValues[6] = SPDR; // Gyro
+		}
+		else if(invalue == turnstop)
+		{
+			MasterTransmit(gyrostop);
+		}
+		else
+		{
+			MasterTransmit(RFID);
+			//First communication will contain crap on shift register
+			for(int i = 0; i < time; i++){}
+			MasterTransmit(traveldist); // Request front sensor
+			for(int i = 0; i < time; i++){}
+			storedValues[7] = SPDR; // SensorRFID
+			MasterTransmit(front); // Request front sensor
+			for(int i = 0; i < time; i++){}
+			storedValues[5] = SPDR; // Distance
+			MasterTransmit(rightfront);
+			for(int i = 0; i < time; i++){}
+			storedValues[0] = SPDR; // Front
+			MasterTransmit(rightback);
+			for(int i = 0; i < time; i++){}
+			storedValues[1] = SPDR; // Right front
+			MasterTransmit(leftfront);
+			for(int i = 0; i < time; i++){}
+			storedValues[2] = SPDR; // Right back
+			MasterTransmit(leftback);
+			for(int i = 0; i < time; i++){}
+			storedValues[3] = SPDR; // Left front
+			MasterTransmit(stop);
+			for(int i = 0; i < time; i++){}
+			storedValues[4] = SPDR; // Left back
+		}
+
+		PORTB ^= 0b00010000; // ss2 high
+
+		emadistance += storedValues[5];
+
+		TCCR0B = 0b00000101; // Start timer
 	}
-	else if(invalue == turnstop)
-	{
-		MasterTransmit(0b1000000);
-	}
-	else
-	{
-	MasterTransmit(RFID);
-	//First communication will contain crap on shift register
-	for(int i = 0; i < time; i++){}
-	MasterTransmit(traveldist); // Request front sensor
-	for(int i = 0; i < time; i++){}
-	storedValues[7] = SPDR; // SensorRFID
-	MasterTransmit(front); // Request front sensor
-	for(int i = 0; i < time; i++){}
-	storedValues[5] = SPDR; // Distance
-	
-	if(invalue == right)
-	{
-		MasterTransmit(rightfront);
-		for(int i = 0; i < time; i++){}
-		storedValues[0] = SPDR; // Front
-		MasterTransmit(rightback);
-		for(int i = 0; i < time; i++){}
-		storedValues[1] = SPDR; // Right front
-		MasterTransmit(stop);
-		storedValues[2] = SPDR; // Right back
-	}
-	else if(invalue == left)
-	{
-		MasterTransmit(leftfront);
-		for(int i = 0; i < time; i++){}
-		storedValues[0] = SPDR; // Front
-		MasterTransmit(leftback);
-		for(int i = 0; i < time; i++){}
-		storedValues[3] = SPDR; // Left front
-		MasterTransmit(stop);
-		storedValues[4] = SPDR; // Left back
-	}
-	else
-	{
-		for(int i = 0; i < time; i++){}
-		MasterTransmit(stop);
-		storedValues[0] = SPDR; // Front
-	}
-	}
-	PORTB ^= 0b00010000; // ss2 high
 }
 
 
 
-void TransmitComm(bool invalue)
+void TransmitComm()
 {
 	PORTB &= 0b11110111;
 
-	if(invalue)
+	for(int i = 0; i < time; i++){}
+	for(int i = 0; i < 11; i ++)
 	{
-
-	}
-	else
-	{
-		for(int i = 0; i < 11;i++)
-		{
-			MasterTransmit(storedValues[i]);
-		}
+		dummy = SPDR;
+		MasterTransmit(storedValues[i]);
+		for(int i = 0; i < time; i++){}				
 	}
 
 	PORTB ^= 0b00001000;
-
 }
+
 
 void initiate_request_timer()
 {
@@ -239,15 +231,14 @@ int index = 0; // index for recieved storedValue from buss
 
 void SlaveInit(void)
 {
-	
 	/* Set MISO output, all others input */
 	DDRB = (1<<DDB6);
-	
-	/* Enable Global Interrupt */
-	sei();
-	
-	/* Enable SPI and interrupts */
+
+	/* Enable SPI */
 	SPCR = (1<<SPE)|(1<<SPIE)|(1<<CPHA)|(1<<CPOL);
+
+	/* Enable external interrupts */
+	sei();
 }
 
 char SlaveRecieve(void)
@@ -258,18 +249,6 @@ char SlaveRecieve(void)
 
 	/* Return Data Register */
 	return SPDR;
-}
-
-/*******************************INTERRUPTS*************************/
-ISR(SPI_STC_vector) // Answer to call from Master
-{
-	storedValues[index] = SPDR;
-	SPDR = storedValues[index]; //Just for controll by oscilloscope
-	
-	if(indexvalue < 11)
-	indexvalue++;
-	else
-	indexvalue = 0;
 }
 
 /*******************************MAIN*******************************/
@@ -288,6 +267,23 @@ int main(void)
 	
 }
 
+/*******************************INTERRUPTS*************************/
+
+ISR(SPI_STC_vect) // Answer to call from Master
+{
+	
+	cli();
+	
+	storedValues[indexvalue] = SPDR;
+	
+	indexvalue ++; 
+	if(indexvalue == 11)
+	indexvalue=0;
+	
+	SPDR = 0;
+	
+	sei();
+}
 
 
 
