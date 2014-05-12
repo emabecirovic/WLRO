@@ -663,6 +663,35 @@ void roteravenster()
 	}
 }
 
+void rfid()
+{
+	storedValues[7] = 0;
+	setcursortostart();
+	print_on_lcd(0x00);
+	volatile int bajs = 1;
+	while(bajs==1)
+	{
+		
+		transmit();
+		print_on_lcd(storedValues[7]);
+		if(storedValues[7] != 1)
+		{
+			driveF();
+			setcursortostart();
+			print_on_lcd(0xcc);
+		}
+		else
+		{
+			stopp();
+			bajs=0;
+			setcursortostart();
+			print_on_lcd(0xff);
+		}
+		
+		
+	}
+}
+
 int main()
 {
 	initiation();
@@ -670,8 +699,8 @@ int main()
 	
 	if(fjarrstyrt==1)
 	{
-		roteravenster();
-		remotecontrol();
+		rfid();
+		//remotecontrol();
 	}
 	else
 	{
