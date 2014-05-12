@@ -1,5 +1,5 @@
 /*
-* Bluetooth_test.c
+* Kommunikationsmodul.c
 *
 * Created: 3/27/2014 8:23:02 AM
 *  Author: poner538
@@ -35,6 +35,7 @@ char room[29][15];
 volatile unsigned char storedValues[11] = {11,12,13,14};
 int indexvalue = 0;
 
+char dummy;
 
 void USARTInit(unsigned int ubrr_value)
 {
@@ -45,11 +46,11 @@ void USARTInit(unsigned int ubrr_value)
 	/*sätt frame format till 8 databitar och 1 stoppbit*/
 	UCSR0C=(0<<USBS0)|(3<<UCSZ00);
 
-	
+	UCSR0A =(1<<U2X0);
 
 
 	/* Tillåt reciever och transmitter kl*/
-	UCSR0B=(1<<RXEN0)|(1<<TXEN0);//|(1<<RXCIE0);
+	UCSR0B=(1<<RXEN0)|(1<<TXEN0); //|(1<<RXCIE0);
 
 	/* */
 }
@@ -93,7 +94,7 @@ void USART_Flush( void )
 
 
 void SlaveInit(void)
-{ 
+{
 	/* Set MISO output, all others input */
 	DDRB = (1<<DDB6);
 
@@ -117,6 +118,139 @@ char SlaveRecieve(void) // Används inte just nu men....
 void SendStoredVal()
 {
 
+
+		for(int i = 0; i < 11; i++)
+		{
+			if(i == 0)
+			{
+				USARTWriteChar(front);
+			}
+			else if (i == 1)
+			{
+				USARTWriteChar(rightfront);
+			}
+			else if (i == 2)
+			{
+				USARTWriteChar(rightback);
+			}
+			else if (i == 3)
+			{
+				USARTWriteChar(leftfront);
+			}
+			else if (i == 4)
+			{
+				USARTWriteChar(leftback);
+			}
+			else if (i == 5)
+			{
+				USARTWriteChar(traveldist);
+				//Distance = 0;
+			}
+			else if (i == 6)
+			{
+				USARTWriteChar(gyro);
+				//sendGyro = 0;
+			}
+			else if (i == 7)
+			{
+				USARTWriteChar(RFID);
+			}
+			else if (i == 8)
+			{
+				USARTWriteChar(direction);// behöver förmodligen inte göra något här
+			}
+			else if (i == 9)
+			{
+				USARTWriteChar(leftspeed);// behöver förmodligen inte göra något här
+			}
+			else if (i == 10)
+			{
+				USARTWriteChar(rightspeed);// behöver förmodligen inte göra något här
+			}
+			USARTWriteChar(storedValues[i]);
+		}
+
+}
+
+
+
+
+int main(void)
+{
+	// char data;
+	unsigned char data;
+	remote = false;
 	
-	for(int i = 0; i < 11; i++)
+	while(1)
 	{
+		cli();
+		DDRB |= 0b00000111;
+		USARTInit(3);
+		UCSR0A =(0<<U2X0);
+		while(remote)
+		{
+
+			data = USART_Recive();
+			PORTB &= 0b01000000;
+			PORTB |= data;
+			
+			//USART_Flush();
+			//data=USART_Recive();
+			//skicka data
+
+		}
+		USARTInit(8);
+		SlaveInit();
+		sei();
+		while(!remote)
+		{
+		/*	char ss1 = PORTB & 0b00010000;
+			while (ss1 == 0)
+			{
+				if(indexvalue<11)
+				{
+					storedValues[indexvalue]=SlaveRecieve();
+					indexvalue++;
+				}
+				else
+				{
+					indexvalue = 0;
+				}
+				ss1 = PORTB & 0b00010000;
+			}	
+			//for(int i; i)
+			*/
+			SendStoredVal();
+		}
+		
+	}
+
+
+return 0;  
+}
+
+/*******************************INTERRUPTS*************************/
+
+ISR(SPI_STC_vect) // Answer to call from Master
+{
+	/*SPDR = 0;
+	cli();*/
+	storedValues[indexvalue] = SPDR;
+	//SPDR = storedValues[indexvalue]; //Just for controll by oscilloscope
+	if(indexvalue < 11)
+		
+		{
+			indexvalue++;
+		}
+		else
+		{
+			indexvalue = 0;
+		}
+
+	/*sei();*/
+}
+/*
+ISR(USART0_RX_vect)
+{
+
+}*/
