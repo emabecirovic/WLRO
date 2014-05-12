@@ -530,34 +530,311 @@ void firstlap()
 	}
 }
 
-void regleringright()
+void initiate_timer()
 {
-	PORTC = 0x01; //sätter båda DIR till 1
-	PORTD = 0x40;
-	int K = 5; //Bestämmer hur snabbt roboten ska reagera på skillnader mellan önskat avstånd till väggen(10cm) och uppmätt avstånd
-	
-	
-	TransmitSensor(right);
-	
-	int sensordiffr = sensor1r-sensor2r;
-	int sensormeanr = (sensor1r+sensor2r)/2;
-	
-	if (sensorfront>10)
+	TIMSK1 = 0b00000001; //Enable interupt vid overflow
+
+	TCCR1B = 0x00; //stop
+	TCNT1 = 0x00; //set count
+
+	TCCR1B = 0x03; //start timer prescale 64
+}
+
+
+void stopp()
+{
+	OCR2A = 0;
+	OCR2B = 0;
+}
+
+void straight()
+{
+	if((sensor1r-sensor2r) > 0.5)
 	{
-		if(sensordiff<20) //Byt plats på höger och vänster för att reglera mot vänster vägg
-		{
-			OCR1A = 180+K*(9-sensormeanr); //PWM höger
-			OCR2A = 180-K*(9-sensormeanr); //PWM vänster
-		}
-		else //sensordiff>20 innebär att högersväng kommer
-		{
-			driveDist(20);
-			rotate90right();
-			driveDist(40);
-		}
+		PORTC = 0x01; //rotera höger
+		PORTD = 0x00;
+		OCR2A = 70;
+		OCR2B = 70;
+	}
+	else if((sensor2r-sensor1r) > 0.5)
+	{
+		PORTC = 0x00; //rotera vänster
+		PORTD = 0x20;
+		OCR2A = 70;
+		OCR2B = 70;
+	}
+}
+
+void transmit()
+{
+	TransmitSensor(0);
+	TransmitComm();
+}
+
+void temporary90right()
+{
+	cli();
+	rotateright();
+	_delay_ms(7000);
+	sei();
+	if(mydirection==1)
+	{
+		ready=1;
+		mydirection=4;
 	}
 	else
-	rotate90left();
+	{
+		ready=1;
+		mydirection-=1;
+	}
+}
+
+void temporary90left()
+{
+	cli();
+	rotateleft();
+	_delay_ms(7000);
+	sei();
+	if(mydirection==4)
+	{
+		ready=1;
+		mydirection=1;
+	}
+	else
+	{
+		ready=1;
+		mydirection+=1;
+	}
+}
+
+void driveF()
+{
+	PORTC = 0x01;
+	PORTD = 0x20;
+	OCR2B = speed;
+	OCR2A = speed;
+}
+
+void drive(float dist) //kör dist cm
+{
+	emadistance=0;
+	dist = dist / 2.55125;
+	//dist = dist / 2.55;
+	
+	while (emadistance < dist * 1)
+	{
+		transmit(0);
+		driveF();
+	}
+	stopp();
+}
+
+void drivefromstill(float dist) //kör dist cm
+{
+	emadistance=0;
+	dist = dist / 2.55125;
+	//dist = dist / 2.55;
+	
+	while (emadistance < dist * 1.6)
+	{
+		transmit(0);
+		driveF();
+	}
+	stopp();
+}
+
+float sidesensor(unsigned char sensorvalue)
+{
+	float value = sensorvalue;
+	value = 1 / value;
+	value = value - 0.000741938763948;
+	value = value / 0.001637008132828;
+	
+	return value;
+}
+
+float frontsensor(unsigned char sensorvalue)
+{
+	float value = sensorvalue;
+	value = 1 / value;
+	value = value - 0.001086689563586;
+	value = value / 0.000191822821525;
+	
+	return value;
+}
+
+void leftturn()  //Används när man vet att det är vägg framför och vägg till höger för att kolla om man ska svänga vänster eller vända om helt
+{
+	transmit(0);
+	
+	sensorright = sidesensor(storedValues[1]);
+	sensorleft = sidesensor(storedValues[3]);
+	
+	if(sensorleft<20)
+	{
+		temporary90left();
+		temporary90left();
+	}
+	else
+	{
+		temporary90left();
+	}
+}
+
+void rotateleft()
+{
+	PORTC = 0x00;
+	PORTD = 0x20;
+	OCR2B = 145;
+	OCR2A = 145;
+}
+
+void rotateright()
+{
+	PORTC = 0x01;
+	PORTD = 0x00;
+	OCR2B = 110;
+	OCR2A = 110;
+}
+
+void regulateright()
+{
+	
+
+	int first=1;
+	char start=0;
+
+	if(first==0)
+	{
+		sensormeanr_old=sensormeanr;
+	}
+	transmit();
+	
+	//REGLERING
+	//Omvandling till centimeter
+	
+	sensor1r = sidesensor(storedValues[1]);
+	sensor2r = sidesensor(storedValues[2]);
+	sensorfront = frontsensor(storedValues[0]);
+	sensormeanr = ((sensor1r + sensor2r) / 2) + 9;
+
+	if(first==1)
+	{
+		first=0;
+		stopp();
+		sensormeanr_old=sensormeanr;
+	}
+	else
+	{
+		//till PD-reglering
+		Td = 400000;
+		K = 4;
+
+		if(sensorfront<50)
+		{
+			drive(40);
+			transmit();
+			sensorright = sidesensor(storedValues[1]);
+			
+			if(sensorright>20)
+			{
+				temporary90right();
+				transmit();
+				sensorfront = frontsensor(storedValues[0]);
+				
+				if(sensorfront<60)
+				{
+					drivefromstill(40);
+					leftturn();
+				}
+				else
+				{
+					drivefromstill(40);
+				}
+			}
+			else
+			{
+				leftturn();
+			}
+		}
+		else if(((sensor1r-sensor2r) < 20) && ((sensor2r-sensor1r) < 20))
+		{
+			if (fabs(sensor1r-sensor2r) > 3)
+			{
+				straight();
+			}
+			else
+			{
+				start=1;
+				timer = TCNT1;
+				dt = (time + overflow * 65536) * 64;
+				
+
+				TCNT1 = 0;
+				overflow = 0;
+				
+				PORTC = 0x01;
+				PORTD = 0x20;
+				rightpwm = speed + K * (18-sensormeanr + Td * (sensormeanr_old-sensormeanr)/dt);
+				leftpwm = speed - K * (18-sensormeanr + Td * (sensormeanr_old-sensormeanr)/dt);
+
+
+				if (rightpwm > 255)
+				{
+					OCR2B = 255;
+				}
+				else if(rightpwm < 0)
+				{
+					OCR2B = 0;
+				}
+				else
+				{
+					OCR2B = rightpwm;
+				}
+				if (leftpwm > 255)
+				{
+					OCR2A = 255;
+				}
+				else if (leftpwm < 0)
+				{
+					OCR2A = 0;
+				}
+				else
+				{
+					OCR2A = leftpwm;
+				}
+
+			}
+		}
+		else
+		{
+			if(start==1)
+			{
+				start=0;
+				drive(20);
+				temporary90right();
+				transmit();
+				sensorfront = frontsensor(storedValues[0]);
+				
+				if(sensorfront>80)
+				{
+					drivefromstill(40);
+				}
+				else
+				{
+					drivefromstill(40);
+					leftturn();
+				}
+			}
+			else
+			{
+				stopp();
+			}
+		}
+
+
+	}
+	
 }
 
 
@@ -905,6 +1182,11 @@ int main(void)
 }
 
 
+ISR(TIMER1_OVF_vect)
+{
+	TCNT1 = 0;
+	overflow++;
+}
 
 
 ISR(TIMER0_COMPB_vect)
