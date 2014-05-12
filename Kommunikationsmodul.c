@@ -236,13 +236,10 @@ ISR(SPI_STC_vect) // Answer to call from Master
 	/*SPDR = 0;
 	cli();*/
 	storedValues[indexvalue] = SPDR;
+		indexvalue++;
 	//SPDR = storedValues[indexvalue]; //Just for controll by oscilloscope
-	if(indexvalue < 11)
+	if(indexvalue > 10)
 		
-		{
-			indexvalue++;
-		}
-		else
 		{
 			indexvalue = 0;
 		}
