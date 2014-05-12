@@ -1118,10 +1118,7 @@ void returntostart()
 	}
 	else
 	{
-		while(mydirection!=4)
-		{
 			rotate90left();  //Rotera 90 grader om vi står i fel riktning
-		}
 	}
 }
 
