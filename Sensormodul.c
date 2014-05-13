@@ -1,6 +1,3 @@
-#include <avr/io.h>
-#include <avr/interrupt.h>
-
 // Bussbeteckningar
 char front = 0b00000001;
 char rightfront = 0b00000010;
@@ -36,12 +33,8 @@ char isRFID = 0; //ETTA ELLER NOLLA!
 char calibrated = 0;
 char dGyro;
 char gyroref;
-char sendGyro = 0x40;
-long double digital_angle = 0;
-long double angle = 0;
-long double ef = 5; //Felmarginal
-long timer = 0;
-long overflow = 0;
+volatile char sendGyro = 0;
+volatile long double angle = 0;
 volatile char gyroflag = 0;
 
 char counter_distance = 0;
@@ -53,6 +46,44 @@ char start_sample = 0;
 volatile char ad_complete = 0;
 
 //Bubble sort för att kunna ta ut medianen av avståndssensorer
+
+void initiate_variables()
+{
+	// Bussbeteckningar
+	front = 0b00000001;
+	rightfront = 0b00000010;
+	rightback = 0b00000011;
+	leftfront = 0b00000100;
+	leftback = 0b00000101;
+	traveldist = 0b00000110;
+	gyro = 0b00000111;
+	gyrostop = 0b10000000;
+	RFID = 0b00001000;
+	stop = 0x00; //Stopbyte
+
+	//Konstanter som uppräkning i AD-omvandling
+	i = 0; //Vilken sensor jag använder
+	m = 0; //Hur många gånger jag har gått igenom sensorn.
+
+	Distance = 0;
+
+	isRFID = 0; //ETTA ELLER NOLLA!
+
+	//Gyrovariabler
+	calibrated = 0;
+	dGyro = 0;
+	gyroref = 0;
+	sendGyro = 0;
+	angle = 0;
+	gyroflag = 0;
+
+	counter_distance = 0;
+
+	//Flaggor
+	start_sample = 0;
+	ad_complete = 0;
+}
+
 void bubble_sort(unsigned char a[], int size)
 {
 	int k, l, temp;
@@ -97,8 +128,8 @@ void USART_Init( unsigned int baud )
 	/* Set baud rate */
 	UBRR0H = (unsigned char)(baud>>8);
 	UBRR0L = (unsigned char)baud;
-	/* Enable receiver and transmitter */
-	UCSR0B = (1<<RXEN0)|(1<<TXEN0);
+	/* Enable receiver and transmitter, enable receive interrupt */
+	UCSR0B = (1<<RXEN0)|(1<<TXEN0)|(1<<RXCIE0);
 	/* Set frame format: 8data, 1stop bit */
 	UCSR0C = (0<<USBS0)|(3<<UCSZ00);
 }
@@ -123,33 +154,9 @@ void initiate_sensormodul(void)
 	ADCSRA = 0b10001011;
 	sei(); //Globala interrupts
 	USART_Init(25);
-	UCSR0B = (0<<RXEN0)|(0<<TXEN0); //Stäng av USART
 	//Kalibrera gyro, sätt sedan ADMUX till 0 så att vi får Frontsensor
 	ADCSRA = 0b11001011; //Starta AD-omvandling
 	ADMUX = 0;
-}
-
-//Vet inte riktigt hur vi ska leta RFID, men det är ett mycket senare problem.
-void find_RFID(void)
-{
-	UCSR0B = (1<<RXEN0)|(1<<TXEN0); //Starta USART
-	while(1)
-	{
-		rfid_data = USART_Receive();
-		if (rfid_data == 0x0A)
-		{
-			isRFID = 1;
-		}
-	}
-}
-
-//Gyro-timer för att beräkna tid som har gått sen senaste gyromätning
-void initiate_gyro_timer()
-{
-	TIMSK0 = 0b00000001; //Enable interupt vid overflow
-	TCCR0B = 0x00; //stop
-	TCNT0 = 0x00; //set count
-	TCCR0B = 0x03; //start timer prescale 64
 }
 
 //Timer för samplehastighet
@@ -162,109 +169,12 @@ void initiate_sample_timer()
 	OCR1BL = 0x30; //RANDOM! När ska comparen triggas? SAMPLING Borde vara oftare ATM
 }
 
-//Beräkna vinkel, KALIBRERA OM
-void calculate_angle()
-{
-	if(digital_angle >= 0)
-	{
-		digital_angle = digital_angle * 0.02530364372469;
-	}
-	else
-	{
-		digital_angle = digital_angle * 0.02197748528729;
-	}
-
-	angle = angle + digital_angle;
-}
-
-//Beräknar vilket värde som ska skickas till styrmodulen
-void calculate_sendGyro()
-{
-	while (angle < -180 - ef)
-	{
-		angle = angle + 360;
-	}
-	while (angle > 180 + ef)
-	{
-		angle = angle - 360;
-	}
-	//Olika koder beroende på vinkel. Felmarginal ef. Koderna har Ema.
-	if(angle >= -180 - ef && angle < -180 + ef)
-	{
-		sendGyro = 0x00;
-	}
-	else if (angle >= -180 + ef && angle < -90 - ef)
-	{
-		sendGyro = 0x10;
-		for(char i = 0; i < 16; i++)
-		{
-			if(angle + 180 >= i * 5.625 && angle + 180 < (i + 1) * 5.625)
-			{
-				sendGyro = sendGyro + i;
-				break;
-			}
-		}
-	}
-	else if(angle >= -90 - ef && angle < -90 + ef)
-	{
-		sendGyro = 0x20;
-	}
-	else if (angle >= -90 + ef && angle < 0 - ef)
-	{
-		sendGyro = 0x30;
-		for(char i = 0; i < 16; i++)
-		{
-			if(angle + 90 >= i * 5.625 && angle + 90 < (i + 1) * 5.625)
-			{
-				sendGyro = sendGyro + i;
-				break;
-			}
-		}
-	}
-	else if(angle >= 0 - ef && angle < 0 + ef)
-	{
-		sendGyro = 0x40;
-	}
-	else if (angle >= 0 + ef && angle < 90 - ef)
-	{
-		sendGyro = 0x50;
-		for(char i = 0; i < 16; i++)
-		{
-			if(angle >= i * 5.625 && angle < (i + 1) * 5.625)
-			{
-				sendGyro = sendGyro + i;
-				break;
-			}
-		}
-	}
-	else if(angle >= 90 - ef && angle < 90 + ef)
-	{
-		sendGyro = 0x60;
-	}
-	else if (angle >= 90 + ef && angle < 180 - ef)
-	{
-		sendGyro = 0x70;
-		for(char i = 0; i < 16; i++)
-		{
-			if(angle - 90 >= i * 5.625 && angle - 90 < (i + 1) * 5.625)
-			{
-				sendGyro = sendGyro + i;
-				break;
-			}
-		}
-	}
-	else if(angle >= 180 - ef && angle < 180 + ef)
-	{
-		sendGyro = 0x80;
-	}
-}
-
 //Mainfunktion
 int main(void)
 {
+	initiate_variables();
 	SlaveInit();
 	initiate_sensormodul();
-	initiate_gyro_timer();
 	initiate_sample_timer();
 	while(1)
 	{
@@ -382,17 +292,17 @@ int main(void)
 							m = m + 1;
 						}
 					}
-					
+
 					if (counter_distance == 1)
 					{
 						//Nästa gång så ska vi ad-omvandla fototransistor
 						ADMUX = 5;
 					}
-					
+
 					counter_distance++;
-					
+
 				}//coutner_distance < 2
-				
+
 				else
 				{
 					//Fototransistor
@@ -405,31 +315,38 @@ int main(void)
 					}
 					ADMUX = i; //Återgå till gammal i
 					counter_distance = 0;
-				}//counter_distance >= 2				
-				
+				}//counter_distance >= 2
+
 			}//gyroflag == 0
-			else if (gyroflag == 1)
+			else if(gyroflag == 1)
 			{
-				//Gyro
+				signed int bigvalue = 83;
+				signed int smallvalue = -83;
 				dGyro = ADC >> 2;
-				//Har en felmarginal på 1
-				if ((dGyro < gyroref + 2) && (dGyro > gyroref - 2))
+				if((dGyro < gyroref + 2) && (dGyro > gyroref - 2))
 				{
-					digital_angle = 0;
-					timer = TCNT0;
-					TCNT0 = 0x00;
-					overflow = 0;
+					angle = angle;
 				}
 				else
 				{
-					digital_angle = dGyro - gyroref;
-					timer = TCNT0;
-					digital_angle = digital_angle * (timer + overflow * 256); //64 är prescalen på timern
-					overflow = 0;
-					TCNT0 = 0x00; //set count
+					angle +=  (dGyro - gyroref)*5/256;
 				}
-				calculate_angle();
-				calculate_sendGyro();
+				
+				//Kolla om vi kommit fram till önskat värde
+		
+				if(angle >= bigvalue)
+				{
+					sendGyro = 1;
+				}
+				else if (angle <= smallvalue)
+				{
+					sendGyro = 2;
+				}
+				else
+				{
+					sendGyro = 0;
+				}
+				
 			}//gyroflag == 1
 			//Starta samplingsräknare
 			TCCR1B = 0x03;
@@ -446,18 +363,10 @@ ISR(TIMER1_COMPB_vect)
 	ADCSRA = 0b11001011;
 }
 
-//Avbrott när vi går över bitmängden för gyro-timer
-ISR(TIMER0_OVF_vect)
-{
-	TCNT0 = 0;
-	overflow++;
-}
 
 //Avbrott för knapp
 ISR(INT0_vect) //knapp ska vi inte ha irl, men ja.
 {
-	angle = 0;
-	sendGyro = 0x40;
 	dummy = 0;
 	//:)
 }
@@ -505,20 +414,20 @@ ISR(SPI_STC_vect) // Skicka på buss!! // Robert
 	else if (selection == gyro)
 	{
 		SPDR = sendGyro;
-		TCCR0B = 0x03; //starta klocka
-		gyroflag = 1; //0 tills en riktig gyrostop införs
+		
+		gyroflag = 1;
 		ADMUX = 6;
 		asm("");
-		//sendGyro = 0;
 	}
 	else if (selection == gyrostop) // här är den riktiga gyrostop
 	{
+		SPDR = 0;
+		angle = 0;
+		sendGyro = 0;
 		gyroflag = 0;
 		ADMUX = i;
 		dummy = 1;
-		TCCR0B = 0; //stoppa klocka
-		TCNT0 = 0;
-		overflow = 0;
+
 	}
 	else if (selection == RFID)
 	{
@@ -529,6 +438,17 @@ ISR(SPI_STC_vect) // Skicka på buss!! // Robert
 		// behöver förmodligen inte göra något här
 	}
 }
+
+ISR(USART0_RX_vect)
+{
+	rfid_data = UDR0;
+	if(rfid_data == 0x0A)
+	{
+		isRFID = 1;
+	}
+	dummy = 0;
+}
+
 
 /* GAMMALT SOM HAR ANVÄNTS I TESTSYFTE */
 /*ISR(ADC_vect)
