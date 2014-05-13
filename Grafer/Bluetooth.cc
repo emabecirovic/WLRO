@@ -27,7 +27,7 @@ HANDLE Bluetooth_Serial_comm::Settup_BT()
 
     /***************************Hanle serial för com 8 *********************/
     HANDLE hSerial;
-    hSerial = CreateFile("COM8", // ändra här för annan com port 
+    hSerial = CreateFile("COM8",
                          GENERIC_WRITE|GENERIC_READ,
                          0,
                          NULL,
@@ -68,7 +68,7 @@ HANDLE Bluetooth_Serial_comm::Settup_BT()
     dcb.ByteSize = 8;             // data size, xmit, and rcv
     dcb.Parity = NOPARITY;        // no parity bit
     dcb.StopBits = ONESTOPBIT;    // one stop bit
-    dcb.fBinary = true;
+    //dcb.fBinary = true;
 
     if(!(SetCommState(hSerial, &dcb)))
     {
@@ -89,7 +89,7 @@ HANDLE Bluetooth_Serial_comm::Settup_BT()
 
 
 /****************** Writefile *************************************/
-void Bluetooth_Serial_comm::Send_to_Bt(unsigned int t)
+void Bluetooth_Serial_comm::Send_to_Bt(int t)
 {
     bool fWaitingOnRead = false;
     DWORD dwByte;
@@ -101,8 +101,8 @@ void Bluetooth_Serial_comm::Send_to_Bt(unsigned int t)
             if (GetLastError() != ERROR_IO_PENDING)     // read not delayed?
                 // Error in communications; report it.
             {
-                cout << "error in communication \n";
-
+                cout << "error in communication write \n";
+                cout << GetLastError() << "\n";
             }
             else
             {
@@ -118,8 +118,8 @@ void Bluetooth_Serial_comm::Send_to_Bt(unsigned int t)
 /************************' Readfile **********************************/
 unsigned char Bluetooth_Serial_comm::Read_from_BT()
 {
-    FlushFileBuffers(hSerial);
-    //ReadCompletion
+    //FlushFileBuffers(hSerial);
+
     BOOL fWaitingOnRead = false;
     DWORD dwByte;
     unsigned char szBuff2[2];
@@ -131,7 +131,9 @@ if(!fWaitingOnRead)
             if (GetLastError() != ERROR_IO_PENDING)     // read not delayed?
                 // Error in communications; report it.
             {
-               cout << "error in communication \n";
+              // cout << "error in communication read \n";
+               cout << GetLastError() << "\n";
+              // if(GetLastError() == ERROR_IO)
 
             }
 
@@ -139,11 +141,12 @@ if(!fWaitingOnRead)
             {
                 fWaitingOnRead = true;
                cout << "io pendeling\n";
+
             }
         }
         else
         {
-             //cout << "read complete imidietly!! \n";
+            // cout << "read complete imidietly!! \n";
         }
 
     }
@@ -202,9 +205,9 @@ DWORD dwRes;
     char a = szBuff2[0];
     char b = szBuff2[1];
    // bitset<8> z(szBuff2);
-  //  bitset<8> y(b);
+  // bitset<8> y(b);
  // bitset<8> x(a);
-//cout << szBuff2 << "  " << y << "   " <<x << "\n\n";
+ //cout << szBuff2 << "  " << y << "   " <<x << "\n\n";
 
     return szBuff2[0];
 }
