@@ -22,7 +22,7 @@ Bluetooth_Serial_comm();
 bool IsOpen();
 
 unsigned char Read_from_BT();
-void Send_to_Bt(unsigned int);
+void Send_to_Bt(int);
 
 };
 
