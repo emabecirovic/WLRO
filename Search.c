@@ -710,16 +710,16 @@ void rotateleft()
 {
 	PORTC = 0x00;
 	PORTD = 0x20;
-	OCR2B = 145;
-	OCR2A = 145;
+	OCR2B = 170;
+	OCR2A = 170;
 }
 
 void rotateright()
 {
 	PORTC = 0x01;
 	PORTD = 0x00;
-	OCR2B = 110;
-	OCR2A = 110;
+	OCR2B = 170;
+	OCR2A = 170;
 }
 /*********************************FÖRSTA VARV*************************************/
 void regulateright()
@@ -1232,4 +1232,41 @@ ISR(TIMER0_COMPB_vect)
 	TCNT0 = 0x00;
 	start_request = 1;
 	//writechar(0b01010111); //W
+}
+
+void rotate90left()
+{
+	volatile isDone = 0;
+	while(isDone == 0)
+	{
+		TransmitSensor(turn);
+		if (storedValues[6] != 1)
+		{
+			rotateleft();
+		}
+		else
+		{
+			TransmitSensor(turnstop);
+			isDone = 0;
+		}
+				
+	}
+}
+
+void rotate90right()
+{
+	volatile isDone = 0;
+	while(isDone == 0)
+	{
+		TransmitSensor(turn);
+		if (storedValues[6] != 1)
+		{
+			rotateright();
+		}
+		else
+		{
+			TransmitSensor(turnstop);
+			isDone = 0;
+		}
+	}
 }
