@@ -1,3 +1,6 @@
+#include <avr/io.h>
+#include <avr/interrupt.h>
+
 // Bussbeteckningar
 char front = 0b00000001;
 char rightfront = 0b00000010;
@@ -178,6 +181,21 @@ int main(void)
 	initiate_sample_timer();
 	while(1)
 	{
+		/*
+		if (dGyro == 255)
+		{
+			dummy = 0;
+		}
+		else if(gyroref == 255)
+		{
+			dummy = 1;
+		}
+		else if(gyroflag == 255)
+		{
+			dummy = 0;
+		}
+		*/
+		
 		if(start_sample == 1)
 		{
 			start_sample = 0;
@@ -187,6 +205,7 @@ int main(void)
 		{
 			dummy = 1;
 		}
+		
 
 		asm("");
 
@@ -199,7 +218,7 @@ int main(void)
 			if(calibrated == 0)
 			{
 				gyroref = ADC >> 2;
-				ADMUX = 0;
+				ADMUX = 6;
 				calibrated = 1;
 				TCCR1B = 0x03;
 			}
@@ -302,7 +321,6 @@ int main(void)
 					counter_distance++;
 
 				}//coutner_distance < 2
-
 				else
 				{
 					//Fototransistor
@@ -316,7 +334,7 @@ int main(void)
 					ADMUX = i; //Återgå till gammal i
 					counter_distance = 0;
 				}//counter_distance >= 2
-
+				
 			}//gyroflag == 0
 			else if(gyroflag == 1)
 			{
@@ -331,9 +349,9 @@ int main(void)
 				{
 					angle +=  (dGyro - gyroref)*5/256;
 				}
-				
+
 				//Kolla om vi kommit fram till önskat värde
-		
+	
 				if(angle >= bigvalue)
 				{
 					sendGyro = 1;
@@ -346,7 +364,7 @@ int main(void)
 				{
 					sendGyro = 0;
 				}
-				
+
 			}//gyroflag == 1
 			//Starta samplingsräknare
 			TCCR1B = 0x03;
@@ -414,7 +432,7 @@ ISR(SPI_STC_vect) // Skicka på buss!! // Robert
 	else if (selection == gyro)
 	{
 		SPDR = sendGyro;
-		
+
 		gyroflag = 1;
 		ADMUX = 6;
 		asm("");
@@ -427,7 +445,6 @@ ISR(SPI_STC_vect) // Skicka på buss!! // Robert
 		gyroflag = 0;
 		ADMUX = i;
 		dummy = 1;
-
 	}
 	else if (selection == RFID)
 	{
