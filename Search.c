@@ -3,8 +3,8 @@
 *
 * Created: 4/29/2014 9:26 AM
 *  Author: robsv107
-*          patsu326
-*	   marek588
+*          	patsu326
+*				marek588
 */
 
 #include <avr/io.h>
@@ -140,7 +140,7 @@ void TransmitSensor(char invalue)
 
 		PORTB &= 0b11101111; // ss2 low
 
-		if(invalue == turn)
+		if(invalue == turn) // Starta flöde av gyrovärden
 		{
 			MasterTransmit(gyro);
 			bussdelay();
@@ -149,11 +149,11 @@ void TransmitSensor(char invalue)
 			storedValues[6] = SPDR; // Gyro
 			
 		}
-		else if(invalue == turnstop)
+		else if(invalue == turnstop) // Stoppa flöde av gyrovärden
 		{
 			MasterTransmit(gyrostop);
 		}
-		else
+		else  // Annars ta emot ett paket med övriga sensorvärden
 		{
 			MasterTransmit(RFID);
 			//First communication will contain crap on shift register
@@ -168,23 +168,23 @@ void TransmitSensor(char invalue)
 			storedValues[5] = SPDR; // Distance
 			
 			MasterTransmit(rightfront);
-			for(int i = 0; i < time; i++){}
+			bussdelay();
 			storedValues[0] = SPDR; // Front
 			
 			MasterTransmit(rightback);
-			for(int i = 0; i < time; i++){}
+			bussdelay();
 			storedValues[1] = SPDR; // Right front
 			
 			MasterTransmit(leftfront);
-			for(int i = 0; i < time; i++){}
+			bussdelay();
 			storedValues[2] = SPDR; // Right back
 			
 			MasterTransmit(leftback);
-			for(int i = 0; i < time; i++){}
+			bussdelay();
 			storedValues[3] = SPDR; // Left front
 			
 			MasterTransmit(stop);
-			for(int i = 0; i < time; i++){}
+			bussdelay();
 			storedValues[4] = SPDR; // Left back
 		}
 
@@ -199,17 +199,23 @@ void TransmitSensor(char invalue)
 
 void TransmitComm()
 {
-	PORTB &= 0b11110111;
+		if(start_request == 1)
+	{
+		start_request = 0;
+	PORTB &= 0b11110111; // ss1 low
 
-	for(int i = 0; i < time; i++){}
+	bussdelay();
 	for(int i = 0; i < 11; i ++)
 	{
-		dummy = SPDR;
+		dummy = SPDR; // Dummy läsning för att cleara SPIF
 		MasterTransmit(storedValues[i]);
-		for(int i = 0; i < time; i++){}
+		bussdelay();
 	}
 
-	PORTB ^= 0b00001000;
+	PORTB ^= 0b00001000; // ss1 low
+	
+		TCCR0B = 0b00000101; // Start timer
+	}
 }
 
 /******************************FJÄRRSTYRNING**********************/
@@ -278,25 +284,21 @@ void updatepos()
 		case (1): // X+
 		{
 			myposX+=1;
-			//mypos[0]=myposX;
 			posdistance=0;
 		}
 		case (2): // Y+
 		{
 			myposY+=1;
-			//mypos[1]=myposY;
 			posdistance=0;
 		}
 		case (3): // X-
 		{
 			myposX-=1;
-			//mypos[0]=myposX;
 			posdistance=0;
 		}
 		case (4): // Y-
 		{
 			myposY-=1;
-			//mypos[1]=myposY;
 			posdistance=0;
 		}
 	}
@@ -462,13 +464,13 @@ void extended_wall()
 /********************************STYRNING*****************************************/
 
 
-void stopp()
+void stopp() // Stanna roboten
 {
 	OCR2A = 0;
 	OCR2B = 0;
 }
 
-void driveF()
+void driveF() // Kör framåt
 {
 	PORTC = 0x01;
 	PORTD = 0x20;
@@ -492,12 +494,11 @@ void driveDist(float dist)
 }
 
 
-void drivefromstill(float dist) //kör dist cm
+void drivefromstill(float dist) //kör dist cm från stillastående
 {
 	distance=0;
 	dist = dist / 2.55125;
-	//dist = dist / 2.55;
-
+	
 	while (distance < dist * 1.6)
 	{
 		transmit(0);
@@ -508,14 +509,14 @@ void drivefromstill(float dist) //kör dist cm
 
 void straight()
 {
-	if((sensor1r-sensor2r) > 0.5)
+	if((sensor1r-sensor2r) > 0.5) // diff mindre än 0.5
 	{
 		PORTC = 0x01; //rotera höger
 		PORTD = 0x00;
 		OCR2A = 70;
 		OCR2B = 70;
 	}
-	else if((sensor2r-sensor1r) > 0.5)
+	else if((sensor2r-sensor1r) > 0.5) // diff mindre än 0.5 andra hållet
 	{
 		PORTC = 0x00; //rotera vänster
 		PORTD = 0x20;
@@ -524,7 +525,7 @@ void straight()
 	}
 }
 
-void temporary90right()
+void temporary90right() // Hårdkodad 90 graders högersväng
 {
 	cli();
 	PORTC = 0x01;
@@ -535,7 +536,7 @@ void temporary90right()
 	sei();
 }
 
-void temporary90left()
+void temporary90left() // Hårdkodad 90 graders vänstersväng
 {
 	cli();
 	PORTC = 0x00;
@@ -547,7 +548,7 @@ void temporary90left()
 }
 
 
-void rotate90left()
+void rotate90left() // Rotera 90 grader med gyro
 {
 	volatile  int isDone = 0;
 	while(isDone == 0)
@@ -566,7 +567,7 @@ void rotate90left()
 	}
 }
 
-void rotate90right()
+void rotate90right() // Rotera 90 grader med gyro
 {
 	volatile int isDone = 0;
 	while(isDone == 0)
@@ -584,7 +585,7 @@ void rotate90right()
 	}
 }
 
-
+/**********************************KONVERTERING**************************/
 float sidesensor(unsigned char sensorvalue)
 {
 	float value = sensorvalue;
@@ -609,10 +610,10 @@ void leftturn()  //Används när man vet att det är vägg framför och vägg ti
 {
 	transmit(0);
 
-	sensorright = sidesensor(storedValues[1]);
+	// sensorright = sidesensor(storedValues[1]);
 	sensorleft = sidesensor(storedValues[3]);
 
-	if(sensorleft<20)
+	if(sensorleft<20) // Vägg närmare än 20 cm till vänster
 	{
 		temporary90left();
 		temporary90left();
@@ -623,7 +624,7 @@ void leftturn()  //Används när man vet att det är vägg framför och vägg ti
 	}
 }
 
-void rotateleft()
+void rotateleft() // Rotera vänster
 {
 	PORTC = 0x00;
 	PORTD = 0x20;
@@ -631,7 +632,7 @@ void rotateleft()
 	OCR2A = 170;
 }
 
-void rotateright()
+void rotateright() // Rotera höger
 {
 	PORTC = 0x01;
 	PORTD = 0x00;
@@ -642,7 +643,7 @@ void rotateright()
 
 void firstlap()
 {
-	if(myposX == startpos[0] && myposY == startpos[1] && !(start))
+	if(myposX == startpos[0] && myposY == startpos[1] && !(start)) // pos[0] = X-koordinat & pos[1] = Y-koordinat
 	{
 		onelap=1;
 	}
@@ -652,30 +653,28 @@ void firstlap()
 	}
 }
 
-void regulateright()
+
+
+void regulateright() // Reglering mot högervägg
 {
 
-
-	int first=1;
-	char start=0;
-
-	if(first==0)
+	if(firstRR==0) // Gör endast första gången funktionen körs
 	{
 		sensormeanr_old=sensormeanr;
 	}
-	transmit();
+	
+	transmit(); // Hämta och skicka värden
 
 	//REGLERING
-	//Omvandling till centimeter
-
 	sensor1r = sidesensor(storedValues[1]);
 	sensor2r = sidesensor(storedValues[2]);
 	sensorfront = frontsensor(storedValues[0]);
-	sensormeanr = ((sensor1r + sensor2r) / 2) + 9;
+	
+	sensormeanr = ((sensor1r + sensor2r) / 2) + 9; // Tar ut ett medelvärde
 
-	if(first==1)
+	if(firstRR==1) // Alla gånger förutom första gången
 	{
-		first=0;
+		firstRR=0;
 		stopp();
 		sensormeanr_old=sensormeanr;
 	}
@@ -685,22 +684,22 @@ void regulateright()
 		Td = 400000;
 		K = 4;
 
-		if(sensorfront<50)
+		if(sensorfront<50) // Vägg närmare än 50 cm
 		{
-			driveDist(40);
+			driveDist(40); // Kör 40 cm
 			transmit();
 			sensorright = sidesensor(storedValues[1]);
 
-			if(sensorright>20)
+			if(sensorright>20) // Vägg längre bort än 20 cm
 			{
 				temporary90right();
 				transmit();
 				sensorfront = frontsensor(storedValues[0]);
 
-				if(sensorfront<60)
+				if(sensorfront<60) // Vägg en ruta bort?
 				{
 					drivefromstill(40);
-					leftturn();
+					leftturn(); // Återvändsgrändsrutin
 				}
 				else
 				{
@@ -712,15 +711,18 @@ void regulateright()
 				leftturn();
 			}
 		}
-		else if(((sensor1r-sensor2r) < 20) && ((sensor2r-sensor1r) < 20))
+		else if(((sensor1r-sensor2r) < 20) && ((sensor2r-sensor1r) < 20))  // Har vägg att reglera mot
 		{
-			if (fabs(sensor1r-sensor2r) > 3)
+			if (fabs(sensor1r-sensor2r) > 3) // För sne för reglering
 			{
-				straight();
+				straight(); // Rakställ roboten
 			}
 			else
 			{
-				start=1;
+				
+				driven=1;
+				
+				// Tidsdifferans för D-reglering
 				timer = TCNT1;
 				dt = (time + overflow * 65536) * 64;
 
@@ -734,11 +736,11 @@ void regulateright()
 				leftpwm = speed - K * (18-sensormeanr + Td * (sensormeanr_old-sensormeanr)/dt);
 
 
-				if (rightpwm > 255)
+				if (rightpwm > 255) // Se till att PWM inte blir för stor
 				{
 					OCR2B = 255;
 				}
-				else if(rightpwm < 0)
+				else if(rightpwm < 0) // Se till att PWM inte blir för liten
 				{
 					OCR2B = 0;
 				}
@@ -746,11 +748,11 @@ void regulateright()
 				{
 					OCR2B = rightpwm;
 				}
-				if (leftpwm > 255)
+				if (leftpwm > 255) // Dito
 				{
 					OCR2A = 255;
 				}
-				else if (leftpwm < 0)
+				else if (leftpwm < 0) // Dito
 				{
 					OCR2A = 0;
 				}
@@ -761,11 +763,11 @@ void regulateright()
 
 			}
 		}
-		else
+		else // Tappat vägg på högersida
 		{
-			if(start==1)
+			if(driven==1)
 			{
-				start=0;
+				driven=0;
 				driveDist(20);
 				temporary90right();
 				transmit();
@@ -811,7 +813,7 @@ void away() // Få roboten från väggen
 	rotate90left();
 	}*/
 
-	if(leftfront < 20)
+	if(leftfront < 20) // Vägg till vänster
 	{
 		regulateright();
 		getinpos = true;
@@ -820,6 +822,7 @@ void away() // Få roboten från väggen
 	else if(getinpos)
 	{
 		driveDist(20);
+		getinpos = false;
 	}
 	else
 	{
@@ -835,48 +838,47 @@ void away() // Få roboten från väggen
 
 void zigzag() //sicksacksak
 {
-	if(sensorfront>60)
+	if(sensorfront>50) // Kör tills roboten står en ruta från väggen
 	{
-		PORTC = 0x01;
-		PORTD = 0x40;
-		OCR2A = speed;
-		OCR1A = speed;
+		driveF();
 	}
-	else if(first)
+	else if(first)	// Första gången vi når vägg
 	{
 		first = false;
 		temporary90left();
 	}
-	else if(zzleftturn)
+	else if(zzleftturn) 
 	{
-		TransmitSensor(left);
+		TransmitSensor(0);
 		zzleftturn = false;
-		if(sensorleft < 20)
+		if(sensorleft < 20) // Har vi vägg till vänster när vi vill svänga vänster
 		{
 			zigzagdone = true;
-			return;
+			return; // Klar med zigzag
 		}
 		temporary90left();
 		driveDist(40);
-		while(sensorleft < 20)
+		while(sensorleft < 20) // Har vi vägg höger efter första sväng
 		{
+			TransmitSensor(0);
 			driveDist(40);
 		}
 		temporary90left();
 	}
 	else
 	{
-		TransmitSensor(right);
+		TransmitSensor(0);
 		zzleftturn = true;
-		if(sensorright < 20)
+		if(sensorright < 20)   // Har vi vägg till höger när vi vill svänga höger
 		{
 			zigzagdone = true;
-			return;
+			return; // Klar med zigzag
 		}
 		temporary90right();
 		driveDist(40);
-		while(sensorright < 20)
+		while(sensorright < 20)  // Har vi vägg höger efter första sväng
 		{
+			TransmitSensor(0);
 			driveDist(40);
 		}
 		temporary90right();
@@ -886,9 +888,18 @@ void zigzag() //sicksacksak
 /*********************************MISSADE RUTOR*******************************/
 
 /************************************HITTA FÖRSTA NOLLAN I RUMMET**********************************/
+void findempty()
+{
+	int *notsearched = findfirstzero();
+
+	if(notsearched[0] == 15 && notsearched[1] == 0)
+	findemptydone = true;
+	else
+	driveto(notsearched);
+}
+
 int * findfirstzero()
 {
-
 	static int firstzero[2]={15,0};
 
 	for(int j=0;j<=17;j++)
@@ -908,102 +919,113 @@ int * findfirstzero()
 void driveto(int pos[2])
 {
 	transmit();
-	if(myposX == pos[0]  && myposY  == pos[1])
-	room[myposX][myposY] = 2;
-	else if(myposX >= pos[0] && myposY <= pos[1]) //Fjärde kvadranten
+	if(myposX == pos[0]  && myposY  == pos[1]) // Jämför koordinaterna roboten står på med positionen vi vill åka till
+	{
+		room[myposX][myposY] = 2; // TA BORT fixas i Kartritning?
+		return;
+	}	
+	else if(myposX >= pos[0] && myposY <= pos[1]) //Fjärde kvadranten, tänk önskad position som origo
 	{
 		switch(mydirection)
 		{
-			case(1):
+			case(1): // X+
 			temporary90left();
-			case(2):
-			if(sensorfront > 50)
-			driveF();
-			else if((pos[1]-myposY) == 1)
+			case(2): // Y+
+			if(sensorfront > 50) // Ingen vägg framför
+				driveF(); 
+			else if((pos[1]-myposY) == 1) // Om vi står endast en ruta ifrån önskad position
 			{
 				driveDist(40);
 				temporary90left();
 			}
-			case(3):
-			if(sensorfront > 50)
-			driveF();
-			else if((myposX-pos[0]) == 1)
+			case(3): // X-
+			if(sensorfront > 50) // Ingen vägg framför
+				driveF();
+			else if((myposX-pos[0]) == 1) // Om vi står endast en ruta ifrån önskad position
 			{
 				driveDist(40);
 				temporary90right();
 			}
-			case(4):
+			case(4): // Y-
 			temporary90right();
 		}
 	}
 	else if(myposX <= pos[0] && myposY <= pos[1]) // Tredje kvadranten KOLLA HÄR OM DET FUNKAR
-	{
+	{																					// Sammma princip som ovan se kommentarer där
 		switch(mydirection)
 		{
-			case(1):
+			case(1): // X+
 			if(sensorfront > 50)
 			driveF();
 			else if((pos[0]-myposX) == 1)
-			driveDist(40);
-			case(2):
+			{
+				driveDist(40);
+				temporary90left();
+			}
+			case(2): //Y+
 			if(sensorfront > 50)
 			driveF();
 			else if((pos[1]-myposY) == 1)
+			{
+				driveDist(40);
+				temporary90right();
+			}
+			case(3): // X-
+			temporary90right();
+			case(4): // Y-
+			temporary90left();
+		}
+	}
+	else if(myposX < pos[0] && myposY > pos[1]) // Andra kvadranten, dito
+	{
+		switch(mydirection)
+		{
+			case(1): // X+
+			if(sensorfront > 50)
+			driveF();
+			else if((pos[0] - myposX == 1))
+			{
+				driveDist(40);
+				temporary90right();
+			}
+			case(2): // Y+
+			temporary90right();
+			case(3): // X-
+			temporary90left();
+			case(4): // Y-
+			if(sensorfront > 50)
+			driveF();
+			else if((myposY-pos[1]) == 1)
+			{
+				driveDist(40);
+				temporary90left();
+			}
+		}
+	}
+	else // Första kvadranten, dito
+	{
+		switch(mydirection)
+		{
+			case(1): // X+
+			temporary90right();
+			case(2): // Y+
+			temporary90left();
+			case(3): // X-
+			if(sensorfront > 50) 
+				driveF();
+			else if((myposX-pos[0]) == 1) 
+			{
+				driveDist(40);
+				temporary90right();
+			}
+			case(4): // Y-
+			if(sensorfront > 50)
+			driveF();
+			else if((myposY-pos[1]) == 1)
 			driveDist(40);
-			case(3):
-			temporary90right();
-			case(4):
-			temporary90left();
-		}
-	}
-	else if(myposX < pos[0] && myposY > pos[1])
-	{
-		switch(mydirection)
-		{
-			case(1):
-			if(sensorfront > 50)
-			driveF();
-			case(2):
-			temporary90right();
-			case(3):
-			temporary90left();
-			case(4):
-			if(sensorfront > 50)
-			driveF();
-		}
-	}
-	else
-	{
-		switch(mydirection)
-		{
-			case(1):
-			temporary90right();
-			case(2):
-			temporary90left();
-			case(3):
-			if(sensorfront < 50)
-			driveF();
-			case(4):
-			if(sensorfront < 50)
-			driveF();
 		}
 	}
 }
-
-void findempty()
-{
-	int *notsearched = findfirstzero();
-
-	if(notsearched[0] == 15 && notsearched[1] == 0)
-	findemptydone = true;
-	else
-	driveto(notsearched);
-}
-
-
-
-
-
 
 
 void returntostart()
@@ -1014,13 +1036,14 @@ void returntostart()
 
 	if(mydirection == 4) //4=negativ y-led. x+,y+,x-,y- = 1,2,3,4
 	{
-		while(sensorfront>10)
+		while(sensorfront>50)
 		{
+			driveF();
 			//Kör rakt fram
-			PORTC = 0x01;
+			/*PORTC = 0x01;
 			PORTD = 0x40;
 			OCR2A = 180;
-			OCR1A = 180;
+			OCR1A = 180;*/
 		}
 		if(myposX<startpos[0]) //Om ingången är till höger om roboten
 		{
@@ -1033,7 +1056,7 @@ void returntostart()
 		{
 			while(myposX>startpos[0]) //Om ingången är till vänster om roboten
 			{
-				regulateright();
+				regulateright(); // REGULATE LEFT ?????
 			}
 		}
 	}
@@ -1046,12 +1069,10 @@ void returntostart()
 
 int main(void)
 {
-	MasterInit();
+	
 	Initiation();
 	_delay_ms(40000);
 	initiate_request_timer();
-
-	transmit();
 
 	int fjarrstyrt = (PIND & 0x01); //1 då roboten är i fjärrstyrt läge
 
@@ -1062,11 +1083,14 @@ int main(void)
 	else
 	{
 		
-
+		MasterInit();
+		_delay_ms(40000);
+		transmit();
+		
 		while(home==0)
 		{
 
-			if(distance >= 40/0.8125) //dividera med sektor 0.8125
+			if(distance >= 40/0.8125) // FEL VÄRDE KOLLA MED EMA
 			updatepos();
 
 

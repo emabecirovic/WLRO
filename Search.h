@@ -54,6 +54,10 @@ int timer = 0;
 
 char speed = 110;
 
+// Flaggor för regulateright
+int firstRR=1;
+char driven=0;
+
 /**************POSITION******************/
 char mydirection = 2; //1=X+ ; 2=Y+ ; 3=X- ; 4=Y-
 unsigned int myposX=0; //Robotens position i X-led
@@ -144,6 +148,14 @@ void driveto(int pos[2]);
 void findempty();
 
 void returntostart(); // Kolla om vi ska ha den
+
+
+
+
+
+
+
+
 
 
 
