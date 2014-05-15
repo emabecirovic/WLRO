@@ -47,6 +47,8 @@ long overflow = 0;
 long dt = 0;
 int timer = 0;
 char speed = 50;
+int first=1;
+char startregulate=0;
 
 volatile char turnisDone = 0;
 
@@ -111,11 +113,15 @@ void initiate_variables()
 	time = 200;
 
 	emadistance = 0;
+	posdistance = 0;
 	traveled=0;
 	overflow = 0;
 	dt = 0;
 	timer = 0;
 	speed = 50;
+	First=1;
+	startregulate=0;
+
 
 	finished=0; //1 då hela kartan utforskad
 	onelap=0; //1 då yttervarvet körts
@@ -431,14 +437,14 @@ void print_on_lcd(char number)
 	//shift(1);
 }
 
-void setcursortostart()
+void setcursor(char place) //16 platser på en rad. 0x00-0x0F
 {
-	PORTA=0x80;
+	
+	PORTA=(0x80 + place - 0x01);
 	(PORTC |= 0b10000000);
 	(PORTC &= 0b00000001);
 	_delay_ms(200);
 }
-
 //-------------------------------------------------------------------------------------
 void stopp()
 {
@@ -730,25 +736,25 @@ void updatepos()
 		{
 			myposX+=1;
 			//mypos[0]=myposX;
-			traveled=0;
+			posdistance=0;
 		}
 		case (2): // Y+
 		{
 			myposY+=1;
 			//mypos[1]=myposY;
-			traveled=0;
+			posdistance=0;
 		}
 		case (3): // X-
 		{
 			myposX-=1;
 			//mypos[0]=myposX;
-			traveled=0;
+			posdistance=0;
 		}
 		case (4): // Y-
 		{
 			myposY-=1;
 			//mypos[1]=myposY;
-			traveled=0;
+			posdistance=0;
 		}
 	}
 }
@@ -861,7 +867,7 @@ void regulateright()
 					}
 					else
 					{
-						start=1;
+						startregulate=1;
 						timer = TCNT1;
 						dt = (timer + overflow * 65536) * 64;
 
@@ -905,9 +911,9 @@ void regulateright()
 				else
 				{
 
-					if(start==1)
+					if(startregulate==1)
 					{
-						start=0;
+						startregulate=0;
 						drive(20);
 						rotate90right();
 						transmit();
@@ -956,7 +962,10 @@ int main(void)
 
 			if(posdistance >= 40/2.55125) // FEL VÄRDE KOLLA MED EMA
 			updatepos();
-
+			
+			setcursor(1);
+			print_to_lcd(myposX);
+			setcursor(1);
 
 			if(onelap==0)
 			{
