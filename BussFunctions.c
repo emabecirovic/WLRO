@@ -53,6 +53,7 @@ unsigned char storedValues[11] = {0b11111111, 0b11001100, 0b00110011, 0b00000000
 
 
 
+/*********************************BUSSFUNKTIONER******************************/
 void MasterInit(void)
 {
 	/* Set MOSI and SCK output, alla others input*/
@@ -60,11 +61,16 @@ void MasterInit(void)
 	samt DD_MOSI och DD_SCK med specifik pinne ex DD_MOSI -> DDB5 */
 	DDRB = (1<<DDB3)|(1<<DDB4)|(1<<DDB5)|(1<<DDB7);
 
-	/* Enable SPI, Master, set clock rate fosc/16 */
-	SPCR = (1<<SPE)|(1<<MSTR)|(0<<SPI2X)|(1<<SPR1)|(0<<SPR0)|(1<<CPHA)|(1<<CPOL);
+	/* Enable SPI, Master, set clock rate fosc/64 and mode 3 */
+	SPCR = (1<<SPE)|(1<<MSTR)|(1<<SPI2X)|(1<<SPR1)|(1<<SPR0)|(1<<CPHA)|(1<<CPOL);
 
+	/* Set Slave select high */
 	PORTB = (1<<PORTB3)|(1<<PORTB4);
-}  
+
+	/* Enable External Interrupts */
+	sei();
+}
+
 
 
 void MasterTransmit(char cData)
@@ -75,9 +81,21 @@ void MasterTransmit(char cData)
 	/* Wait for transmission complete */
 	while(!(SPSR & (1<<SPIF)))
 	;
+
+	//SPSR = (1<<SPIF);
+}
+
+void bussdelay()
+{
+	for(int i = 0; i < time; i++){}
 }
 
 
+void transmit()
+{
+	TransmitSensor(0);
+	TransmitComm();
+}
 
 void TransmitSensor(char invalue)
 {
@@ -87,68 +105,96 @@ void TransmitSensor(char invalue)
 
 		PORTB &= 0b11101111; // ss2 low
 
-		if(invalue == turn)
+		if(invalue == turn) // Starta flöde av gyrovärden
 		{
 			MasterTransmit(gyro);
-			for(int i = 0; i < time; i++){}
+			bussdelay();
+
 			MasterTransmit(stop);
 			storedValues[6] = SPDR; // Gyro
+
 		}
-		else if(invalue == turnstop)
+		else if(invalue == turnstop) // Stoppa flöde av gyrovärden
 		{
 			MasterTransmit(gyrostop);
 		}
-		else
+		else  // Annars ta emot ett paket med övriga sensorvärden
 		{
 			MasterTransmit(RFID);
 			//First communication will contain crap on shift register
-			for(int i = 0; i < time; i++){}
+			bussdelay();
+
 			MasterTransmit(traveldist); // Request front sensor
-			for(int i = 0; i < time; i++){}
+			bussdelay();
 			storedValues[7] = SPDR; // SensorRFID
+
 			MasterTransmit(front); // Request front sensor
-			for(int i = 0; i < time; i++){}
+			bussdelay();
 			storedValues[5] = SPDR; // Distance
+
 			MasterTransmit(rightfront);
-			for(int i = 0; i < time; i++){}
+			bussdelay();
 			storedValues[0] = SPDR; // Front
+
 			MasterTransmit(rightback);
-			for(int i = 0; i < time; i++){}
+			bussdelay();
 			storedValues[1] = SPDR; // Right front
+
 			MasterTransmit(leftfront);
-			for(int i = 0; i < time; i++){}
+			bussdelay();
 			storedValues[2] = SPDR; // Right back
+
 			MasterTransmit(leftback);
-			for(int i = 0; i < time; i++){}
+			bussdelay();
 			storedValues[3] = SPDR; // Left front
+
 			MasterTransmit(stop);
-			for(int i = 0; i < time; i++){}
+			bussdelay();
 			storedValues[4] = SPDR; // Left back
 		}
 
 		PORTB ^= 0b00010000; // ss2 high
 
-		emadistance += storedValues[5];
+		distance += storedValues[5];
+		posdistance += storedValues[5];
 
 		TCCR0B = 0b00000101; // Start timer
 	}
 }
 
-
-
 void TransmitComm()
 {
-	PORTB &= 0b11110111;
-
-	for(int i = 0; i < time; i++){}
-	for(int i = 0; i < 11; i ++)
+	if(start_request == 1)
 	{
-		dummy = SPDR;
-		MasterTransmit(storedValues[i]);
-		for(int i = 0; i < time; i++){}				
+		start_request = 0;
+ 		PORTB &= 0b11110111; // ss1 low
+
+		bussdelay();
+		for(int i = 0; i < 11; i ++)
+		{
+			dummy = SPDR; // Dummy läsning för att cleara SPIF
+			MasterTransmit(storedValues[i]);
+			bussdelay();
+		}
+
+	PORTB ^= 0b00001000; // ss1 low
+
+	TCCR0B = 0b00000101; // Start timer
+	}
+}
+
+
+void transmit()
+{
+	if(start_request == 1)
+	{
+		
+		TransmitSensor(0);
+		
+		TransmitComm();
+		TCCR0B = 0b00000101; // Start timer
 	}
 
-	PORTB ^= 0b00001000;
 }
 
 
