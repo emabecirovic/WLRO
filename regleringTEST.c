@@ -56,9 +56,9 @@ bool finished=0; //1 då hela kartan utforskad
 bool onelap=0; //1 då yttervarvet körts
 bool home=0; //1 då robten återvänt till startposition
 bool awaydone, finsempptydone, zigzagdone;
-unsigned int myposX=0; //Robotens position i X-led
-unsigned int myposY=0; //Robotens position i Y-led
-unsigned int startpos[2]={15,0}; //Startpositionen sätts till mitten på nedre långsidan
+unsigned char myposX=15; //Robotens position i X-led
+unsigned char myposY=0; //Robotens position i Y-led
+unsigned char startpos[2]={15,0}; //Startpositionen sätts till mitten på nedre långsidan
 
 //LCD-saker :)
 char lcd0 = 0b00110000;
@@ -84,6 +84,8 @@ char mydirection = 2;
 
 char dummy;
 char gyrostop = 0b10000000;
+
+volatile char bajsflagga = 0;
 
 void initiate_variables()
 {
@@ -119,14 +121,14 @@ void initiate_variables()
 	dt = 0;
 	timer = 0;
 	speed = 50;
-	First=1;
+	first=1;
 	startregulate=0;
 
 
 	finished=0; //1 då hela kartan utforskad
 	onelap=0; //1 då yttervarvet körts
 	home=0; //1 då robten återvänt till startposition
-	myposX=0; //Robotens position i X-led
+	myposX=15; //Robotens position i X-led
 	myposY=0; //Robotens position i Y-led
 	startpos[0] = 15; //Startpositionen sätts till mitten på nedre långsidan
 	startpos[1] = 0;
@@ -154,6 +156,7 @@ void initiate_variables()
 	mydirection = 2;
 	
 	turnisDone = 0;
+	bajsflagga = 0;
 }
 
 void MasterInit(void)
@@ -233,6 +236,7 @@ void TransmitSensor(char invalue)
 		PORTB ^= 0b00010000; // ss2 high
 
 		emadistance += storedValues[5];
+		posdistance += storedValues[5];
 
 		TCCR0B = 0b00000101; // Start timer
 	}
@@ -472,7 +476,6 @@ void rotate90left()
 {
 	storedValues[6] = 0;
 	asm("");
-	print_on_lcd(0xDD);
 	while(turnisDone == 0)
 	{
 		TransmitSensor(turn);
@@ -503,7 +506,6 @@ void rotate90left()
 void rotate90right()
 {
 	storedValues[6] = 0;
-	print_on_lcd(0xEE);
 	while(turnisDone == 0)
 	{
 		TransmitSensor(turn);
@@ -601,7 +603,6 @@ void driveF()
 
 void drive(float dist) //kör dist cm
 {
-	print_on_lcd(0xAA);
 	emadistance=0;
 	dist = dist / 2.55125;
 	//dist = dist / 2.55;
@@ -671,7 +672,6 @@ void remotecontrol()
 	{
 		button = PINB & 0b00000111;
 		//print_on_lcd(button);
-		setcursortostart();
 
 		/*
 		1 = W
@@ -682,7 +682,6 @@ void remotecontrol()
 		6 = Q
 		*/
 
-		setcursortostart();
 		print_on_lcd(button);
 		switch(button)
 		{
@@ -730,51 +729,176 @@ void remotecontrol()
 
 void updatepos()
 {
+	bajsflagga = 1;
 	switch(mydirection)
 	{
 		case (1): // X+
 		{
 			myposX+=1;
 			//mypos[0]=myposX;
-			posdistance=0;
 		}
 		case (2): // Y+
 		{
 			myposY+=1;
 			//mypos[1]=myposY;
-			posdistance=0;
 		}
 		case (3): // X-
 		{
 			myposX-=1;
 			//mypos[0]=myposX;
-			posdistance=0;
 		}
 		case (4): // Y-
 		{
 			myposY-=1;
 			//mypos[1]=myposY;
-			posdistance=0;
 		}
+		posdistance = 0;
 	}
 }
 
+void regulateright()
+{
+
+	if(first==0)
+	{
+		sensormeanr_old=sensormeanr;
+	}
+	transmit();
+	//REGLERING
+	//Omvandling till centimeter
+
+	sensor1r = sidesensor(storedValues[1]);
+	sensor2r = sidesensor(storedValues[2]);
+	sensorfront = frontsensor(storedValues[0]);
+	sensormeanr = ((sensor1r + sensor2r) / 2) + 9;
+	if(first==1)
+	{
+		first=0;
+		stopp();
+		sensormeanr_old=sensormeanr;
+	}
+	else
+	{
+		//till PD-reglering
+		Td = 100000000; //128000000
+		K = 2;
+		if(sensorfront<50)
+		{
+			drive(40);
+			updatepos();
+			transmit();
+			sensorright = sidesensor(storedValues[1]);
+			if(sensorright>20)
+			{
+				rotate90right();
+				transmit();
+				sensorfront = frontsensor(storedValues[0]);
+				if(sensorfront<80)
+				{
+					drivefromstill(40);
+					updatepos();
+					leftturn();
+				}
+				else
+				{
+					drivefromstill(40);
+					updatepos();
+				}
+			}
+			else
+			{
+				leftturn();
+			}
+		}
+		else if(((sensor1r-sensor2r) < 20) && ((sensor2r-sensor1r) < 20))
+		{
+			if (fabs(sensor1r-sensor2r) > 2.5)
+			{
+				straight();
+			}
+			else
+			{
+				startregulate=1;
+				timer = TCNT1;
+				dt = (timer + overflow * 65536) * 64;
+				TCNT1 = 0;
+				overflow = 0;
+				PORTC = 0x01;
+				PORTD = 0x20;
+				rightpwm = speed + K * (18-sensormeanr + Td * (sensormeanr_old-sensormeanr)/dt);
+				leftpwm = speed - K * (18-sensormeanr + Td * (sensormeanr_old-sensormeanr)/dt);
+
+				if (rightpwm > 255)
+				{
+					OCR2B = 255;
+				}
+				else if(rightpwm < 0)
+				{
+					OCR2B = 0;
+				}
+				else
+				{
+					OCR2B = rightpwm;
+				}
+				if (leftpwm > 255)
+				{
+					OCR2A = 255;
+				}
+				else if (leftpwm < 0)
+				{
+					OCR2A = 0;
+				}
+				else
+				{
+					OCR2A = leftpwm;
+				}
+			}
+		}//Om inte på båda
+		else
+		{
+			if(startregulate==1)
+			{
+				startregulate=0;
+				drive(20);
+				rotate90right();
+				transmit();
+				sensorfront = frontsensor(storedValues[0]);
+				if(sensorfront>80)
+				{
+					drivefromstill(40);
+				}
+				else
+				{
+					drivefromstill(40);
+					leftturn();
+				}
+				straight();
+			}
+			else
+			{
+				stopp();
+			}
+		}
+	}
+	
+}
+
+
 void firstlap()
 {
-	if(myposX == startpos[0] && myposY == startpos[1])	//Det här kommer gälla de första sekunderna roboten börjar köra också..!
+	if(myposX == startpos[0] && myposY == startpos[1] && bajsflagga)	//Det här kommer gälla de första sekunderna roboten börjar köra också..!
 	{
 		onelap=1;
 	}
 	else
 	{
-		//regulateright();
+		regulateright();
 	}
 }
 
 void rfid()
 {
 	storedValues[7] = 0;
-	setcursortostart();
 	volatile int bajs = 1;
 	while(bajs==1)
 	{
@@ -787,13 +911,11 @@ void rfid()
 			PORTD = 0x20;
 			OCR2B = 50;
 			OCR2A = 50;
-			setcursortostart();
 		}
 		else
 		{
 			stopp();
 			bajs=0;
-			setcursortostart();
 
 		}
 
@@ -801,147 +923,10 @@ void rfid()
 	}
 }
 
-void regulateright()
-{
 
-		while(1)
-		{
-			if(first==0)
-			{
-				sensormeanr_old=sensormeanr;
-			}
-			transmit();
-
-			//REGLERING
-			//Omvandling till centimeter
-
-			sensor1r = sidesensor(storedValues[1]);
-			sensor2r = sidesensor(storedValues[2]);
-			sensorfront = frontsensor(storedValues[0]);
-			sensormeanr = ((sensor1r + sensor2r) / 2) + 9;
-			if(first==1)
-			{
-				first=0;
-				stopp();
-				sensormeanr_old=sensormeanr;
-			}
-			else
-			{
-				//till PD-reglering
-				Td = 100000000; //128000000
-				K = 2;
-
-				if(sensorfront<50)
-				{
-					drive(40);
-					transmit();
-					sensorright = sidesensor(storedValues[1]);
-
-					if(sensorright>20)
-					{
-						rotate90right();
-						transmit();
-						sensorfront = frontsensor(storedValues[0]);
-
-						if(sensorfront<80)
-						{
-							drivefromstill(40);
-							leftturn();
-						}
-						else
-						{
-							drivefromstill(40);
-						}
-					}
-					else
-					{
-						leftturn();
-					}
-				}
-				else if(((sensor1r-sensor2r) < 20) && ((sensor2r-sensor1r) < 20))
-				{
-
-					if (fabs(sensor1r-sensor2r) > 2)
-					{
-						straight();
-					}
-					else
-					{
-						startregulate=1;
-						timer = TCNT1;
-						dt = (timer + overflow * 65536) * 64;
-
-
-						TCNT1 = 0;
-						overflow = 0;
-
-						PORTC = 0x01;
-						PORTD = 0x20;
-						rightpwm = speed + K * (18-sensormeanr + Td * (sensormeanr_old-sensormeanr)/dt);
-						leftpwm = speed - K * (18-sensormeanr + Td * (sensormeanr_old-sensormeanr)/dt);
-
-
-						if (rightpwm > 255)
-						{
-							OCR2B = 255;
-						}
-						else if(rightpwm < 0)
-						{
-							OCR2B = 0;
-						}
-						else
-						{
-							OCR2B = rightpwm;
-						}
-						if (leftpwm > 255)
-						{
-							OCR2A = 255;
-						}
-						else if (leftpwm < 0)
-						{
-							OCR2A = 0;
-						}
-						else
-						{
-							OCR2A = leftpwm;
-						}
-
-					}
-				}//Om inte på båda
-				else
-				{
-
-					if(startregulate==1)
-					{
-						startregulate=0;
-						drive(20);
-						rotate90right();
-						transmit();
-						sensorfront = frontsensor(storedValues[0]);
-
-						if(sensorfront>80)
-						{
-							drivefromstill(40);
-						}
-						else
-						{
-							drivefromstill(40);
-							leftturn();
-						}
-						straight();
-					}
-					else
-					{
-						stopp();
-					}
-				}
-			}
-	
-}
 
 int main(void)
 {
-
 	initiate_variables();
 	initiation();
 	int fjarrstyrt = (PIND & 0x01); //1 då roboten är i fjärrstyrt läge
@@ -960,12 +945,14 @@ int main(void)
 		while(home==0)
 		{
 
-			if(posdistance >= 40/2.55125) // FEL VÄRDE KOLLA MED EMA
+			if(posdistance >= (40/2.55125)*0.857)
 			updatepos();
 			
 			setcursor(1);
-			print_to_lcd(myposX);
-			setcursor(1);
+			print_on_lcd(myposX);
+			print_on_lcd(myposY);
+			print_on_lcd(mydirection);
+			//setcursor(1);
 
 			if(onelap==0)
 			{
@@ -975,6 +962,7 @@ int main(void)
 			{
 				stopp();
 				home=1;
+				print_on_lcd(0xAB);
 			}
 			/*
 			else if(!awaydone)
