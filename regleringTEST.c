@@ -420,9 +420,10 @@ void print_on_lcd(char number)
 	//shift(1);
 }
 
-void setcursortostart()
+void setcursor(char place) //16 platser på en rad. 0x00-0x0F
 {
-	PORTA=0x80;
+	
+	PORTA=(0x80 + place - 0x01);
 	(PORTC |= 0b10000000);
 	(PORTC &= 0b00000001);
 	_delay_ms(200);
