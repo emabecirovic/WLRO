@@ -41,3 +41,17 @@ window.draw(fire);
 }
 
 //anvönd setfillcolor för att fylla rektangel
+
+//För avsökt yta, vit rektangel. typ:
+
+
+if (room[i][j] == 2)
+{
+sf::RectangleShape searched_area;
+searched_area.setSize(sf::Vector2f(10, 10));
+searched_area.setOutlineColor(sf::Color::White);
+searched_area.setFillColor(sf::Color::White);
+searched_area.setOutlineThickness(5);
+searched_area.setPosition(i, j);
+window.draw(searched_area);
+}
