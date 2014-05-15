@@ -41,6 +41,7 @@ long Td;
 volatile float rightpwm;
 volatile float leftpwm;
 volatile float emadistance = 0;
+volatile float posdistance = 0;
 float traveled=0;
 long overflow = 0;
 long dt = 0;
@@ -794,32 +795,8 @@ void rfid()
 	}
 }
 
-int main()
+void regulateright()
 {
-	initiate_variables();
-	initiation();
-	int fjarrstyrt = (PIND & 0x01); //1 då roboten är i fjärrstyrt läge
-	initiate_timer();
-	MasterInit();
-	_delay_ms(40000);
-	initiate_request_timer();
-
-	if(fjarrstyrt==1)
-	{
-		remotecontrol();
-	}
-
-	else
-	{
-
-		/*while(1) //Ta bort för att kunna köra autonomt
-		{
-		stopp();
-		}*/
-
-		int first=1;
-		volatile char start=0;
-
 
 		while(1)
 		{
@@ -953,11 +930,65 @@ int main()
 					}
 				}
 			}
-		}
+	
+}
 
+int main(void)
+{
+
+	initiate_variables();
+	initiation();
+	int fjarrstyrt = (PIND & 0x01); //1 då roboten är i fjärrstyrt läge
+	initiate_timer();
+	MasterInit();
+	_delay_ms(40000);
+	initiate_request_timer();
+	
+	if(fjarrstyrt==1)
+	{
+		remotecontrol();
+	}
+	else
+	{
+		
+		while(home==0)
+		{
+
+			if(posdistance >= 40/2.55125) // FEL VÄRDE KOLLA MED EMA
+			updatepos();
+
+
+			if(onelap==0)
+			{
+				firstlap();
+			}
+			else
+			{
+				stopp();
+				home=1;
+			}
+			/*
+			else if(!awaydone)
+			{
+				away();
+			}
+			else if(!zigzagdone)
+			{
+				zigzag();
+			}
+			else if(!findemptydone)
+			{
+				findempty();
+			}
+			else
+			{
+				returntostart();
+			}*/
+		}
 	}
 	return 0;
 }
+
 
 ISR(TIMER1_OVF_vect)
 {
