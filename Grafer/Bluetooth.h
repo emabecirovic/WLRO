@@ -13,7 +13,11 @@ private:
     OVERLAPPED osReadWrite = {0};
     HANDLE Settup_BT();
     bool connected;
-
+    unsigned char szBuff2[2];
+    unsigned char szBuff[2];
+    DWORD dwByte;
+    bool fWaitingOnRead;
+    DWORD dwRes;
 public:
 
 Bluetooth_Serial_comm();
@@ -23,6 +27,7 @@ bool IsOpen();
 
 unsigned char Read_from_BT();
 void Send_to_Bt(int);
+void disconnect();
 
 };
 
