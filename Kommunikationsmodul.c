@@ -15,7 +15,9 @@
 typedef int bool;
 enum {false, true};
 
+int senddataval = 0;
 
+volatile bool bussComplete = false;
 bool remote = false;
 //Lables for transmition
 char front = 0b00000001;
@@ -179,7 +181,15 @@ int main(void)
 {
 	// char data;
 	unsigned char data;
+	if(PIND6 == 1)
+	{
+		remote == true;
+	}
+	else
+	{
+		
 	remote = false;
+	}
 	
 	while(1)
 	{
@@ -193,7 +203,7 @@ int main(void)
 			data = USART_Recive();
 			PORTB &= 0b01000000;
 			PORTB |= data;
-			
+
 			//USART_Flush();
 			//data=USART_Recive();
 			//skicka data
@@ -201,26 +211,31 @@ int main(void)
 		}
 		USARTInit(8);
 		SlaveInit();
-		//sei();
+		sei();
 		while(!remote)
 		{
-			char ss1 = PORTB & 0b00010000;
+		/*	char ss1 = PORTB & 0b00010000;
 			while (ss1 == 0)
 			{
 				storedValues[indexvalue]=SlaveRecieve();
 				indexvalue++;
-			
+
 				if(indexvalue > 10)
 				{
 					indexvalue = 0;
 				}
 				ss1 = PORTB & 0b00010000;
-			}
-			//for(int i; i)
+			}*/
+		
+			if(bussComplete == true)
+			{
 			
 			SendStoredVal();
+			
+			bussComplete = false;
+			}
 		}
-		
+
 	}
 
 
@@ -235,12 +250,20 @@ ISR(SPI_STC_vect) // Answer to call from Master
 	cli();*/
 	storedValues[indexvalue] = SPDR;
 		indexvalue++;
+		senddataval++;
 	//SPDR = storedValues[indexvalue]; //Just for controll by oscilloscope
 	if(indexvalue > 10)
-		
+
 		{
+			
 			indexvalue = 0;
+			
 		}
+	if(senddataval > 200)
+	{
+		bussComplete = true;
+		senddataval = 0;
+	}
 
 	/*sei();*/
 }
