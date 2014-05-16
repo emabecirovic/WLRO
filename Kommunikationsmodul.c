@@ -201,32 +201,30 @@ int main(void)
 		}
 		USARTInit(8);
 		SlaveInit();
-		sei();
+		//sei();
 		while(!remote)
 		{
-		/*	char ss1 = PORTB & 0b00010000;
+			char ss1 = PORTB & 0b00010000;
 			while (ss1 == 0)
 			{
-				if(indexvalue<11)
-				{
-					storedValues[indexvalue]=SlaveRecieve();
-					indexvalue++;
-				}
-				else
+				storedValues[indexvalue]=SlaveRecieve();
+				indexvalue++;
+			
+				if(indexvalue > 10)
 				{
 					indexvalue = 0;
 				}
 				ss1 = PORTB & 0b00010000;
-			}	
+			}
 			//for(int i; i)
-			*/
+			
 			SendStoredVal();
 		}
 		
 	}
 
 
-return 0;  
+return 0;
 }
 
 /*******************************INTERRUPTS*************************/
