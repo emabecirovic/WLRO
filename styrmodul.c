@@ -893,6 +893,7 @@ void bajsfunktion()
 	else if(getinpos)
 	{
 		drive(20);
+		updatepos();
 		getinpos = false;
 	}
 	else
@@ -946,6 +947,7 @@ void away() // Få roboten från väggen
 		rotate90left();
 		print_on_lcd(sensorleft);
 		drive(40); // Kör en sektion ut i öppen yta
+		updatepos();
 
 		rotate90right();
 
