@@ -28,7 +28,8 @@ void Drawmap(sf::RenderWindow* myWindow, char room[29][15],sf::RectangleShape* f
         for(int j = 0; j < 15; j++)
         {
 
-            if(room[i][j] == 2)
+            if(room[i][j] == 2) //Det här är inte rätt. vi borde bara ha typ ...setPosition(myposX,myposY) eller nåt.
+            //2 är ju avsökt område
             {
                 robotposition->setPosition(120 + 20*i , 590 -(20 + 20*j));
                 myWindow->draw(*robotposition);
@@ -43,11 +44,17 @@ void Drawmap(sf::RenderWindow* myWindow, char room[29][15],sf::RectangleShape* f
                 fire->setPosition(120 + 20*i, 590 -(20 + 20*j));
                 myWindow->draw(*fire);
             }
+            else if(room[i][j] == 2)
+            {
+                searched_area.setPosition(120 + 20*i, 590 -(20 + 20*j));
+                window->draw(*searched_area);
+            }
             else
             {
                 wall->setPosition(120 + 20*i, 590 -(20 + 20*j)); //samma x och y som i setwall
                 myWindow->draw(*wall);
             }
+            
         }
 
     }
@@ -165,6 +172,12 @@ fire.setSize(sf::Vector2f(20,20));
 fire.setOutlineColor(sf::Color::White);
 fire.setFillColor(sf::Color::Red);
 fire.setOutlineThickness(1);
+
+sf::RectangleShape searched_area;
+searched_area.setSize(sf::Vector2f(20, 20));
+searched_area.setOutlineColor(sf::Color::White);
+searched_area.setFillColor(sf::Color::White);
+searched_area.setOutlineThickness(1);
 
 int myposX;
 int myposY = 1;
