@@ -1,12 +1,10 @@
-
-
 typedef int bool;
 enum{false, true};
 
 
 
 
-bool remoteControl = false;  // Change to Port connected to switch
+bool remoteControl = false; // Change to Port connected to switch
 
 /************BUSS**********************/
 char dummy;
@@ -65,9 +63,9 @@ int firstRR=1;
 char startregulate = 0;
 
 /**************POSITION******************/
-char mydirection = 2; //1=X+ ; 2=Y+ ; 3=X- ; 4=Y-
-unsigned int myposX=15; //Robotens position i X-led
-unsigned int myposY=0; //Robotens position i Y-led
+volatile char mydirection = 1; //1=X+ ; 2=Y+ ; 3=X- ; 4=Y-
+volatile unsigned int myposX=15; //Robotens position i X-led
+volatile unsigned int myposY=0; //Robotens position i Y-led
 unsigned int startpos[2]={15,0}; //Startpositionen sätts till mitten på nedre långsidan
 volatile float posdistance = 0;
 
