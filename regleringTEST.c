@@ -443,7 +443,6 @@ void print_on_lcd(char number)
 
 void setcursor(char place) //16 platser på en rad. 0x00-0x0F
 {
-	
 	PORTA=(0x80 + place - 0x01);
 	(PORTC |= 0b10000000);
 	(PORTC &= 0b00000001);
@@ -475,7 +474,6 @@ void rotateright()
 void rotate90left()
 {
 	storedValues[6] = 0;
-	asm("");
 	while(turnisDone == 0)
 	{
 		TransmitSensor(turn);
@@ -552,7 +550,6 @@ void temporary90left()
 	OCR2A = 110;
 	_delay_ms(7000);
 	sei();
-	print_on_lcd(0x11);
 }
 
 float sidesensor(unsigned char sensorvalue)
@@ -567,7 +564,7 @@ float sidesensor(unsigned char sensorvalue)
 
 void straight()
 {
-	while (fabs(sensor1r - sensor2r))
+	while (fabs(sensor1r - sensor2r) > 0.5)
 	{
 		if((sensor1r-sensor2r) > 0.5)
 		{
@@ -590,8 +587,6 @@ void straight()
 	}
 	
 }
-
-
 
 void driveF()
 {
@@ -628,8 +623,6 @@ void drivefromstill(float dist) //kör dist cm
 	}
 	stopp();
 }
-
-
 
 float frontsensor(unsigned char sensorvalue)
 {
@@ -812,7 +805,7 @@ void regulateright()
 		}
 		else if(((sensor1r-sensor2r) < 20) && ((sensor2r-sensor1r) < 20))
 		{
-			if (fabs(sensor1r-sensor2r) > 2.5)
+			if (fabs(sensor1r-sensor2r) > 2)
 			{
 				straight();
 			}
@@ -886,7 +879,7 @@ void regulateright()
 
 void firstlap()
 {
-	if(myposX == startpos[0] && myposY == startpos[1] && bajsflagga)	//Det här kommer gälla de första sekunderna roboten börjar köra också..!
+	if(myposX == startpos[0] && myposY == startpos[1] && bajsflagga == 1)	//Det här kommer gälla de första sekunderna roboten börjar köra också..!
 	{
 		onelap=1;
 	}
@@ -904,7 +897,6 @@ void rfid()
 	{
 
 		transmit();
-		print_on_lcd(storedValues[7]);
 		if(storedValues[7] != 1)
 		{
 			PORTC = 0x01;
@@ -944,16 +936,16 @@ int main(void)
 		
 		while(home==0)
 		{
-
-			if(posdistance >= (40/2.55125)*0.857)
-			updatepos();
-			
+			//Skriver ut myposX, myposY, mydiredtion och posdistance på skörmen
 			setcursor(1);
 			print_on_lcd(myposX);
 			print_on_lcd(myposY);
 			print_on_lcd(mydirection);
-			//setcursor(1);
-
+			print_on_lcd(posdistance);
+			
+			if(posdistance >= (40/2.55125)*0.857)
+			updatepos();
+			
 			if(onelap==0)
 			{
 				firstlap();
