@@ -40,7 +40,7 @@ volatile unsigned char storedValues[11];
 
 
 /******************REGLERING************************/
-float sensor1r, sensor2r, sensordiff, sensorfront, sensorleft, sensorright;
+volatile float sensor1r, sensor2r, sensordiff, sensorfront, sensorleft, sensorright;
 volatile float sensormeanr;
 volatile float sensormeanr_old;
 float K;
@@ -97,10 +97,11 @@ char button = 0x00;
 /***************FLAGGOR FÖR MAIN******************/
 volatile bool start = 1; //vi står i startpositionen
 
-bool finished=0; //1 då hela kartan utforskad
-bool onelap=0; //1 då yttervarvet körts
-bool home=0; //1 då robten återvänt till startposition
-bool awaydone, zigzagdone, findemptydone, getinpos;
+volatile bool finished=0; //1 då hela kartan utforskad
+volatile bool onelap=0; //1 då yttervarvet körts
+volatile bool home=0; //1 då robten återvänt till startposition
+volatile bool awaydone, zigzagdone, findemptydone, getinpos;
+volatile bool bajsflagga = false;
 
 bool zzleftturn = true; // Till första toppsvängen i sicksacksak
 bool zzfirst = true; // Till första bottensväng i sicksacksak
@@ -148,7 +149,7 @@ void extended_wall();
 /*****************STYRNING********************/
 void stopp();
 void driveF();
-void driveDist(float dist);
+void drive(float dist);
 void drivefromstill(float dist);
 void straight();
 
@@ -167,8 +168,10 @@ float sidesensor(unsigned char sensorvalue);
 float frontsensor(unsigned char sensorvalue);
 
 /******************REGLERING & AVSÖKNING**************/
-void firstlap();
 void regulateright();
+void firstlap();
+void bajsfunktion();
+
 
 void away();
 void zigzag();
