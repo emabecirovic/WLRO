@@ -77,12 +77,12 @@ HANDLE Bluetooth_Serial_comm::Settup_BT()
     }
 
 
-    /*if (INVALID_SET_FILE_POINTER != SetFilePointer(hSerial,
+  /*   (INVALID_SET_FILE_POINTER != SetFilePointer(hSerial,
             0,
             0,
-            FILE_BEGIN));
+            FILE_BEGIN));*/
 
-*/
+
 
     return hSerial;
 }
@@ -91,9 +91,9 @@ HANDLE Bluetooth_Serial_comm::Settup_BT()
 /****************** Writefile *************************************/
 void Bluetooth_Serial_comm::Send_to_Bt(int t)
 {
-    bool fWaitingOnRead = false;
-    DWORD dwByte;
-    unsigned char szBuff[2] = {t};
+    fWaitingOnRead = false;
+
+
     if(!fWaitingOnRead)
     {
         if(!WriteFile(hSerial,szBuff,1,&dwByte,&osReadWrite))
@@ -118,11 +118,12 @@ void Bluetooth_Serial_comm::Send_to_Bt(int t)
 /************************' Readfile **********************************/
 unsigned char Bluetooth_Serial_comm::Read_from_BT()
 {
-    //FlushFileBuffers(hSerial);
+    FlushFileBuffers(hSerial);
 
-    BOOL fWaitingOnRead = false;
-    DWORD dwByte;
-    unsigned char szBuff2[2];
+    fWaitingOnRead = false;
+
+
+
 
 if(!fWaitingOnRead)
     {
@@ -140,12 +141,13 @@ if(!fWaitingOnRead)
             else
             {
                 fWaitingOnRead = true;
-               cout << "io pendeling\n";
+              // cout << "io pendeling\n";
 
             }
         }
         else
         {
+           // return szBuff2[0];
             // cout << "read complete imidietly!! \n";
         }
 
@@ -155,11 +157,11 @@ if(!fWaitingOnRead)
 
 
 #define READ_TIMEOUT      500      // milliseconds
-DWORD dwRes;
+
 
     if (fWaitingOnRead)
     {
-        dwRes = WaitForSingleObject(osReadWrite.hEvent, INFINITE);
+        dwRes = WaitForSingleObject(osReadWrite.hEvent, READ_TIMEOUT);
 
         switch(dwRes)
         {
@@ -171,7 +173,7 @@ DWORD dwRes;
             } // Error in communications; report it.
             else
             {
-                // cout << "read complete success\n";
+               //  cout << "read complete success\n";
                 // cout << dwRes << "\n";
                 // Read completed successfully.
                 //  Reset flag so that another opertion can be issued.
@@ -202,8 +204,8 @@ DWORD dwRes;
     //FlushFileBuffers(hSerial);
 
 
-    char a = szBuff2[0];
-    char b = szBuff2[1];
+    //char a = szBuff2[0];
+ //   char b = szBuff2[1];
    // bitset<8> z(szBuff2);
   // bitset<8> y(b);
  // bitset<8> x(a);
@@ -218,5 +220,10 @@ bool Bluetooth_Serial_comm::IsOpen()
 {
 
         return connected;
+}
+
+void Bluetooth_Serial_comm::disconnect()
+{
+    CloseHandle(hSerial);
 }
 
