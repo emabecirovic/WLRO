@@ -46,7 +46,7 @@ void Drawmap(sf::RenderWindow* myWindow, char room[29][15],sf::RectangleShape* f
             }
             else if(room[i][j] == 2)
             {
-                searched_area.setPosition(120 + 20*i, 590 -(20 + 20*j));
+                searched_area->setPosition(120 + 20*i, 590 -(20 + 20*j));
                 myWindow->draw(*searched_area);
             }
             else
