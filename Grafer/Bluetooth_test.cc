@@ -16,7 +16,7 @@
 
 using namespace std;
 
-void Drawmap(sf::RenderWindow* myWindow, char room[29][15],sf::RectangleShape* fire, sf::RectangleShape* robotposition ,sf::RectangleShape* wall, sf::RectangleShape* searched_area)
+void Drawmap(sf::RenderWindow* myWindow, char room[29][15],sf::RectangleShape* fire, sf::RectangleShape* robotposition ,sf::RectangleShape* wall)
 {
     /************ Kartritning ***********************/
 
@@ -28,8 +28,7 @@ void Drawmap(sf::RenderWindow* myWindow, char room[29][15],sf::RectangleShape* f
         for(int j = 0; j < 15; j++)
         {
 
-            if(room[i][j] == 2) //Det här är inte rätt. vi borde bara ha typ ...setPosition(myposX,myposY) eller nåt.
-            //2 är ju avsökt område.
+            if(room[i][j] == 2)
             {
                 robotposition->setPosition(120 + 20*i , 590 -(20 + 20*j));
                 myWindow->draw(*robotposition);
@@ -44,17 +43,11 @@ void Drawmap(sf::RenderWindow* myWindow, char room[29][15],sf::RectangleShape* f
                 fire->setPosition(120 + 20*i, 590 -(20 + 20*j));
                 myWindow->draw(*fire);
             }
-            else if(room[i][j] == 2)
-            {
-                searched_area->setPosition(120 + 20*i, 590 -(20 + 20*j));
-                myWindow->draw(*searched_area);
-            }
             else
             {
                 wall->setPosition(120 + 20*i, 590 -(20 + 20*j)); //samma x och y som i setwall
                 myWindow->draw(*wall);
             }
-            
         }
 
     }
@@ -150,8 +143,8 @@ cirkle.setFillColor(sf::Color::Red);
     float y5 = 0;
     int windows_passed = 0;
 
-    char room[29][15]={{1,0,0,0,1,2,2,1,1,1,1},
-                    {1,2,1,1,2,4}};
+    char room[29][15];
+
 
 /****************Kartritande variabler *********************/
 
@@ -173,16 +166,11 @@ fire.setOutlineColor(sf::Color::White);
 fire.setFillColor(sf::Color::Red);
 fire.setOutlineThickness(1);
 
-sf::RectangleShape searched_area;
-searched_area.setSize(sf::Vector2f(20, 20));
-searched_area.setOutlineColor(sf::Color::White);
-searched_area.setFillColor(sf::Color::White);
-searched_area.setOutlineThickness(1);
-
 int myposX;
-int myposY = 1;
+int myposY;;
 int x2;
 int y;
+int type;
 
 bool isRFID = false;
 
@@ -197,7 +185,7 @@ bool isRFID = false;
         if(sf::Keyboard::isKeyPressed(sf::Keyboard::L))
         {
             remote = true;
-   //         myWindow->close();
+            myWindow->close();
         }
 
         test = Com_Port->Read_from_BT();
@@ -212,7 +200,7 @@ bool isRFID = false;
                     y1 = ((1/yt) - 0.001086689563586)/0.000191822821525;
 
                 }
-                cout << "Fram: "<< y1 << " ";
+             //   cout << "Fram: "<< y1 << " ";
             }
             else if(test == 2)
             {
@@ -222,7 +210,7 @@ bool isRFID = false;
                     y2 = ((1/yt) - 0.000741938763948)/0.001637008132828;
 
                 }
-                cout << "Höger Fram: "<< y2 << " ";
+              //  cout << "Höger Fram: "<< y2 << " ";
 
             }
             else if(test == 3)
@@ -233,7 +221,7 @@ bool isRFID = false;
                     y3 = ((1/yt) - 0.000741938763948)/0.001637008132828;
 
                 }
-                cout << "Höger Bak: "<< y3 << "\n";
+               // cout << "Höger Bak: "<< y3 << "\n";
 
             }
             else if(test == 4)
@@ -272,23 +260,26 @@ bool isRFID = false;
                 test = Com_Port->Read_from_BT();
 
 
-                //  cout << "RFID: "<< test << "\n";
+               //   cout << "RFID: "<< test << " ";
 
             }
             else if(test == 9)
             {
                 test = Com_Port->Read_from_BT();
-                // cout << "Fram eller bakåt: "<< test << " ";
+                 cout << "x: "<< test << " ";
+                 myposX = test;
             }
             else if(test == 10)
             {
                 test = Com_Port->Read_from_BT();
-                //  cout << "Styrsignal Höger: "<< test << " ";
+                type = test;
+                  cout << "type: "<< test << " ";
             }
             else if(test == 11)
             {
                 test = Com_Port->Read_from_BT();
-                //  cout << "Styrsignal Vänster: "<< test << "\n";
+                  cout << "y: "<< test << "\n";
+                  myposY = test;
             }
             else
             {
@@ -325,8 +316,9 @@ myWindow->clear();
             myWindow->draw(bgSprite);
 
 
-
-
+        /*****************Fram********************/
+        cirkle.setPosition(755,395 - (y1*2));
+        myWindow->draw(cirkle);
         /************* Höger Fram****************/
         cirkle.setPosition(155,185 - (y2* 6));
         myWindow->draw(cirkle);
@@ -345,6 +337,7 @@ myWindow->clear();
 
 /*************************************************/
 
+room[myposX][myposY] = type;
 Drawmap(myWindow,room,&fire,&robotposition,&wall);
 
 
@@ -371,8 +364,7 @@ int main()
 
     Bluetooth_Serial_comm Com_Port;
     bool remote = false;
-while(1)
-{
+
 
     if(remote == true)
     {
@@ -383,9 +375,9 @@ while(1)
         remote = autonom(&Com_Port);
     }
 
-}
 
-    Com_Port.~Bluetooth_Serial_comm();
+
+    Com_Port.disconnect();
 
     return 0;
 }
