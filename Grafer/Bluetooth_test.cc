@@ -16,7 +16,7 @@
 
 using namespace std;
 
-void Drawmap(sf::RenderWindow* myWindow, char room[29][15],sf::RectangleShape* fire, sf::RectangleShape* robotposition ,sf::RectangleShape* wall)
+void Drawmap(sf::RenderWindow* myWindow, char room[29][15],sf::RectangleShape* fire, sf::RectangleShape* robotposition ,sf::RectangleShape* wall, sf::RectangleShape* searched_area)
 {
     /************ Kartritning ***********************/
 
@@ -29,7 +29,7 @@ void Drawmap(sf::RenderWindow* myWindow, char room[29][15],sf::RectangleShape* f
         {
 
             if(room[i][j] == 2) //Det här är inte rätt. vi borde bara ha typ ...setPosition(myposX,myposY) eller nåt.
-            //2 är ju avsökt område
+            //2 är ju avsökt område.
             {
                 robotposition->setPosition(120 + 20*i , 590 -(20 + 20*j));
                 myWindow->draw(*robotposition);
