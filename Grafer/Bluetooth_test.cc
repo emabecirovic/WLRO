@@ -41,7 +41,7 @@ void Drawmap(sf::RenderWindow* myWindow, char room[29][15],sf::RectangleShape* f
                 fire->setPosition(120 + 20*i, 590 -(20 + 20*j));
                 myWindow->draw(*fire);
             }
-             else if(room[i][j] == room[myposX][myposY]) //vet inte om man kan göra såhär? kanske :)
+             else if(room[i][j] == room[myposX][myposY]) //såhär kanske man inte kan göra..?
             {
                 robotposition->setPosition(120 + 20*i , 590 -(20 + 20*j));
                 myWindow->draw(*robotposition);
