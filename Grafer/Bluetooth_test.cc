@@ -16,43 +16,42 @@
 
 using namespace std;
 
-void Drawmap(sf::RenderWindow* myWindow, char room[29][15],sf::RectangleShape* fire, sf::RectangleShape* robotposition ,sf::RectangleShape* wall)
+void Drawmap(sf::RenderWindow* myWindow, char room[29][15],sf::RectangleShape* fire, sf::RectangleShape* robotposition ,sf::RectangleShape* wall sf::RectangleShape* searched_area)
 {
-    /************ Kartritning ***********************/
+    /********************************** Kartritning **********************************/
 
-//Rita ut ett tomt (vitt) fönster, pixlar eller?, i 29*15-storlek, med RenderWindow. Finns redan i nån main
 
-//Rita ut roboten på kartan, i punkten (15,0) kommer den börja. Typ en fylld fyrkant eller nåt.
     for(int i = 0; i < 29; i++)
     {
         for(int j = 0; j < 15; j++)
         {
 
-            if(room[i][j] == 2)
+            if(room[i][j] == 1)
             {
-                robotposition->setPosition(120 + 20*i , 590 -(20 + 20*j));
-                myWindow->draw(*robotposition);
-            }
-            else if(room[i][j] == 1)
-            {
-                wall->setPosition(120 + 20*i, 590 -(20 + 20*j)); //samma x och y som i setwall
+                wall->setPosition(120 + 20*i, 590 -(20 + 20*j)); //sätter ut vägg på rätt plats i kartan
                 myWindow->draw(*wall);
+            }
+            else if(room[i][j] == 2)
+            {
+                searched_area->setPosition(120 + 20*i , 590 -(20 + 20*j));
+                myWindow->draw(*searched_area);
             }
             else if(room[i][j] == 4)
             {
                 fire->setPosition(120 + 20*i, 590 -(20 + 20*j));
                 myWindow->draw(*fire);
             }
+             else if(room[i][j] == room[myposX][myposY]) //vet inte om man kan göra såhär? kanske :)
+            {
+                robotposition->setPosition(120 + 20*i , 590 -(20 + 20*j));
+                myWindow->draw(*robotposition);
             else
             {
-                wall->setPosition(120 + 20*i, 590 -(20 + 20*j)); //samma x och y som i setwall
+                wall->setPosition(120 + 20*i, 590 -(20 + 20*j)); 
                 myWindow->draw(*wall);
             }
         }
-
     }
-
-//bör rita ut väggar på rätt plats när storleken är fixad
 }
 
 
@@ -165,6 +164,12 @@ fire.setSize(sf::Vector2f(20,20));
 fire.setOutlineColor(sf::Color::White);
 fire.setFillColor(sf::Color::Red);
 fire.setOutlineThickness(1);
+
+sf::RectangleShape searched_area;
+searched_area.setSize(sf::Vector2f(20, 20));
+searched_area.setOutlineColor(sf::Color::White);
+searched_area.setFillColor(sf::Color::White);
+searched_area.setOutlineThickness(1);
 
 int myposX;
 int myposY;;
