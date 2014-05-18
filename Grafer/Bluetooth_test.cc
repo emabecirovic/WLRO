@@ -167,7 +167,7 @@ fire.setOutlineThickness(1);
 
 sf::RectangleShape searched_area;
 searched_area.setSize(sf::Vector2f(20, 20));
-searched_area.setOutlineColor(sf::Color::White);
+searched_area.setOutlineColor(sf::Color::Black);
 searched_area.setFillColor(sf::Color::White);
 searched_area.setOutlineThickness(1);
 
