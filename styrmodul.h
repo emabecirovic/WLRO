@@ -66,9 +66,9 @@ char startregulate = 0;
 volatile char mydirection = 1; //1=X+ ; 2=Y+ ; 3=X- ; 4=Y-
 volatile unsigned int myposX=15; //Robotens position i X-led
 volatile unsigned int myposY=0; //Robotens position i Y-led
-unsigned int startpos[2]={15,0}; //Startpositionen sätts till mitten på nedre långsidan
+const unsigned int startX = 15;
+const unsigned int startY = 0; //Startpositionen sätts till mitten på nedre långsidan
 volatile float posdistance = 0;
-volatile char isRFID = 0;
 
 /*************************LCD***********************/
 
@@ -124,8 +124,6 @@ void initiate_timer(); // Busstimer
 
 
 void Initiation(); // styr och LCD
-
-/******************LCD********************************/
 void writechar(unsigned char data);
 
 /*****************BUSS********************/
@@ -144,42 +142,42 @@ void remotecontrol();
 /******************POSITIONERING******************/
 void updatepos();
 
+/***********************KARTA************************/
+void setwall(int x,int y);
+void updatemap();
+void extended_wall();
 
 /*****************STYRNING********************/
 void stopp();
-
-void rotateleft();
-void rotateright();
-void rotate90left();
-void rotate90right();
+void driveF();
+void drive(float dist);
+void drivefromstill(float dist);
+void straight();
 
 void temporary90right();
 void temporary90left();
 
-//konvertering
-float sidesensor(unsigned char sensorvalue);
-float frontsensor(unsigned char sensorvalue);
-
-void straight();
-
-void driveF();
-void drive(float dist);
-void drivefromstill(float dist);
+void rotate90left();
+void rotate90right();
 
 void leftturn();
+void rotateleft();
+void rotateright();
 
+/****************KONVERTERING*************/
+float sidesensor(unsigned char sensorvalue);
+float frontsensor(unsigned char sensorvalue);
 
 /******************REGLERING & AVSÖKNING**************/
 void regulateright();
 void firstlap();
+void bajsfunktion();
 
 
 void away();
 void zigzag();
 int * findfirstzero();
-void driveto(int pos[2]);
+void driveto(unsigned int posX, unsigned int posY);
 void findempty();
+
 void returntostart(); // Kolla om vi ska ha den
-
-void rfid();
-

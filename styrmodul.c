@@ -46,8 +46,8 @@ void initiate_variables()
 	mydirection = 1; //1=X+ ; 2=Y+ ; 3=X- ; 4=Y-
 	myposX=15; //Robotens position i X-led
 	myposY=0; //Robotens position i Y-led
-	startpos[0] = 15; //Startpositionen sätts till mitten på nedre långsidan
-	startpos[1] = 0;
+	//startX = 15; //Startpositionen sätts till mitten på nedre långsidan
+	//startY = 0;
 	posdistance = 0;
 
 
@@ -848,7 +848,7 @@ void regulateright()
 
 void firstlap()
 {
-	if(myposX == startpos[0] && myposY == startpos[1] && !start)	//Det här kommer gälla de första sekunderna roboten börjar köra också..!
+	if(myposX == startX && myposY == startY && !start)	//Det här kommer gälla de första sekunderna roboten börjar köra också..!
 	{
 		onelap=1;
 		setcursor(1);
@@ -1022,6 +1022,170 @@ void rfid()
 	}
 }
 
+
+void driveto(unsigned int posX, unsigned int posY)
+{
+	transmit();
+	if(myposX == posX  && myposY  == posY) // Jämför koordinaterna roboten står på med positionen vi vill åka till
+	{
+		
+	}	
+	else if(myposX >= posX && myposY <= posY) //Fjärde kvadranten, tänk önskad position som origo
+	{
+		switch(mydirection)
+		{
+			case(1): // X+
+			rotate90left();
+			case(2): // Y+
+			if(sensorfront > 50) // Ingen vägg framför
+				driveF(); 
+			else if((posY-myposY) == 1) // Om vi står endast en ruta ifrån önskad position
+			{
+				drive(40);
+				rotate90left();
+			}
+			case(3): // X-
+			if(sensorfront > 50) // Ingen vägg framför
+				driveF();
+			else if((myposX-posX) == 1) // Om vi står endast en ruta ifrån önskad position
+			{
+				drive(40);
+				rotate90right();
+			}
+			case(4): // Y-
+			rotate90right();
+		}
+	}
+	else if(myposX <= posX && myposY <= posY) // Tredje kvadranten KOLLA HÄR OM DET FUNKAR
+	{																					// Sammma princip som ovan se kommentarer där
+		switch(mydirection)
+		{
+			case(1): // X+
+			if(sensorfront > 50)
+			driveF();
+			else if((posX-myposX) == 1)
+			{
+				drive(40);
+				rotate90left();
+			}
+			case(2): //Y+
+			if(sensorfront > 50)
+			driveF();
+			else if((posY-myposY) == 1)
+			{
+				drive(40);
+				rotate90right();
+			}
+			case(3): // X-
+			rotate90right();
+			case(4): // Y-
+			rotate90left();
+		}
+	}
+	else if(myposX < posX && myposY > posY) // Andra kvadranten, dito
+	{
+		switch(mydirection)
+		{
+			case(1): // X+
+			if(sensorfront > 50)
+			driveF();
+			else if((posX - myposX == 1))
+			{
+				drive(40);
+				rotate90right();
+			}
+			/*else
+			{
+				drive(40);
+				rotate90right();
+			}*/
+			case(2): // Y+
+			rotate90right();
+			case(3): // X-
+			rotate90left();
+			case(4): // Y-
+			if(sensorfront > 50)
+			driveF();
+			else if((myposY-posY) == 1)
+			{
+				drive(40);
+				rotate90left();
+			}
+		}
+	}
+	else // Första kvadranten, dito
+	{
+		switch(mydirection)
+		{
+			case(1): // X+
+			rotate90right();
+			case(2): // Y+
+			rotate90left();
+			case(3): // X-
+			if(sensorfront > 50) 
+				driveF();
+			else if((myposX-posX) == 1) 
+			{
+				drive(40);
+				rotate90right();
+			}
+			case(4): // Y-
+			if(sensorfront > 50)
+			driveF();
+			else if((myposY-posY) == 1)
+			drive(40);
+		}
+	}
+}
+
+
+void returntostart()
+{
+	if(myposX == startX && myposY == startY && !(start)) // pos[0] = X-koordinat & pos[1] = Y-koordinat
+	{
+		home=1;
+	}
+	else
+	{
+		driveto(startX, startY);
+	}
+	
+	/*
+	//int mydirection; //Robotens riktning
+	//int myposX; //Rpbotens position i X-led
+	//int starposX; //Starpositionens värde i X-led
+
+	if(mydirection == 4) //4=negativ y-led. x+,y+,x-,y- = 1,2,3,4
+	{
+		while(sensorfront>50)
+		{
+			driveF();
+			//Kör rakt fram
+			/*PORTC = 0x01;
+			PORTD = 0x40;
+			OCR2A = 180;
+			OCR1A = 180;*
+		}
+		if(myposX<startpos[0]) //Om ingången är till höger om roboten
+		{
+			while(myposX<startpos[0])
+			{
+				regulateright();
+			}
+		}
+		else
+		{
+			while(myposX>startpos[0]) //Om ingången är till vänster om roboten
+			{
+				regulateright(); // REGULATE LEFT ?????
+			}
+		}
+	}
+	else
+	{
+		temporary90left();  //Rotera 90 grader om vi står i fel riktning
+	}*/
+}
 
 
 int main(void)
