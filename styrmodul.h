@@ -68,6 +68,7 @@ volatile unsigned int myposX=15; //Robotens position i X-led
 volatile unsigned int myposY=0; //Robotens position i Y-led
 unsigned int startpos[2]={15,0}; //Startpositionen sätts till mitten på nedre långsidan
 volatile float posdistance = 0;
+volatile char isRFID = 0;
 
 /*************************LCD***********************/
 
