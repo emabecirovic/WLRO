@@ -1,26 +1,59 @@
-/*
-* Search.c
-*
-* Created: 4/29/2014 9:26 AM
-* Author: robsv107
-* patsu326
-* marek588
-*/
-
 #include <avr/io.h>
-#include <avr/delay.h>
 #include <avr/interrupt.h>
-#include "styrmodul.h"
 
-#define F_CPU 1000000UL
+// Bussbeteckningar
+char front = 0b00000001;
+char rightfront = 0b00000010;
+char rightback = 0b00000011;
+char leftfront = 0b00000100;
+char leftback = 0b00000101;
+char traveldist = 0b00000110;
+char gyro = 0b00000111;
+char gyrostop = 0b10000000;
+char RFID = 0b00001000;
+char stop = 0x00; //Stopbyte
+volatile char selection; // Används i skicka avbrottet
 
+//Konstanter som uppräkning i AD-omvandling
+char i = 0; //Vilken sensor jag använder
+char m = 0; //Hur många gånger jag har gått igenom sensorn.
+const char samplings = 8;
+
+unsigned char dFront[8];
+unsigned char dRight_Front[8];
+unsigned char dRight_Back[8];
+unsigned char dLeft_Front[8];
+unsigned char dLeft_Back[8];
+unsigned char sortedValues[5];
+unsigned char dDist;
+unsigned char tempDistance;
+char Distance = 0;
+
+unsigned char rfid_data;
+char isRFID = 0; //ETTA ELLER NOLLA!
+
+//Gyrovariabler
+char calibrated = 0;
+char dGyro;
+char gyroref;
+volatile char sendGyro = 0;
+volatile long double angle = 0;
+volatile char gyroflag = 0;
+
+char counter_distance = 0;
+
+float dummy;
+
+//Flaggor
+char start_sample = 0;
+volatile char ad_complete = 0;
+
+//Bubble sort för att kunna ta ut medianen av avståndssensorer
 
 void initiate_variables()
 {
-	/************BUSS**********************/
-
-	// Förenklingar för enklarekodning
-	/*front = 0b00000001;
+	// Bussbeteckningar
+	front = 0b00000001;
 	rightfront = 0b00000010;
 	rightback = 0b00000011;
 	leftfront = 0b00000100;
@@ -29,1147 +62,408 @@ void initiate_variables()
 	gyro = 0b00000111;
 	gyrostop = 0b10000000;
 	RFID = 0b00001000;
-	direction = 0b00001001;
-	rightspeed = 0b00001010;
-	leftspeed = 0b00001011;
-	stop = 0x00; //Stop bit*/
+	stop = 0x00; //Stopbyte
 
-	//Control signals
-	/*right = 1;
-	left = 2;
-	turn = 3;
-	turnstop = 4;
-	trstraight = 5;*/
+	//Konstanter som uppräkning i AD-omvandling
+	i = 0; //Vilken sensor jag använder
+	m = 0; //Hur många gånger jag har gått igenom sensorn.
 
-	// Delayer för busskomm
-	//time = 200;
-	start_request = 0;
+	Distance = 0;
 
-	// Array för värden från buss
-	storedValues[11];
+	isRFID = 0; //ETTA ELLER NOLLA!
 
+	//Gyrovariabler
+	calibrated = 0;
+	dGyro = 0;
+	gyroref = 0;
+	sendGyro = 0;
+	angle = 0;
+	gyroflag = 0;
 
-	/******************REGLERING************************/
+	counter_distance = 0;
 
-	distance = 0; // Avlagdsträcka
-	overflow = 0; // Räknat för långt
-	dt = 0;
-	timer = 0;
-
-	speed = 50;
-
-	turnisDone = 0;
-
-
-	// Flaggor för regulateright
-	firstRR=1;
-	startregulate = 0;
-
-	/**************POSITION******************/
-	mydirection = 1; //1=X+ ; 2=Y+ ; 3=X- ; 4=Y-
-	myposX=15; //Robotens position i X-led
-	myposY=0; //Robotens position i Y-led
-	startpos[0] = 15; //Startpositionen sätts till mitten på nedre långsidan
-	startpos[1] = 0;
-	posdistance = 0;
-
-	/*************************LCD***********************/
-
-	/*lcd0 = 0b00110000;
-	lcd1 = 0b00110001;
-	lcd2 = 0b00110010;
-	lcd3 = 0b00110011;
-	lcd4 = 0b00110100;
-	lcd5 = 0b00110101;
-	lcd6 = 0b00110110;
-	lcd7 = 0b00110111;
-	lcd8 = 0b00111000;
-	lcd9 = 0b00111001;
-	lcda = 0b01000001;
-	lcdb = 0b01000010;
-	lcdc = 0b01000011;
-	lcdd = 0b01000100;
-	lcde = 0b01000101;
-	lcdf = 0b01000110;
-	lcdspace = 0b00100000;*/
-
-
-	/*******************FJÄRRSTYRT****************/
-
-
-	/***************FLAGGOR FÖR MAIN******************/
-	start = 1; //vi står i startpositionen
-
-	finished=0; //1 då hela kartan utforskad
-	onelap=0; //1 då yttervarvet körts
-	home=0; //1 då robten återvänt till startposition
-
-
-	zzleftturn = true; // Till första toppsvängen i sicksacksak
-	zzfirst = true; // Till första bottensväng i sicksacksak
-
-	drivetoY = true; // Y-led är prioriterad riktining om sant i driveto
+	//Flaggor
+	start_sample = 0;
+	ad_complete = 0;
 }
 
-
-void writechar(unsigned char data)
+void bubble_sort(unsigned char a[], int size)
 {
-	PORTA=data;
-	(PORTC |= 0b11000000);
-	(PORTC &= 0b01000001);
-	_delay_ms(30);
-}
-
-void shift(int steps) //
-{
-	int n=0;
-	while(n<steps)
+	int k, l, temp;
+	for (k = 0; k < (size - 1); ++k)
 	{
-		PORTA=0b00011100; //Shift display right
-		(PORTC |= 0b11000000);
-		(PORTC &= 0b01000001);
-		_delay_ms(30);
-		n+=1;
-	}
-	int m=0;
-	while(m<(2*steps))
-	{
-		PORTA=0b00010000; //Shift cursor left
-		(PORTC |= 0b11000000);
-		(PORTC &= 0b01000001);
-		_delay_ms(30);
-		m+=1;
+		for (l = 0; l < size - 1 - k; ++l )
+		{
+			if (a[l] > a[l+1])
+			{
+				temp = a[l+1];
+				a[l+1] = a[l];
+				a[l] = temp;
+			}
+		}
 	}
 }
 
-void shiftcursorleft()
+//Initiering av slave
+void SlaveInit(void)
 {
-	PORTA=0b00010000; //Shift cursor left
-	(PORTC |= 0b11000000);
-	(PORTC &= 0b01000001);
-	_delay_ms(30);
+	/* Set MISO output, all others input */
+	DDRB = (1<<DDB6);
+	/* Enable SPI */
+	SPCR = (1<<SPE)|(1<<SPIE)|(1<<CPHA)|(1<<CPOL);
+	/* Enable External Interrupt */
+	// sei();
 }
 
-//------------------------------------------------------------------------------
-
-char what_lcd_number(char number)
+char SlaveRecieve(void) // Används inte just nu men....
 {
-	switch (number)
-	{
-		case 0:
-		return lcd0;
-		break;
-		case 1:
-		return lcd1;
-		break;
-		case 2:
-		return lcd2;
-		break;
-		case 3:
-		return lcd3;
-		break;
-		case 4:
-		return lcd4;
-		break;
-		case 5:
-		return lcd5;
-		break;
-		case 6:
-		return lcd6;
-		break;
-		case 7:
-		return lcd7;
-		break;
-		case 8:
-		return lcd8;
-		break;
-		case 9:
-		return lcd9;
-		break;
-		case 10:
-		return lcda;
-		break;
-		case 11:
-		return lcdb;
-		break;
-		case 12:
-		return lcdc;
-		break;
-		case 13:
-		return lcdd;
-		break;
-		case 14:
-		return lcde;
-		break;
-		case 15:
-		return lcdf;
-		break;
-		default:
-		return lcd0;
-		break;
-	}
-}
-
-void print_on_lcd(char number)
-{
-	char highnumber = number >> 4;
-	highnumber = highnumber & 0b00001111;
-	char lownumber = number & 0b00001111;
-
-	writechar(what_lcd_number(highnumber));
-	//shift(1);
-	writechar(what_lcd_number(lownumber));
-	//shift(1);
-	writechar(lcdspace);
-	//shift(1);
-}
-
-void setcursor(char place) //16 platser på en rad. 0x00-0x0F
-{
-	PORTA=(0x80 + place - 0x01);
-	(PORTC |= 0b10000000);
-	(PORTC &= 0b00000001);
-	for(long i = 0; i < 2000; i ++){}
-}
-
-
-void MasterInit(void)
-{
-	/* Set MOSI and SCK output, alla others input*/
-	/* Ersätt DDR_SPI med den port "serie" som används ex DD_SPI -> DDRB
-	samt DD_MOSI och DD_SCK med specifik pinne ex DD_MOSI -> DDB5 */
-	DDRB = (1<<DDB3)|(1<<DDB4)|(1<<DDB5)|(1<<DDB7);
-
-	/* Enable SPI, Master, set clock rate fosc/16 */
-	SPCR = (1<<SPE)|(1<<MSTR)|(0<<SPI2X)|(1<<SPR1)|(0<<SPR0)|(1<<CPHA)|(1<<CPOL);
-
-	PORTB = (1<<PORTB3)|(1<<PORTB4);
-
-	/* Enable External Interrupts */
-	sei();
-}
-
-void MasterTransmit(char cData)
-{
-	/* Start transmission */
-	SPDR = cData;
-	/* Wait for transmission complete */
+	/*Wait for reception complete */
 	while(!(SPSR & (1<<SPIF)))
 	;
+	/* Return Data Register */
+	return SPDR;
+
 }
 
-void TransmitSensor(char invalue)
+//Initiering av USART för RFID-läsning
+void USART_Init( unsigned int baud )
 {
-	if(start_request == 1)
-	{
-		start_request = 0;
-		
-		PORTB &= 0b11101111; // ss2 low
-
-		if(invalue == turn)
-		{
-			MasterTransmit(gyro);
-			for(int i = 0; i < time; i++){}
-			MasterTransmit(stop);
-			storedValues[6] = SPDR; // Gyro
-		}
-		else if(invalue == turnstop)
-		{
-			MasterTransmit(gyrostop);
-			for(int i = 0; i < time; i++){}
-			dummy=SPDR;
-		}
-		else
-		{
-			MasterTransmit(RFID);
-			//First communication will contain crap on shift register
-			for(int i = 0; i < time; i++){}
-			MasterTransmit(traveldist); // Request front sensor
-			for(int i = 0; i < time; i++){}
-			storedValues[7] = SPDR; // SensorRFID
-			MasterTransmit(front); // Request front sensor
-			for(int i = 0; i < time; i++){}
-			storedValues[5] = SPDR; // Distance
-			MasterTransmit(rightfront);
-			for(int i = 0; i < time; i++){}
-			storedValues[0] = SPDR; // Front
-			MasterTransmit(rightback);
-			for(int i = 0; i < time; i++){}
-			storedValues[1] = SPDR; // Right front
-			MasterTransmit(leftfront);
-			for(int i = 0; i < time; i++){}
-			storedValues[2] = SPDR; // Right back
-			MasterTransmit(leftback);
-			for(int i = 0; i < time; i++){}
-			storedValues[3] = SPDR; // Left front
-			MasterTransmit(stop);
-			for(int i = 0; i < time; i++){}
-			storedValues[4] = SPDR; // Left back
-		}
-
-		PORTB ^= 0b00010000; // ss2 high
-
-		if(invalue != trstraight)
-		{
-			distance = distance + storedValues[5];
-			posdistance = posdistance + storedValues[5];
-			storedValues[5] = 0;
-		}
-		
-		if (isRFID == 0 && storedValues[7] == 1)
-		{
-			isRFID = 1;
-			setcursor(1);
-			print_on_lcd(0xAA);
-			storedValues[6] = 123;
-		}
-		else if (isRFID == 1 && storedValues[7] == 0)
-		{
-			isRFID = 1;
-		}
-		else if (isRFID == 0 && storedValues[7] == 0)
-		{
-			isRFID = 0;
-		}
-
-		TCCR0B = 0b00000101; // Start timer
-	}
+	/* Set baud rate */
+	UBRR0H = (unsigned char)(baud>>8);
+	UBRR0L = (unsigned char)baud;
+	/* Enable receiver and transmitter, enable receive interrupt */
+	UCSR0B = (1<<RXEN0)|(1<<TXEN0)|(1<<RXCIE0);
+	/* Set frame format: 8data, 1stop bit */
+	UCSR0C = (0<<USBS0)|(3<<UCSZ00);
 }
 
-
-
-void TransmitComm()
+unsigned char USART_Receive( void )
 {
-	if(start_request == 0)
-	{
-		PORTB &= 0b11110111;
-		
-
-		for(int i = 0; i < time; i++){}
-		for(int i = 0; i < 11; i ++)
-		{
-			dummy = SPDR;
-			MasterTransmit(storedValues[i]);
-			for(int i = 0; i < time; i++){}
-		}
-
-		PORTB ^= 0b00001000;
-		
-		TCCR0B = 0b00000101; // Start timer
-	}
+	/* Wait for data to be received */
+	while (!(UCSR0A & (1<<RXC0)));
+	/* Get and return received data from buffer */
+	return UDR0;
 }
 
-void transmit()
+//Sensormodulens initiering
+void initiate_sensormodul(void)
 {
-	TransmitComm();
-	TransmitSensor(0);
-	
+	MCUCR = 0b00000000;
+	EIMSK = 0b00000001; //INT0-avbrott
+	EICRA = 0b00000011; //Avbrott på uppflank INT0
+	ADMUX = 6; //Gyro ligger på plats 6
+	DDRA = 0x00;
+	DDRD = 0x00;
+	ADCSRA = 0b10001011;
+	sei(); //Globala interrupts
+	USART_Init(25);
+	//Kalibrera gyro, sätt sedan ADMUX till 0 så att vi får Frontsensor
+	ADCSRA = 0b11001011; //Starta AD-omvandling
+	ADMUX = 0;
 }
 
-void initiate_request_timer()
+//Timer för samplehastighet
+void initiate_sample_timer()
 {
-	TIMSK0 = 0b00000100; //Enable interupt vid matchning med OCR0B
-	TCNT0 = 0x00;
-	TCCR0B = 0b0000101; //Starta räknare, presscale 1024
-	OCR0B = 0xFF; // 255
-	// 261120 st klockcykler
+	TIMSK1 = 0b00000100; //Enable interupt vid matchning med OCR1B TCCR1B =0x0060;
+	TCNT1 = 0x00;
+	TCCR1B = 0x03; //Starta samplingsräknare, presscale 64.
+	OCR1BH = 0x00;
+	OCR1BL = 0x30; //RANDOM! När ska comparen triggas? SAMPLING Borde vara oftare ATM
 }
 
-void initiate_timer()
-{
-	TIMSK1 = 0b00000001; //Enable interupt vid overflow
-
-	TCCR1B = 0x00; //stop
-	TCNT1 = 0x00; //set count
-
-	TCCR1B = 0x03; //start timer prescale 64
-}
-
-void initiation()
-{
-	//Sätter utgångar/ingångar
-	DDRA=0b11111111;
-	DDRC=0b11000001;
-	DDRD=0b11100000;
-	//TCCR1A=0b10000001; //setup, phase correct PWM
-	//TCCR1B=0b00000010; //sätter hastigheten på klockan
-	TCCR2A=0b10100001;
-	TCCR2B=0b00000010;
-
-	//Till displayen, vet inte om det behövs men den är efterbliven
-	PORTA=0b00110000;
-	PORTC=0b00000000;
-	_delay_ms(200);
-	PORTA=0b00110000;
-	PORTC=0b10000000;
-	PORTC=0b00000000;
-	_delay_ms(50);
-	PORTA=0b00110000;
-	PORTC=0b10000000;
-	PORTC=0b00000000;
-	_delay_us(1100);
-	//Startar initiering
-	PORTA=0b00110000; // 1-line mode ; 5x8 Dots
-	PORTC=0b10000000;
-	PORTC=0b00000000;
-	_delay_us(4000);
-	PORTA=0b00001111; // Display on ; Cursor on ; Blink on
-	PORTC=0b10000000;
-	PORTC=0b00000000;
-	_delay_us(4000);
-	PORTA=0b00000001; // Clear display
-	PORTC=0b10000000;
-	PORTC=0b00000000;
-	_delay_ms(200);
-	PORTA=0b00000111; //Increment mode ; Entire shift on
-	PORTC=0b10000000;
-	_delay_ms(200);
-	//Initiering klar
-
-
-
-	storedValues[6] = 0;
-
-}
-
-
-
-//-------------------------------------------------------------------------------------
-void stopp()
-{
-	OCR2A = 0;
-	OCR2B = 0;
-}
-
-void rotateleft()
-{
-	PORTC = 0x00;
-	PORTD = 0x20;
-	OCR2B = 100;
-	OCR2A = 100;
-}
-
-void rotateright()
-{
-	PORTC = 0x01;
-	PORTD = 0x00;
-	OCR2B = 100;
-	OCR2A = 100;
-}
-
-void rotate90left()
-{
-	storedValues[6] = 0;
-	while(turnisDone == 0)
-	{
-		start = 1;
-		TransmitSensor(turn);
-		if (storedValues[6] != 1)
-		{
-			rotateleft();
-		}
-		else
-		{
-			start_request = 1;
-			TransmitSensor(turnstop);
-			stopp();
-			turnisDone = 1;
-		}
-
-	}
-	if(mydirection==4)
-	{
-		mydirection=1;
-	}
-	else
-	{
-		mydirection+=1;
-	}
-	turnisDone = 0;
-	for(long i = 0; i < 80000; i ++){stopp();}
-}
-
-void rotate90right()
-{
-	storedValues[6] = 0;
-	while(turnisDone == 0)
-	{
-		start_request = 1;
-		TransmitSensor(turn);
-		if (storedValues[6] != 2)
-		{
-			rotateright();
-		}
-		else
-		{
-			start_request = 1;
-			TransmitSensor(turnstop);
-			stopp();
-			turnisDone = 1;
-		}
-	}
-	if(mydirection==1)
-	{
-		mydirection=4;
-	}
-	else
-	{
-		mydirection-=1;
-	}
-	turnisDone = 0;
-	for(long i = 0; i < 80000; i ++){stopp();}
-}
-
-void temporary90right()
-{
-	cli();
-	PORTC = 0x01;
-	PORTD = 0x00;
-	OCR2B = 110;
-	OCR2A = 110;
-	_delay_ms(7000);
-	sei();
-}
-
-void temporary90left()
-{
-	cli();
-	PORTC = 0x00;
-	PORTD = 0x20;
-	OCR2B = 110;
-	OCR2A = 110;
-	_delay_ms(7000);
-	sei();
-}
-
-float sidesensor(unsigned char sensorvalue)
-{
-	float value = sensorvalue;
-	value = 1 / value;
-	value = value - 0.000741938763948;
-	value = value / 0.001637008132828;
-
-	return value;
-}
-
-void straight()
-{
-	TransmitSensor(trstraight);
-	sensor1r = sidesensor(storedValues[1]);
-	sensor2r = sidesensor(storedValues[2]);
-
-
-	while (fabs(sensor1r - sensor2r)>2)
-	{
-		if((sensor1r-sensor2r) > 0.8)
-		{
-			PORTC = 0x01; //rotera höger
-			PORTD = 0x00;
-			OCR2A = 60;
-			OCR2B = 60;
-		}
-		else if((sensor2r-sensor1r) > 0.8)
-		{
-			PORTC = 0x00; //rotera vänster
-			PORTD = 0x20;
-			OCR2A = 60;
-			OCR2B = 60;
-		}
-
-		TransmitSensor(trstraight);
-		sensor1r = sidesensor(storedValues[1]);
-		sensor2r = sidesensor(storedValues[2]);
-	}
-
-}
-
-void driveF()
-{
-	PORTC = 0x01;
-	PORTD = 0x20;
-	OCR2B = speed;
-	OCR2A = speed;
-}
-
-void drive(float dist) //kör dist cm
-{
-	distance=0;
-	dist = dist / 2.55125;
-	//dist = dist / 2.55;
-	
-	while (distance < dist * 0.9)
-	{
-		transmit();
-		driveF();
-	}
-	stopp();
-	
-}
-
-void drivefromstill(float dist) //kör dist cm
-{
-	distance=0;
-	dist = dist / 2.55125;
-	//dist = dist / 2.55;
-
-	while (distance < dist * 1.05)
-	{
-		transmit();
-		driveF();
-	}
-	stopp();
-}
-
-float frontsensor(unsigned char sensorvalue)
-{
-	float value = sensorvalue;
-	value = 1 / value;
-	value = value - 0.001086689563586;
-	value = value / 0.000191822821525;
-
-	return value;
-}
-
-void leftturn() //Används när man vet att det är vägg framför och vägg till höger för att kolla om man ska svänga vänster eller vända om helt
-{
-	stopp();
-	transmit();
-
-	sensorleft = sidesensor(storedValues[3]);
-
-	if(sensorleft<25)
-	{
-		rotate90left();
-		rotate90left();
-	}
-	else
-	{
-		rotate90left();
-	}
-	straight();
-}
-
-void remotecontrol()
-{
-	cli();
-	DDRB = 0x00;
-	PINB = 0x00;
-	stopp();
-
-	while(1)
-	{
-		button = PINB & 0b00000111;
-		//print_on_lcd(button);
-
-		/*
-		1 = W
-		2 = D
-		3 = A
-		4 = S
-		5 = E
-		6 = Q
-		*/
-
-		setcursor(1);
-		print_on_lcd(button);
-		switch(button)
-		{
-			case (1)://Kör framåt, W
-			PORTC = 0x01; //Sätter båda DIR till 1
-			PORTD = 0x20;
-			OCR2A = 255; //PWM vänster
-			OCR2B = 244; //PWM höger
-			break;
-			case (4): //Backa, S
-			PORTC = 0x0; //Sätter båda DIR till 0
-			PORTD = 0x0;
-			OCR2A = 255;
-			OCR2B = 244;
-			break;
-			case (6): //Rotera vänster, Q
-			PORTC = 0x00; //DIR vänster till 0
-			PORTD = 0x20; //DIR höger till 1
-			OCR2A = 100;
-			OCR2B = 100;
-			break;
-			case (5): //Rotera höger, E
-			PORTC = 0x01;
-			PORTD = 0x00;
-			OCR2A = 100;
-			OCR2B = 100;
-			break;
-			case (3): //Sväng vänster, A
-			PORTC = 0x01;
-			PORTD = 0x20;
-			OCR2A = 120;
-			OCR2B = 255;
-			break;
-			case (2): //Sväng höger, D
-			PORTC = 0x01;
-			PORTD = 0x20;
-			OCR2A = 255;
-			OCR2B = 125;
-			break;
-			default:
-			stopp();
-		}
-	}
-}
-
-void updatepos()
-{
-
-	start = 0;
-	asm("");
-	switch(mydirection)
-	{
-		case (1): // X+
-		{
-			myposX = myposX + 1;
-			break;
-		}
-		case (2): // Y+
-		{
-			myposY+=1;
-			break;
-		}
-		case (3): // X-
-		{
-			myposX-=1;
-			break;
-		}
-		case (4): // Y-
-		{
-			myposY-=1;
-			break;
-		}
-		default:
-		{
-		}
-	}
-	storedValues[8] = myposX;
-	storedValues[9] = myposY;
-	
-	if(isRFID == 1)
-	{
-		setcursor(6);
-		print_on_lcd(0xBC);
-		storedValues[10] = 4;
-	}
-	else
-	{
-		storedValues[10] = 2;
-	}
-	posdistance = 0;
-}
-
-void regulateright()
-{
-	if(firstRR==0)
-	{
-		sensormeanr_old=sensormeanr;
-	}
-	transmit();
-	//REGLERING
-	//Omvandling till centimeter
-
-	sensor1r = sidesensor(storedValues[1]);
-	sensor2r = sidesensor(storedValues[2]);
-	sensorfront = frontsensor(storedValues[0]);
-	sensormeanr = ((sensor1r + sensor2r) / 2) + 4;
-
-	if(firstRR==1)
-	{
-		firstRR=0;
-		stopp();
-		sensormeanr_old=sensormeanr;
-	}
-	else
-	{
-		//till PD-reglering
-		Td = 90000000; //128000000
-		K = 2;
-		if(sensorfront < 50)
-		{
-			straight();
-			drive(40);
-			updatepos();
-			transmit();
-			sensorright = sidesensor(storedValues[1]);
-			if(sensorright>25)
-			{
-				
-				rotate90right();
-				
-				transmit();
-				start_request = 1;
-				sensorfront = frontsensor(storedValues[0]);
-				if(sensorfront < 70)
-				{
-					drivefromstill(40);
-					updatepos();
-					leftturn();
-				}
-				else
-				{
-					drivefromstill(40);
-					updatepos();
-				}
-			}
-			else
-			{
-				leftturn();
-			}
-		}
-		else if(((sensor1r-sensor2r) < 15) && ((sensor2r-sensor1r) < 15))
-		{
-			if (fabs(sensor1r-sensor2r) > 4)
-			{
-				straight();
-			}
-			else
-			{
-				startregulate=1;
-				timer = TCNT1;
-				dt = (timer + overflow * 65536) * 64;
-				TCNT1 = 0;
-				overflow = 0;
-				PORTC = 0x01;
-				PORTD = 0x20;
-				rightpwm = speed + K * (15-sensormeanr + Td * (sensormeanr_old-sensormeanr)/dt);
-				leftpwm = speed - K * (15-sensormeanr + Td * (sensormeanr_old-sensormeanr)/dt);
-
-				if (rightpwm > 255)
-				{
-					OCR2B = 255;
-				}
-				else if(rightpwm < 0)
-				{
-					OCR2B = 0;
-				}
-				else
-				{
-					OCR2B = rightpwm;
-				}
-				if (leftpwm > 255)
-				{
-					OCR2A = 255;
-				}
-				else if (leftpwm < 0)
-				{
-					OCR2A = 0;
-				}
-				else
-				{
-					OCR2A = leftpwm;
-				}
-			}
-		}//Om inte på båda
-		else
-		{
-			if(startregulate==1)
-			{
-				startregulate=0;
-				drive(20);
-				updatepos();
-				rotate90right();
-				
-				
-				start_request = 1;
-				transmit();
-				sensorfront = frontsensor(storedValues[0]);
-				if(sensorfront>65)
-				{
-					drivefromstill(40);
-					updatepos();
-
-				}
-				else
-				{
-					drivefromstill(40);
-					updatepos();
-
-					leftturn();
-				}
-				straight();
-			}
-			else
-			{
-				stopp();
-			}
-		}
-	}
-
-}
-
-
-void firstlap()
-{
-	if(myposX == startpos[0] && myposY == startpos[1] && !start)	//Det här kommer gälla de första sekunderna roboten börjar köra också..!
-	{
-		onelap=1;
-		//setcursor(1);
-		//print_on_lcd(0xCC);
-		straight();
-		for(long i = 0; i < 160000; i ++){stopp();}
-	}
-	else
-	{
-		regulateright();
-	}
-}
-
-
-
-void away() // Få roboten från väggen
-{
-	transmit();
-	
-	// Vänd roboten posetiv x-led
-	while(mydirection != 1)
-	{
-		if(mydirection < 3)
-		rotate90right();
-		else
-		rotate90left();
-	}
-
-	transmit();
-	sensorleft=sidesensor(storedValues[3]);
-	//setcursor(1);
-	//print_on_lcd(sensorleft);
-
-	if(sensorleft < 20) // Vägg till vänster
-	{
-		regulateright();
-		sensorleft=sidesensor(storedValues[3]);
-		if(sensorleft > 20)
-		{
-			getinpos = true;
-		}
-
-	}
-	else if(getinpos)
-	{
-		drive(20);
-		updatepos();
-		getinpos = false;
-	}
-	else
-	{
-		asm("");
-		straight();
-		stopp();
-		rotate90left();
-		//print_on_lcd(sensorleft);
-		drivefromstill(40); // Kör en sektion ut i öppen yta
-		updatepos();
-
-		rotate90right();
-
-		awaydone = true;
-	}
-}
-
-void zigzag() //sicksacksak
-{
-	transmit();
-	sensorfront = frontsensor(storedValues[0]);
-	sensorright = sidesensor(storedValues[1]);
-	sensorleft = sidesensor(storedValues[3]);
-
-	if(sensorfront>50) // Kör tills roboten står en ruta från väggen
-	{
-		driveF();
-	}
-	else if(zzfirst)	// Första gången vi når vägg
-	{
-		zzfirst = false;
-		rotate90left();
-		
-		for(long i = 0; i < 160000; i ++){	stopp();}
-	}
-	else if(zzleftturn)
-	{
-		
-		zzleftturn = false;
-		if(sensorleft < 20) // Har vi vägg till vänster när vi vill svänga vänster
-		{
-			zigzagdone = true;
-		}
-		else
-		{
-			rotate90left();
-			drivefromstill(40);
-			updatepos();
-			
-			transmit();
-			sensorfront = frontsensor(storedValues[0]);
-			sensorright = sidesensor(storedValues[1]);
-			sensorleft = sidesensor(storedValues[3]);
-			
-			while(sensorleft < 20) // Har vi vägg vänster efter första sväng
-			{
-				transmit();
-				sensorfront = frontsensor(storedValues[0]);
-				sensorright = sidesensor(storedValues[1]);
-				sensorleft = sidesensor(storedValues[3]);
-				drive(40);
-				updatepos();
-			}
-			rotate90left();
-		}
-	}
-	else
-	{
-		transmit();
-		sensorfront = frontsensor(storedValues[0]);
-		sensorright = sidesensor(storedValues[1]);
-		sensorleft = sidesensor(storedValues[3]);
-		zzleftturn = true;
-		if(sensorright < 20) // Har vi vägg till höger när vi vill svänga höger
-		{
-			zigzagdone = true;
-		}
-		else
-		{
-			rotate90right();
-			drivefromstill(40);
-			updatepos();
-			while(sensorright < 20) // Har vi vägg höger efter första sväng
-			{
-				transmit();
-				sensorfront = frontsensor(storedValues[0]);
-				sensorright = sidesensor(storedValues[1]);
-				sensorleft = sidesensor(storedValues[3]);
-				drive(40);
-				updatepos();
-			}
-			rotate90right();
-		}
-	}
-}
-
-void rfid()
-{
-	storedValues[7] = 0;
-	volatile int bajs = 1;
-	while(bajs==1)
-	{
-
-		transmit();
-		if(storedValues[7] != 1)
-		{
-			PORTC = 0x01;
-			PORTD = 0x20;
-			OCR2B = 50;
-			OCR2A = 50;
-		}
-		else
-		{
-			stopp();
-			bajs=0;
-
-		}
-
-
-	}
-}
-
-
-
+//Mainfunktion
 int main(void)
 {
 	initiate_variables();
-	initiation();
-	int fjarrstyrt = (PIND & 0x01); //1 då roboten är i fjärrstyrt läge
-	initiate_timer();
-	initiate_request_timer();
-
-	if(fjarrstyrt==1)
+	SlaveInit();
+	initiate_sensormodul();
+	initiate_sample_timer();
+	while(1)
 	{
-		
-		for(long i = 0; i < 480000; i++){}
-		/*while(1)
-		{
-			transmit();
-			rotate90right();
-			for(long i = 0; i < 80000; i++){}
-			rotate90left();
-			for(long i = 0; i < 80000; i++){}
-			print_on_lcd(storedValues[0]);
-		}*/
-		remotecontrol();
-	}
-	else
-	{
-		MasterInit();
-		for(long i = 0; i < 480000; i++){}
-		
-		while(home==0)
-		{
-			
-			if(posdistance > 13)  //40/2.55125)*0.9
-			{
-				updatepos();
-			}
-			
-			//setcursor(1);
-			//print_on_lcd(myposX);
-			//print_on_lcd(myposY);
-			
-			if(!onelap)
-			{
-				firstlap();
-			}
-			else if(!awaydone)
-			{
-				away();
-				//print_on_lcd(0xAA);
-			}
-			else if(!zigzagdone)
-			{
-				zigzag();				
-				//print_on_lcd(0xBB);
-			}
-			/*else if(!findemptydone)
-			{
-			findempty();
-			}
-			else
-			{
-			returntostart();
-			}*/
-			else
-			{
-				stopp();
-				home=1;
-				//print_on_lcd(0xAB);
-			}
-		}
 		/*
-		while(1)
+		if (dGyro == 255)
 		{
-		rotate90left();
-		for(long i = 0; i < 160000; i ++){stopp();}
-		rotate90right();
-		for(long i = 0; i < 160000; i ++){stopp();}
+			dummy = 0;
+		}
+		else if(gyroref == 255)
+		{
+			dummy = 1;
+		}
+		else if(gyroflag == 255)
+		{
+			dummy = 0;
 		}
 		*/
+		
+		if(start_sample == 1)
+		{
+			start_sample = 0;
+			//find_RFID();
+		}
+		else
+		{
+			dummy = 1;
+		}
+		
+
+		asm("");
+
+		//När AD-omvandling är klar så sätts ad_complete och då görs dessa beräkningar
+		if(ad_complete == 1)
+		{
+			ad_complete = 0;
+
+			//Kalibrera gyrot första gången
+			if(calibrated == 0)
+			{
+				gyroref = ADC >> 2;
+				ADMUX = 6;
+				calibrated = 1;
+				TCCR1B = 0x03;
+			}
+			else if(gyroflag == 0)
+			{
+				if (counter_distance < 2)
+				{
+					//Front
+					if(i == 0)
+					{
+						dFront[m] = ADC >> 2;
+						if (m == samplings - 1)
+						{
+							bubble_sort(dFront, samplings);
+							sortedValues[0] = dFront[1];
+							i = i + 1;
+							m = 0;
+							ADMUX = i;
+						}
+						else
+						{
+							m = m + 1;
+						}
+					}
+					//Right Front
+					else if(i == 1)
+					{
+						dRight_Front[m] = ADC >> 2;
+						if (m == samplings - 1)
+						{
+							bubble_sort(dRight_Front, samplings);
+							sortedValues[1] = dRight_Front[1];
+							i = i + 1;
+							m = 0;
+							ADMUX = i;
+						}
+						else
+						{
+							m = m + 1;
+						}
+					}
+					//Right Back
+					else if(i == 2)
+					{
+						dRight_Back[m] = ADC >> 2;
+						if (m == samplings - 1)
+						{
+							bubble_sort(dRight_Back, samplings);
+							sortedValues[2] = dRight_Back[1];
+							i = i + 1;
+							m = 0;
+							ADMUX = i;
+						}
+						else
+						{
+							m = m + 1;
+						}
+					}
+					//Left Front
+					else if(i == 3)
+					{
+						dLeft_Front[m] = ADC >> 2;
+						if (m == samplings - 1)
+						{
+							bubble_sort(dLeft_Front, samplings);
+							sortedValues[3] = dLeft_Front[1];
+							i = i + 1;
+							m = 0;
+							ADMUX = i;
+						}
+						else
+						{
+							m = m + 1;
+						}
+					}
+					//Left Back
+					else if(i == 4)
+					{
+						dLeft_Back[m] = ADC >> 2;
+						if (m == samplings - 1)
+						{
+							bubble_sort(dLeft_Back, samplings);
+							sortedValues[4] = dLeft_Back[1];
+							i = 0;
+							m = 0;
+							ADMUX = i;
+						}
+						else
+						{
+							m = m + 1;
+						}
+					}
+
+					if (counter_distance == 1)
+					{
+						//Nästa gång så ska vi ad-omvandla fototransistor
+						ADMUX = 5;
+					}
+
+					counter_distance++;
+
+				}//coutner_distance < 2
+				else
+				{
+					//Fototransistor
+					tempDistance = dDist;
+					dDist = ADC >> 2;
+					//Om den nya och den gamla ligger på olika sidor på 150 så ska Distance räknas upp. Det betyder att vi har gått förbi ett segment på skivan.
+					if (((tempDistance <= 150) && (dDist > 150)) | ((tempDistance >= 150) && (dDist < 150)))
+					{
+						Distance = Distance + 1;
+					}
+					ADMUX = i; //Återgå till gammal i
+					counter_distance = 0;
+				}//counter_distance >= 2
+				
+			}//gyroflag == 0
+			else if(gyroflag == 1)
+			{
+				signed int bigvalue = 7600;
+				signed int smallvalue = -7600;
+				dGyro = ADC >> 2;
+				if((dGyro < gyroref + 3) && (dGyro > gyroref - 3))
+				{
+					angle = angle;
+				}
+				else
+				{
+					angle +=  (dGyro - gyroref);//*5/256;
+				}
+
+				//Kolla om vi kommit fram till önskat värde
+	
+				if(angle >= bigvalue)
+				{
+					sendGyro = 1;
+				}
+				else if (angle <= smallvalue)
+				{
+					sendGyro = 2;
+				}
+				else
+				{
+					sendGyro = 0;
+				}
+
+			}//gyroflag == 1
+			//Starta samplingsräknare
+			TCCR1B = 0x03;
+		}//ad_complete == 1
+	}//while
+}//main
+
+//Avbrott för sampletid
+ISR(TIMER1_COMPB_vect)
+{
+	TCCR1B = 0x00;
+	TCNT1 = 0x00;
+	start_sample = 1;
+	ADCSRA = 0b11001011;
+}
+
+
+//Avbrott för knapp
+ISR(INT0_vect) //knapp ska vi inte ha irl, men ja.
+{
+	dummy = 0;
+	//:)
+}
+
+//Avbortt för AD-omvandlingen är klar
+ISR(ADC_vect)
+{
+	ADCSRA = 0b10001011;
+	ad_complete = 1;
+}
+
+//Avbrott för buss klar
+ISR(SPI_STC_vect) // Skicka på buss!! // Robert
+{
+	SPDR = 0; //Dummyskrivning
+	selection = SPDR;
+	if(selection == front)
+	{
+		SPDR = sortedValues[0];
 	}
-	return 0;
+	else if (selection == rightfront)
+	{
+		SPDR = sortedValues[1];
+		//SPDR = 125;
+	}
+	else if (selection == rightback)
+	{
+		SPDR = sortedValues[2];
+	}
+	else if (selection == leftfront)
+	{
+		SPDR = sortedValues[3];
+	}
+	else if (selection == leftback)
+	{
+		SPDR = sortedValues[4];
+	}
+	else if (selection == traveldist)
+	{
+		SPDR = Distance;
+		asm("");
+		Distance = 0;
+
+	}
+	else if (selection == gyro)
+	{
+		SPDR = sendGyro;
+
+		gyroflag = 1;
+		ADMUX = 6;
+		asm("");
+	}
+	else if (selection == gyrostop) // här är den riktiga gyrostop
+	{
+		SPDR = 0;
+		angle = 0;
+		sendGyro = 0;
+		gyroflag = 0;
+		ADMUX = i;
+		dummy = 1;
+	}
+	else if (selection == RFID)
+	{
+		SPDR = isRFID;
+		asm("");
+		isRFID = 0;
+	}
+	else if (selection == stop)
+	{
+		// behöver förmodligen inte göra något här
+	}
 }
 
-
-ISR(TIMER1_OVF_vect)
+ISR(USART0_RX_vect)
 {
-	TCNT1 = 0;
-	overflow++;
-}
-
-ISR(TIMER0_COMPB_vect)
-{
-	TCCR0B = 0b0000000; //stop timer
-	TCNT0 = 0x00;
-	start_request = 1;
+	rfid_data = UDR0;
+	if(rfid_data == 0x0A)
+	{
+		isRFID = 1;
+	}
+	dummy = 0;
 }
