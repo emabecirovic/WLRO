@@ -66,7 +66,6 @@ unsigned int startpos[2]={15,0}; //Startpositionen sätts till mitten på nedre 
 volatile float posdistance = 0;
 
 
-
 /***************FLAGGOR FÖR MAIN******************/
 bool start = 1; //vi står i startpositionen
 
@@ -78,11 +77,7 @@ bool awaydone, zigzagdone, findemptydone, getinpos;
 bool zzleftturn = true; // Till första toppsvängen i sicksacksak
 bool first = true; // Till första bottensväng i sicksacksak
 
-bool drivetoY = true; // Y-led är prioriterad riktining om sant i driveto
 
-int firstzero; //Första nollan om man läser matrisen uppifrån och ned
-
-char room[29][15]; //=.... 0=outforskat, 1=vägg, 2=öppen yta
 
 
 

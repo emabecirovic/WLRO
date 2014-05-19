@@ -37,6 +37,14 @@ char room[29][15];
 volatile unsigned char storedValues[11] = {11,12,13,14};
 int indexvalue = 0;
 
+/****************KARTLÄGGNING*******************************/
+bool drivetoY = true; // Y-led är prioriterad riktining om sant i driveto
+
+int firstzero; //Första nollan om man läser matrisen uppifrån och ned
+
+char room[29][15]; //=.... 0=outforskat, 1=vägg, 2=öppen yta
+
+
 char dummy;
 
 void USARTInit(unsigned int ubrr_value)
@@ -192,6 +200,183 @@ void SendStoredVal()
 }
 
 
+/***********************************KARTHANTERING***********************************/
+void setwall(int x,int y)
+{
+	room[x][y]=1;
+}
+
+void updatemap() // Kan väl bara gälla för yttervarvet?
+{
+	char w=30; //Hur långt ifrån vi ska vara för att säga att det är en vägg.
+
+	switch(mydirection)
+	{
+		case (1): // X+
+		if(sensormeanr<=w) //Vet inte vad som är en lämplig siffra här
+		{
+			setwall(myposX,myposY-1);
+		}
+		else if(sensorfront<=w)
+		{
+			setwall(myposX+1,myposY);
+		}
+		else if(sensorleft<w)
+		{
+			setwall(myposX,myposY+1);
+		}
+		if (!room[myposX-1][myposY]==(1|4))
+		{
+			room[myposX-1][myposY]=2;
+		}
+		break;
+
+		case (2): // Y+
+		if(sensormeanr<=w)
+		{
+			setwall(myposX+1,myposY);
+		}
+		else if(sensorfront<=w)
+		{
+			setwall(myposX,myposY+1);
+		}
+		else if(sensorleft<w)
+		{
+			setwall(myposX-1,myposY);
+		}
+
+		if (!room[myposX][myposY-1]==(1|4))
+		{
+			room[myposX][myposY-1]=2;
+		}
+		break;
+
+		case (3): // X-
+		if(sensormeanr<=w)
+		{
+			setwall(myposX,myposY+1);
+		}
+		else if(sensorfront<=w)
+		{
+			setwall(myposX-1,myposY);
+		}
+		else if(sensorleft<w)
+		{
+			setwall(myposX,myposY-1);
+		}
+
+		if (!room[myposX+1][myposY]==(1|4))
+		{
+			room[myposX+1][myposY]=2;
+		}
+		break;
+
+		case (4): // Y-
+		if(sensormeanr<=w)
+		{
+			setwall(myposX-1,myposY);
+		}
+		else if(sensorfront<=w)
+		{
+			setwall(myposX,myposY-1);
+		}
+		else if(sensorleft<w)
+		{
+			setwall(myposX+1,myposY);
+		}
+		if (!room[myposX][myposY+1]==(1|4))
+		{
+			room[myposX][myposY+1]=2;
+		}
+		break;
+	}
+	if (storedValues[7]==1)
+	{
+		room[myposX][myposY]=4;
+	}
+}
+
+/*********************************RITA UT FÖRLÄNGD VÄGG*************************************/
+void extended_wall()
+{
+	for(int j = 0; j < 15; j++ )
+	{
+		for(int i = 0; i < 29; i++)
+		{
+			if(room[i][j] == (1 | 2))
+			{
+				i = 29;
+			}
+			else
+			{
+				room[i][j] = 1;
+			}
+		}
+	}
+	for(int i = 0; i < 29; i++ )
+	{
+		for(int j = 0; j < 15; j++)
+		{
+			if(room[i][j] == (1 | 2))
+			{
+				j = 15;
+			}
+			else
+			{
+				room[i][j] = 1;
+			}
+		}
+	}
+	for(int j = 0; j < 15; j++ )
+	{
+		for(int i = 28; i >= 0; i--)
+		{
+			if(room[i][j] == (1 | 2))
+			{
+				i = -1;
+			}
+			else
+			{
+				room[i][j] = 1;
+			}
+		}
+	}
+	for(int i = 0; i < 29; i++ )
+	{
+		for(int j = 14; j >= 0; i--)
+		{
+			if(room[i][j] == (1 | 2))
+			{
+				j = -1;
+			}
+			else
+			{
+				room[i][j] = 1;
+			}
+		}
+	}
+}
+
+/******************GE POSITIONEN FÖR ICKE SÖKT RUTA*********************/
+int * findfirstzero()
+{
+	static int firstzero[2]={15,0};
+
+	for(int j=0;j<=17;j++)
+	{
+		for(int i=0;i<=31;i++)
+		{
+			if(room[j][i]==0)
+			{
+				firstzero[0]=i;
+				firstzero[1]=j;
+			}
+		}
+	}
+	return firstzero;
+}
+
+
 
 
 int main(void)
@@ -235,6 +420,9 @@ int main(void)
 			
 		while(!remote)
 		{
+		
+			updatemap();
+			
 			if(bussComplete == true)
 			{
 				SendStoredVal();
