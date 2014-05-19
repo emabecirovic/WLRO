@@ -148,18 +148,3 @@ void driveto(int pos[2]);
 void findempty();
 
 void returntostart(); // Kolla om vi ska ha den
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
