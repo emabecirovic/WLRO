@@ -338,16 +338,16 @@ int main(void)
 			}//gyroflag == 0
 			else if(gyroflag == 1)
 			{
-				signed int bigvalue = 83;
-				signed int smallvalue = -83;
+				signed int bigvalue = 7600;
+				signed int smallvalue = -7600;
 				dGyro = ADC >> 2;
-				if((dGyro < gyroref + 2) && (dGyro > gyroref - 2))
+				if((dGyro < gyroref + 3) && (dGyro > gyroref - 3))
 				{
 					angle = angle;
 				}
 				else
 				{
-					angle +=  (dGyro - gyroref)*5/256;
+					angle +=  (dGyro - gyroref);//*5/256;
 				}
 
 				//Kolla om vi kommit fram till önskat värde
