@@ -124,6 +124,8 @@ void initiate_timer(); // Busstimer
 
 
 void Initiation(); // styr och LCD
+
+/******************LCD********************************/
 void writechar(unsigned char data);
 
 /*****************BUSS********************/
@@ -142,36 +144,34 @@ void remotecontrol();
 /******************POSITIONERING******************/
 void updatepos();
 
-/***********************KARTA************************/
-void setwall(int x,int y);
-void updatemap();
-void extended_wall();
 
 /*****************STYRNING********************/
 void stopp();
-void driveF();
-void drive(float dist);
-void drivefromstill(float dist);
-void straight();
+
+void rotateleft();
+void rotateright();
+void rotate90left();
+void rotate90right();
 
 void temporary90right();
 void temporary90left();
 
-void rotate90left();
-void rotate90right();
-
-void leftturn();
-void rotateleft();
-void rotateright();
-
-/****************KONVERTERING*************/
+//konvertering
 float sidesensor(unsigned char sensorvalue);
 float frontsensor(unsigned char sensorvalue);
+
+void straight();
+
+void driveF();
+void drive(float dist);
+void drivefromstill(float dist);
+
+void leftturn();
+
 
 /******************REGLERING & AVSÖKNING**************/
 void regulateright();
 void firstlap();
-void bajsfunktion();
 
 
 void away();
@@ -179,5 +179,7 @@ void zigzag();
 int * findfirstzero();
 void driveto(int pos[2]);
 void findempty();
-
 void returntostart(); // Kolla om vi ska ha den
+
+void rfid();
+
