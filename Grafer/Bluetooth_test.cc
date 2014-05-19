@@ -16,48 +16,54 @@
 
 using namespace std;
 
-void Drawmap(sf::RenderWindow* myWindow, char room[29][15],sf::RectangleShape* fire, sf::RectangleShape* robotposition ,sf::RectangleShape* wall sf::RectangleShape* searched_area)
+void Drawmap(sf::RenderWindow* myWindow, char room[31][17],sf::RectangleShape* robotposition)//,sf::RectangleShape* fire, sf::RectangleShape* robotposition ,sf::RectangleShape* wall)
 {
-    /********************************** Kartritning **********************************/
+    /************ Kartritning ***********************/
 
+//Rita ut ett tomt (vitt) fönster, pixlar eller?, i 29*15-storlek, med RenderWindow. Finns redan i nån main
 
-    for(int i = 0; i < 29; i++)
+//Rita ut roboten på kartan, i punkten (15,0) kommer den börja. Typ en fylld fyrkant eller nåt.
+    for(int i = 0; i < 31; i++)
     {
-        for(int j = 0; j < 15; j++)
+        for(int j = 0; j < 17; j++)
         {
 
-            if(room[i][j] == 1)
+            if(room[i][j] == 2)
             {
-                wall->setPosition(120 + 20*i, 590 -(20 + 20*j)); //sätter ut vägg på rätt plats i kartan
-                myWindow->draw(*wall);
+                robotposition->setFillColor(sf::Color::Magenta);
+                robotposition->setPosition(100 + 20*i , 590 -(20 + 20*j));
+                myWindow->draw(*robotposition);
             }
-            else if(room[i][j] == 2)
+            else if(room[i][j] == 5)
             {
-                searched_area->setPosition(120 + 20*i , 590 -(20 + 20*j));
-                myWindow->draw(*searched_area);
+                robotposition->setFillColor(sf::Color::White);
+                robotposition->setPosition(100 + 20*i, 590 -(20 + 20*j)); //samma x och y som i setwall
+                myWindow->draw(*robotposition);
             }
             else if(room[i][j] == 4)
             {
-                fire->setPosition(120 + 20*i, 590 -(20 + 20*j));
-                myWindow->draw(*fire);
-            }
-             else if(room[i][j] == room[myposX][myposY]) //såhär kanske man inte kan göra..?
-            {
-                robotposition->setPosition(120 + 20*i , 590 -(20 + 20*j));
+                robotposition->setFillColor(sf::Color::Red);
+                robotposition->setPosition(100 + 20*i, 590 -(20 + 20*j));
                 myWindow->draw(*robotposition);
+            }
             else
             {
-                wall->setPosition(120 + 20*i, 590 -(20 + 20*j)); 
-                myWindow->draw(*wall);
+                robotposition->setFillColor(sf::Color::Black);
+                robotposition->setPosition(100 + 20*i, 590 -(20 + 20*j)); //samma x och y som i setwall
+                myWindow->draw(*robotposition);
             }
         }
+
     }
+
+//bör rita ut väggar på rätt plats när storleken är fixad
 }
 
 
 bool remote_controll(Bluetooth_Serial_comm* Com_Port)
 {
     bool remote = true;
+    int i = 0;
     while(remote)
     {
         if(sf::Keyboard::isKeyPressed(sf::Keyboard::K))
@@ -84,12 +90,16 @@ bool remote_controll(Bluetooth_Serial_comm* Com_Port)
         }
         else if(sf::Keyboard::isKeyPressed(sf::Keyboard::E))
         {
+
             Com_Port->Send_to_Bt(5);
+
+
         }
         else if(sf::Keyboard::isKeyPressed(sf::Keyboard::Q))
         {
+
             Com_Port->Send_to_Bt(6);
-            //Com_Port.~Bluetooth_Serial_comm();
+
         }
         else
         {
@@ -106,7 +116,6 @@ bool autonom(Bluetooth_Serial_comm* Com_Port)
     int test;
 
     float yt;
-
 
     //Initiering av variabler
     sf::RenderWindow* myWindow = new sf::RenderWindow(sf::VideoMode(800,600), "Who let the robot out?");
@@ -142,7 +151,7 @@ cirkle.setFillColor(sf::Color::Red);
     float y5 = 0;
     int windows_passed = 0;
 
-    char room[29][15];
+    char room[31][17];
 
 
 /****************Kartritande variabler *********************/
@@ -153,29 +162,30 @@ robotposition.setOutlineColor(sf::Color::White);
 robotposition.setFillColor(sf::Color::Magenta);
 robotposition.setOutlineThickness(1); // och tjockleken.
 
+/*
 sf::RectangleShape wall;
 wall.setSize(sf::Vector2f(20, 20));
 wall.setOutlineColor(sf::Color::White);
 wall.setFillColor(sf::Color::Black);
-wall.setOutlineThickness(1);
+wallsetOutlineThickness(1);
 
-sf::RectangleShape fire;
-fire.setSize(sf::Vector2f(20,20));
-fire.setOutlineColor(sf::Color::White);
-fire.setFillColor(sf::Color::Red);
-fire.setOutlineThickness(1);
-
-sf::RectangleShape searched_area;
-searched_area.setSize(sf::Vector2f(20, 20));
-searched_area.setOutlineColor(sf::Color::Black);
-searched_area.setFillColor(sf::Color::White);
-searched_area.setOutlineThickness(1);
-
-int myposX;
-int myposY;;
+sf::RectangleShape* fire;
+fire->setSize(sf::Vector2f(20,20));
+fire->setOutlineColor(sf::Color::White);
+fire->setFillColor(sf::Color::Red);
+fire->setOutlineThickness(1);
+/*
+sf::RectangleShape* searched_area;
+searched_area->setSize(sf::Vector2f(20, 20));
+searched_area->setOutlineColor(sf::Color::Black);
+searched_area->setFillColor(sf::Color::White);
+searched_area->setOutlineThickness(1);
+*/
+int myposX = 15;
+int myposY = 0;
 int x2;
 int y;
-int type;
+int type = 0;
 
 bool isRFID = false;
 
@@ -185,12 +195,26 @@ bool isRFID = false;
 
 
    // while (myWindow->isOpen())
-   while(remote == false)
+
+
+   while(remote == false and myWindow->isOpen())
     {
         if(sf::Keyboard::isKeyPressed(sf::Keyboard::L))
         {
             remote = true;
             myWindow->close();
+        }
+        if(sf::Keyboard::isKeyPressed(sf::Keyboard::R))
+        {
+            for(int i = 0; i < 31; i++)
+            {
+                for(int j = 0; j < 17; j++)
+                    {
+                    room[i][j] = 0;
+                    }
+            }
+            myposX = 16;
+            myposY = 1;
         }
 
         test = Com_Port->Read_from_BT();
@@ -272,7 +296,7 @@ bool isRFID = false;
             {
                 test = Com_Port->Read_from_BT();
                  cout << "x: "<< test << " ";
-                 myposX = test;
+                 myposX = test + 1;
             }
             else if(test == 10)
             {
@@ -284,7 +308,7 @@ bool isRFID = false;
             {
                 test = Com_Port->Read_from_BT();
                   cout << "y: "<< test << "\n";
-                  myposY = test;
+                  myposY = test + 1;
             }
             else
             {
@@ -311,7 +335,7 @@ bool isRFID = false;
 
         }
         x = round(myClock.getElapsedTime().asSeconds()*40);
-        windows_passed = floor(x/370);
+       windows_passed = floor(x/370);
 
 
 /********************************************************/
@@ -319,7 +343,6 @@ bool isRFID = false;
 myWindow->clear();
 
             myWindow->draw(bgSprite);
-
 
         /*****************Fram********************/
         cirkle.setPosition(755,395 - (y1*2));
@@ -343,11 +366,14 @@ myWindow->clear();
 /*************************************************/
 
 room[myposX][myposY] = type;
-Drawmap(myWindow,room,&fire,&robotposition,&wall);
 
+Drawmap(myWindow,room,&robotposition);//,fire,robotposition,wall);
 
         myWindow->display();
-
+        if(type != 4)
+        {
+            room[myposX][myposY] = 5;
+        }
         if(fmod(x,370) <= 1)
         {
           //  myWindow->clear();
@@ -368,7 +394,7 @@ int main()
 {
 
     Bluetooth_Serial_comm Com_Port;
-    bool remote = false;
+    bool remote = true;
 
 
     if(remote == true)
