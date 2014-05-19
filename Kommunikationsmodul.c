@@ -56,6 +56,23 @@ void USARTInit(unsigned int ubrr_value)
 
 	/* */
 }
+void USARTInit2(unsigned int ubrr_value)
+{
+	//sätter en baud rate
+	UBRR0H = (unsigned char)(ubrr_value>>8);
+	UBRR0L = (unsigned char)ubrr_value;
+
+	/*sätt frame format till 8 databitar och 1 stoppbit*/
+	UCSR0C=(0<<USBS0)|(3<<UCSZ00);
+
+	//UCSR0A =(1<<U2X0);
+
+
+	/* Tillåt reciever och transmitter kl*/
+	UCSR0B=(1<<RXEN0)|(1<<TXEN0); //|(1<<RXCIE0);
+
+	/* */
+}
 
 unsigned char USART_Recive(void)
 {
@@ -121,56 +138,56 @@ void SendStoredVal()
 {
 
 
-		for(int i = 0; i < 11; i++)
+	for(int i = 0; i < 11; i++)
+	{
+		if(i == 0)
 		{
-			if(i == 0)
-			{
-				USARTWriteChar(front);
-			}
-			else if (i == 1)
-			{
-				USARTWriteChar(rightfront);
-			}
-			else if (i == 2)
-			{
-				USARTWriteChar(rightback);
-			}
-			else if (i == 3)
-			{
-				USARTWriteChar(leftfront);
-			}
-			else if (i == 4)
-			{
-				USARTWriteChar(leftback);
-			}
-			else if (i == 5)
-			{
-				USARTWriteChar(traveldist);
-				//Distance = 0;
-			}
-			else if (i == 6)
-			{
-				USARTWriteChar(gyro);
-				//sendGyro = 0;
-			}
-			else if (i == 7)
-			{
-				USARTWriteChar(RFID);
-			}
-			else if (i == 8)
-			{
-				USARTWriteChar(direction);// behöver förmodligen inte göra något här
-			}
-			else if (i == 9)
-			{
-				USARTWriteChar(leftspeed);// behöver förmodligen inte göra något här
-			}
-			else if (i == 10)
-			{
-				USARTWriteChar(rightspeed);// behöver förmodligen inte göra något här
-			}
-			USARTWriteChar(storedValues[i]);
+			USARTWriteChar(front);
 		}
+		else if (i == 1)
+		{
+			USARTWriteChar(rightfront);
+		}
+		else if (i == 2)
+		{
+			USARTWriteChar(rightback);
+		}
+		else if (i == 3)
+		{
+			USARTWriteChar(leftfront);
+		}
+		else if (i == 4)
+		{
+			USARTWriteChar(leftback);
+		}
+		else if (i == 5)
+		{
+			USARTWriteChar(traveldist);
+			//Distance = 0;
+		}
+		else if (i == 6)
+		{
+			USARTWriteChar(gyro);
+			//sendGyro = 0;
+		}
+		else if (i == 7)
+		{
+			USARTWriteChar(RFID);
+		}
+		else if (i == 8)
+		{
+			USARTWriteChar(direction);// behöver förmodligen inte göra något här
+		}
+		else if (i == 9)
+		{
+			USARTWriteChar(leftspeed);// behöver förmodligen inte göra något här
+		}
+		else if (i == 10)
+		{
+			USARTWriteChar(rightspeed);// behöver förmodligen inte göra något här
+		}
+		USARTWriteChar(storedValues[i]);
+	}
 
 }
 
@@ -181,94 +198,86 @@ int main(void)
 {
 	// char data;
 	unsigned char data;
-	if(PIND6 == 1)
+	char select = PIND & 0b01000000;
+	if(select == 0b01000000)
 	{
-		remote == true;
+		cli();
+		DDRB = 0b00000111;
+		USARTInit2(3);
+		remote = true;
 	}
 	else
 	{
-		
-	remote = false;
+		USARTInit(8);
+		SlaveInit();
+		sei();
+		remote = false;
 	}
 	
 	while(1)
 	{
-		cli();
-		DDRB |= 0b00000111;
-		USARTInit(3);
-		UCSR0A =(0<<U2X0);
+		
 		while(remote)
 		{
 
 			data = USART_Recive();
+								
+			PORTB = data;
+			/*
 			PORTB &= 0b01000000;
 			PORTB |= data;
 
 			//USART_Flush();
 			//data=USART_Recive();
-			//skicka data
+			//skicka data*/
 
 		}
-		USARTInit(8);
-		SlaveInit();
-		sei();
+			
 		while(!remote)
 		{
-		/*	char ss1 = PORTB & 0b00010000;
-			while (ss1 == 0)
-			{
-				storedValues[indexvalue]=SlaveRecieve();
-				indexvalue++;
-
-				if(indexvalue > 10)
-				{
-					indexvalue = 0;
-				}
-				ss1 = PORTB & 0b00010000;
-			}*/
-		
 			if(bussComplete == true)
 			{
-			
-			SendStoredVal();
-			
-			bussComplete = false;
+				SendStoredVal();
+				
+				bussComplete = false;
+				sei();
 			}
 		}
 
 	}
 
 
-return 0;
+	return 0;
 }
 
-/*******************************INTERRUPTS*************************/
+			/*******************************INTERRUPTS*************************/
 
-ISR(SPI_STC_vect) // Answer to call from Master
-{
-	/*SPDR = 0;
-	cli();*/
-	storedValues[indexvalue] = SPDR;
-		indexvalue++;
-		senddataval++;
-	//SPDR = storedValues[indexvalue]; //Just for controll by oscilloscope
-	if(indexvalue > 10)
+			ISR(SPI_STC_vect) // Answer to call from Master
+			{
+			/*SPDR = 0;
+			cli();*/
+			storedValues[indexvalue] = SPDR;
+			indexvalue++;
+			senddataval++;
+			//SPDR = storedValues[indexvalue]; //Just for controll by oscilloscope
+			if(indexvalue > 10)
 
-		{
+			{
 			
 			indexvalue = 0;
 			
-		}
-	if(senddataval > 200)
-	{
-		bussComplete = true;
-		senddataval = 0;
-	}
+			}
+			if(senddataval > 150)
+			{
+			bussComplete = true;
+			senddataval = 0;
+			cli();
+			}
 
-	/*sei();*/
-}
-/*
-ISR(USART0_RX_vect)
-{
+			/*sei();*/
+			}
+			/*
+			ISR(USART0_RX_vect)
+			{
 
-}*/
+			}*/
