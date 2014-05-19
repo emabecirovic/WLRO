@@ -425,16 +425,16 @@ void rotateleft()
 {
 	PORTC = 0x00;
 	PORTD = 0x20;
-	OCR2B = 170;
-	OCR2A = 170;
+	OCR2B = 100;
+	OCR2A = 100;
 }
 
 void rotateright()
 {
 	PORTC = 0x01;
 	PORTD = 0x00;
-	OCR2B = 170;
-	OCR2A = 170;
+	OCR2B = 100;
+	OCR2A = 100;
 }
 
 void rotate90left()
@@ -654,37 +654,37 @@ void remotecontrol()
 		print_on_lcd(button);
 		switch(button)
 		{
-			case (0x01)://Kör framåt, W
+			case (1)://Kör framåt, W
 			PORTC = 0x01; //Sätter båda DIR till 1
 			PORTD = 0x20;
 			OCR2A = 255; //PWM vänster
 			OCR2B = 244; //PWM höger
 			break;
-			case (0x04): //Backa, S
+			case (4): //Backa, S
 			PORTC = 0x0; //Sätter båda DIR till 0
 			PORTD = 0x0;
 			OCR2A = 255;
 			OCR2B = 244;
 			break;
-			case (0x06): //Rotera vänster, Q
+			case (6): //Rotera vänster, Q
 			PORTC = 0x00; //DIR vänster till 0
 			PORTD = 0x20; //DIR höger till 1
-			OCR2A = 170;
-			OCR2B = 170;
+			OCR2A = 100;
+			OCR2B = 100;
 			break;
-			case (0x05): //Rotera höger, E
+			case (5): //Rotera höger, E
 			PORTC = 0x01;
 			PORTD = 0x00;
-			OCR2A = 170;
-			OCR2B = 170;
+			OCR2A = 100;
+			OCR2B = 100;
 			break;
-			case (0x03): //Sväng vänster, A
+			case (3): //Sväng vänster, A
 			PORTC = 0x01;
 			PORTD = 0x20;
 			OCR2A = 120;
 			OCR2B = 255;
 			break;
-			case (0x02): //Sväng höger, D
+			case (2): //Sväng höger, D
 			PORTC = 0x01;
 			PORTD = 0x20;
 			OCR2A = 255;
@@ -880,6 +880,7 @@ void firstlap()
 		onelap=1;
 		setcursor(1);
 		print_on_lcd(0xCC);
+		straight();
 		for(long i = 0; i < 160000; i ++){stopp();}
 	}
 	else
@@ -1053,25 +1054,31 @@ int main(void)
 	initiation();
 	int fjarrstyrt = (PIND & 0x01); //1 då roboten är i fjärrstyrt läge
 	initiate_timer();
-	MasterInit();
-	for(long i = 0; i < 480000; i++){}
 	initiate_request_timer();
 
 	if(fjarrstyrt==1)
 	{
-		while(1)
+		
+		for(long i = 0; i < 480000; i++){}
+		/*while(1)
 		{
 			transmit();
+			rotate90right();
+			for(long i = 0; i < 80000; i++){}
+			rotate90left();
+			for(long i = 0; i < 80000; i++){}
 			print_on_lcd(storedValues[0]);
-		}
-		//remotecontrol();
+		}*/
+		remotecontrol();
 	}
 	else
 	{
+		MasterInit();
+		for(long i = 0; i < 480000; i++){}
 		
 		while(home==0)
 		{
-
+			
 			if(posdistance > 13)  //40/2.55125)*0.9
 			{
 				updatepos();
