@@ -23,20 +23,23 @@ const char direction = 0b00001001;
 const char rightspeed = 0b00001010;
 const char leftspeed = 0b00001011;
 const char firstdone = 0b00001100;
-const char findfirstzero = 0b00001101;
-const char stop = 0x00; //Stop bit
+const char findzeroX = 0b00001101;
+const char findzeroY = 0b00001110;
+const char arraytransmit = 0b00001111;
+const char stop = 0x00; //Stop byte
 
 //Control signals
 const char turn = 3;
 const char turnstop = 4;
 const char trstraight = 5;
+const char array = 6;
 
 // Delayer för busskomm
 const int time = 200;
 char start_request = 0;
 
 // Array för värden från buss
-volatile unsigned char storedValues[11];
+volatile unsigned char storedValues[13];
 
 
 /******************REGLERING************************/

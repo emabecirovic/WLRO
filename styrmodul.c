@@ -23,7 +23,7 @@ void initiate_variables()
 	start_request = 0;
 
 	// Array för värden från buss
-	storedValues[11];
+	storedValues[13];
 
 
 	/******************REGLERING************************/
@@ -376,11 +376,14 @@ void TransmitComm(char invalue)
 		if(invalue == findfirstzero)
 		{
 			dummy = SPDR;
-			MasterTransmit(findfirstzero);
+			MasterTransmit(findzeroX);
 			for(int i = 0; i < time; i++){}
+			MasterTransmit(findzeroY);
+			for(int i = 0; i < time; i++){}
+			firstzeroX = SPDR
 			MasterTransmit(stop);
 			for(int i = 0; i < time; i++){}
-			firstzero = SPDR;
+			firstzeroY = SPDR;
 		}
 		else if(invalue == firstdone)
 		{
@@ -390,13 +393,25 @@ void TransmitComm(char invalue)
 		}
 		else
 		{
+			dummy = SPDR;
+			MasterTransmit(arraytransmit);
 			for(int i = 0; i < time; i++){}
-			for(int i = 0; i < 11; i ++)
+			
+			for(int i = 0; i < 10; i ++)
 			{
 				dummy = SPDR;
 				MasterTransmit(storedValues[i]);
 				for(int i = 0; i < time; i++){}
 			}
+			
+			dummy = SPDR;
+			MasterTransmit(myposX);
+			for(int i = 0; i < time; i++){}
+			
+			dummy = SPDR;
+			MasterTransmit(myposY);
+			for(int i = 0; i < time; i++){}
+		}
 
 		PORTB ^= 0b00001000;
 		
