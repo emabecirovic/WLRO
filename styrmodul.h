@@ -1,9 +1,6 @@
 typedef int bool;
 enum{false, true};
 
-
-
-
 bool remoteControl = false; // Change to Port connected to switch
 
 /************BUSS**********************/
@@ -23,7 +20,7 @@ const char direction = 0b00001001;
 const char rightspeed = 0b00001010;
 const char leftspeed = 0b00001011;
 const char firstdone = 0b00001100;
-const char findfirstzero = 0b00001101;
+const char findzero = 0b00001101;
 const char stop = 0x00; //Stop bit
 
 //Control signals
@@ -70,6 +67,7 @@ const unsigned int startX = 15;
 const unsigned int startY = 0; //Startpositionen sätts till mitten på nedre långsidan
 volatile float posdistance = 0;
 volatile char isRFID = 0;
+volatile char n = 0; //För 13 14
 
 /*************************LCD***********************/
 
@@ -135,7 +133,7 @@ void bussdelay();
 
 void transmit();
 void TransmitSensor(char invalue);
-void TransmitComm();
+void TransmitComm(char invalue);
 
 /*******************FJÄRRSTYRNING***************/
 void remotecontrol();
@@ -177,7 +175,7 @@ void bajsfunktion();
 
 void away();
 void zigzag();
-int * findfirstzero();
+void findfirstzero();
 void driveto(unsigned int posX, unsigned int posY);
 void findempty();
 
