@@ -44,7 +44,7 @@ volatile char selection; // Används i skicka avbrottet
 
 char room[29][15];
 
-volatile unsigned char storedValues[11];
+volatile unsigned char storedValues[13];
 int indexvalue = 0;
 
 /****************KARTLÄGGNING*******************************/
@@ -57,6 +57,14 @@ volatile bool doextend = false;
 volatile bool dofindfirst = false;
 
 char room[29][15]; //=.... 0=outforskat, 1=vägg, 2=öppen yta
+
+volatile char mydirection;
+volatile char myposX;
+volatile char myposY;
+volatile char sensorfront;
+volatile char sensorleft;
+volatile char sensorright;
+float sensormeanr;
 
 
 char dummy;
@@ -208,6 +216,14 @@ void SendStoredVal()
 		{
 			USARTWriteChar(rightspeed);// behöver förmodligen inte göra något här
 		}
+		else if (i == 11)
+		{
+			USARTWriteChar(12);// behöver förmodligen inte göra något här
+		}
+		else if (i == 12)
+		{
+			USARTWriteChar(13);// behöver förmodligen inte göra något här
+		}
 		USARTWriteChar(storedValues[i]);
 	}
 
@@ -220,11 +236,13 @@ void setwall(int x,int y)
 	room[x][y]=1;
 }
 
-void updatemap() // Kan väl bara gälla för yttervarvet?
+void updatemap(char w) // Kan väl bara gälla för yttervarvet?
 {
-	char w=30; //Hur långt ifrån vi ska vara för att säga att det är en vägg.
+	//char w=30; //Hur långt ifrån vi ska vara för att säga att det är en vägg.
 
-	switch(storedValues[8])
+	sensormeanr = (sensorright + sensorleft)/2;
+
+	switch(mydirection)
 	{
 		case (1): // X+
 		if(sensormeanr<=w) //Vet inte vad som är en lämplig siffra här
@@ -239,23 +257,23 @@ void updatemap() // Kan väl bara gälla för yttervarvet?
 		{
 			setwall(myposX,myposY+1);
 		}
-		else if(sensorfront>=45 & sensorfron<=55)
+		else if((sensorfront>=45) && (sensorfront<=55))
 		{
-			setwall(myposX+2, myposY)
+			setwall(myposX+2, myposY);
 		}
-		else if(sensorfront>=85 & sensorfron<=95)
+		else if((sensorfront>=85) && (sensorfront<=95))
 		{
-			setwall(myposX+3, myposY)
-		}	
-		else if(sensorfront>=125 & sensorfron<=135)
-		{
-			setwall(myposX+4, myposY)
-		}	
-		else if(sensorfront>=165 & sensorfron<=175)
-		{
-			setwall(myposX+5, myposY)
+			setwall(myposX+3, myposY);
 		}
-		
+		else if((sensorfront>=125) && (sensorfront<=135))
+		{
+			setwall(myposX+4, myposY);
+		}
+		else if((sensorfront>=165) && (sensorfront<=175))
+		{
+			setwall(myposX+5, myposY);
+		}
+
 		if (!room[myposX-1][myposY]==(1|4))
 		{
 			room[myposX-1][myposY]=2;
@@ -275,23 +293,23 @@ void updatemap() // Kan väl bara gälla för yttervarvet?
 		{
 			setwall(myposX-1,myposY);
 		}
-		else if(sensorfront>=45 & sensorfron<=55)
+		else if((sensorfront>=45) && (sensorfront<=55))
 		{
-			setwall(myposX, myposY+2)
+			setwall(myposX, myposY+2);
 		}
-		else if(sensorfront>=85 & sensorfron<=95)
+		else if((sensorfront>=85) && (sensorfront<=95))
 		{
-			setwall(myposX, myposY+3)
-		}	
-		else if(sensorfront>=125 & sensorfron<=135)
-		{
-			setwall(myposX, myposY+4)
-		}	
-		else if(sensorfront>=165 & sensorfron<=175)
-		{
-			setwall(myposX, myposY+5)
+			setwall(myposX, myposY+3);
 		}
-		
+		else if((sensorfront>=125) && (sensorfront<=135))
+		{
+			setwall(myposX, myposY+4);
+		}
+		else if((sensorfront>=165) && (sensorfront<=175))
+		{
+			setwall(myposX, myposY+5);
+		}
+
 		if (!room[myposX][myposY-1]==(1|4))
 		{
 			room[myposX][myposY-1]=2;
@@ -311,21 +329,21 @@ void updatemap() // Kan väl bara gälla för yttervarvet?
 		{
 			setwall(myposX,myposY-1);
 		}
-		else if(sensorfront>=45 & sensorfron<=55)
+		else if((sensorfront>=45) && (sensorfront<=55))
 		{
-			setwall(myposX-2, myposY)
+			setwall(myposX-2, myposY);
 		}
-		else if(sensorfront>=85 & sensorfron<=95)
+		else if((sensorfront>=85) && (sensorfront<=95))
 		{
-			setwall(myposX-3, myposY)
-		}	
-		else if(sensorfront>=125 & sensorfron<=135)
+			setwall(myposX-3, myposY);
+		}
+		else if((sensorfront>=125) && (sensorfront<=135))
 		{
-			setwall(myposX-4, myposY)
-		}	
-		else if(sensorfront>=165 & sensorfron<=175)
+			setwall(myposX-4, myposY);
+		}
+		else if((sensorfront>=165) && (sensorfront<=175))
 		{
-			setwall(myposX-5, myposY)
+			setwall(myposX-5, myposY);
 		}
 
 		if (!room[myposX+1][myposY]==(1|4))
@@ -347,23 +365,23 @@ void updatemap() // Kan väl bara gälla för yttervarvet?
 		{
 			setwall(myposX+1,myposY);
 		}
-		else if(sensorfront>=45 & sensorfron<=55)
+		else if((sensorfront>=45) && (sensorfront<=55))
 		{
-			setwall(myposX, myposY-2)
+			setwall(myposX, myposY-2);
 		}
-		else if(sensorfront>=85 & sensorfron<=95)
+		else if((sensorfront>=85) && (sensorfront<=95))
 		{
-			setwall(myposX, myposY-3)
-		}	
-		else if(sensorfront>=125 & sensorfron<=135)
-		{
-			setwall(myposX, myposY-4)
-		}	
-		else if(sensorfront>=165 & sensorfron<=175)
-		{
-			setwall(myposX, myposY-5)
+			setwall(myposX, myposY-3);
 		}
-		
+		else if((sensorfront>=125) && (sensorfront<=135))
+		{
+			setwall(myposX, myposY-4);
+		}
+		else if((sensorfront>=165) && (sensorfront<=175))
+		{
+			setwall(myposX, myposY-5);
+		}
+
 		if (!room[myposX][myposY+1]==(1|4))
 		{
 			room[myposX][myposY+1]=2;
@@ -518,8 +536,8 @@ int main(void)
 			myposY = storedValues[12];
 			
 			
-			updatemap();
-			firstzero = findfirstzero();
+			updatemap(30);
+			findfirstzero();
 			
 			if(bussComplete == true)
 			{
