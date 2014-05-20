@@ -371,10 +371,10 @@ void TransmitComm(char invalue)
 			for(int i = 0; i < time; i++){}
 			MasterTransmit(findzeroY);
 			for(int i = 0; i < time; i++){}
-			firstzeroX = SPDR
+			findzeroX = SPDR;
 			MasterTransmit(stop);
 			for(int i = 0; i < time; i++){}
-			firstzeroY = SPDR;
+			findzeroY = SPDR;
 		}
 		else if(invalue == firstdone)
 		{
@@ -407,9 +407,9 @@ void TransmitComm(char invalue)
 			PORTB ^= 0b00001000;
 			
 			TCCR0B = 0b00000101; // Start timer
-		}
 	}
 }
+
 
 
 /***********************************FJÄRRSTYRNING*****************************/
