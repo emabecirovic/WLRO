@@ -543,7 +543,7 @@ void rotate90left()
 	storedValues[6] = 0;
 	while(turnisDone == 0)
 	{
-		start = 1;
+		start_request = 1;
 		TransmitSensor(turn);
 		if (storedValues[6] != 1)
 		{
@@ -567,7 +567,11 @@ void rotate90left()
 		mydirection += 1;
 	}
 	turnisDone = 0;
-	for(long i = 0; i < 80000; i ++){stopp();}
+	for(long i = 0; i < 80000; i ++)
+	{
+		stopp();
+	}
+	n = 0;
 }
 
 void rotate90right()
@@ -598,7 +602,11 @@ void rotate90right()
 		mydirection -= 1;
 	}
 	turnisDone = 0;
-	for(long i = 0; i < 80000; i ++){stopp();}
+	for(long i = 0; i < 80000; i ++)
+	{
+		stopp();
+	}
+	n = 0;
 }
 
 void temporary90right()
@@ -652,7 +660,7 @@ void straight()
 	sensor2r = sidesensor(storedValues[2]);
 
 
-	while (fabs(sensor1r - sensor2r) > 2)
+	while (fabs(sensor1r - sensor2r) > 0.8)
 	{
 		if((sensor1r - sensor2r) > 0.8)
 		{
@@ -757,7 +765,7 @@ void regulateright()
 	else
 	{
 		//till PD-reglering
-		Td = 90000000; //128000000
+		Td = 85000000; //128000000
 		K = 2;
 		if(sensorfront < 50)
 		{
@@ -793,7 +801,7 @@ void regulateright()
 		}
 		else if(((sensor1r - sensor2r) < 15) && ((sensor2r - sensor1r) < 15))
 		{
-			if (fabs(sensor1r - sensor2r) > 4)
+			if (fabs(sensor1r - sensor2r) > 10)
 			{
 				straight();
 			}
@@ -806,8 +814,8 @@ void regulateright()
 				overflow = 0;
 				PORTC = 0x01;
 				PORTD = 0x20;
-				rightpwm = speed + K * (15 - sensormeanr + Td * (sensormeanr_old - sensormeanr) / dt);
-				leftpwm = speed - K * (15 - sensormeanr + Td * (sensormeanr_old - sensormeanr) / dt);
+				rightpwm = speed + K * (18 - sensormeanr + Td * (sensormeanr_old - sensormeanr) / dt);
+				leftpwm = speed - K * (18 - sensormeanr + Td * (sensormeanr_old - sensormeanr) / dt);
 
 				if (rightpwm > 255)
 				{
@@ -879,7 +887,10 @@ void firstlap()
 		setcursor(1);
 		print_on_lcd(0xCC);
 		straight();
-		for(long i = 0; i < 160000; i ++){stopp();}
+		for(long i = 0; i < 160000; i ++)
+		{
+			stopp();
+		}
 	}
 	else
 	{
@@ -910,6 +921,7 @@ void away() // Få roboten från väggen
 	if(sensorleft < 20) // Vägg till vänster
 	{
 		regulateright();
+		transmit();
 		sensorleft = sidesensor(storedValues[3]);
 		if(sensorleft > 20)
 		{
@@ -920,7 +932,7 @@ void away() // Få roboten från väggen
 	else if(getinpos)
 	{
 		drive(20);
-		updatepos();
+		updatepos();	
 		getinpos = false;
 	}
 	else
@@ -934,6 +946,7 @@ void away() // Få roboten från väggen
 		updatepos();
 
 		rotate90right();
+		//straight();
 
 		awaydone = true;
 	}
@@ -1269,11 +1282,26 @@ int main(void)
 		
 		while(home == 0)
 		{
-			
-			if(posdistance > 13 + n)  //40/2.55125)*0.9
+			char i = 0;
+			if(n != 2)
+			{
+				i = 0;
+			}
+			else
+			{
+				i = 1;
+			}
+			if(posdistance > 13 + i)  //40/2.55125)*0.9
 			{
 				updatepos();
-				n = n && 0b11111110; //Robert sluta undra bättre än if.
+				if(n != 2)
+				{
+					n = n + 1;
+				}
+				else
+				{
+					n = 0;
+				}
 			}
 			
 			setcursor(1);
