@@ -374,7 +374,7 @@ void TransmitComm(char invalue)
 		}
 		else if(invalue == firstdone)
 		{
-			dummy = SPDR; 
+			dummy = SPDR;
 			MasterTransmit(firstdone);
 			for(int i = 0; i < time; i++){}
 		}
@@ -388,9 +388,10 @@ void TransmitComm(char invalue)
 				for(int i = 0; i < time; i++){}
 			}
 
-		PORTB ^= 0b00001000;
-		
-		TCCR0B = 0b00000101; // Start timer
+			PORTB ^= 0b00001000;
+			
+			TCCR0B = 0b00000101; // Start timer
+		}
 	}
 }
 
@@ -1056,18 +1057,18 @@ void driveto(unsigned int posX, unsigned int posY)
 	if(myposX == posX  && myposY  == posY) // Jämför koordinaterna roboten står på med positionen vi vill åka till
 	{
 		
-	}	
+	}
 	else if(myposX >= posX && myposY <= posY) //Fjärde kvadranten, tänk önskad position som origo
 	{
 		switch(mydirection)
 		{
 			case(1): // X+
 			rotate90left();
-			break;			
+			break;
 			case(2): // Y+
 			if(sensorfront > 50) // Ingen vägg framför
 			{
-				driveF(); 
+				driveF();
 			}
 			else if((posY - myposY) == 1) // Om vi står endast en ruta ifrån önskad position
 			{
@@ -1097,7 +1098,7 @@ void driveto(unsigned int posX, unsigned int posY)
 			case(1): // X+
 			if(sensorfront > 50)
 			{
-				driveF();	
+				driveF();
 			}
 			else if((posX - myposX) == 1)
 			{
@@ -1108,7 +1109,7 @@ void driveto(unsigned int posX, unsigned int posY)
 			case(2): //Y+
 			if(sensorfront > 50)
 			{
-				driveF();	
+				driveF();
 			}
 			else if((posY - myposY) == 1)
 			{
@@ -1131,7 +1132,7 @@ void driveto(unsigned int posX, unsigned int posY)
 			case(1): // X+
 			if(sensorfront > 50)
 			{
-				driveF();	
+				driveF();
 			}
 			else if((posX - myposX == 1))
 			{
@@ -1140,8 +1141,8 @@ void driveto(unsigned int posX, unsigned int posY)
 			}
 			/*else
 			{
-				drive(40);
-				rotate90right();
+			drive(40);
+			rotate90right();
 			}*/
 			break;
 			case(2): // Y+
@@ -1174,11 +1175,11 @@ void driveto(unsigned int posX, unsigned int posY)
 			rotate90left();
 			break;
 			case(3): // X-
-			if(sensorfront > 50) 
+			if(sensorfront > 50)
 			{
 				driveF();
 			}
-			else if((myposX - posX) == 1) 
+			else if((myposX - posX) == 1)
 			{
 				drive(40);
 				rotate90right();
@@ -1187,13 +1188,13 @@ void driveto(unsigned int posX, unsigned int posY)
 			case(4): // Y-
 			if(sensorfront > 50)
 			{
-				driveF();	
+				driveF();
 			}
 			else if((myposY - posY) == 1)
 			{
-				drive(40);	
+				drive(40);
 			}
-			break;	
+			break;
 		}
 	}
 }
@@ -1217,33 +1218,33 @@ void returntostart()
 
 	if(mydirection == 4) //4=negativ y-led. x+,y+,x-,y- = 1,2,3,4
 	{
-		while(sensorfront>50)
-		{
-			driveF();
-			//Kör rakt fram
-			PORTC = 0x01;
-			PORTD = 0x40;
-			OCR2A = 180;
-			OCR1A = 180;
-		}
-		if(myposX < startpos[0]) //Om ingången är till höger om roboten
-		{
-			while(myposX < startpos[0])
-			{
-				regulateright();
-			}
-		}
-		else
-		{
-			while(myposX > startpos[0]) //Om ingången är till vänster om roboten
-			{
-				regulateright(); // REGULATE LEFT ?????
-			}
-		}
+	while(sensorfront>50)
+	{
+	driveF();
+	//Kör rakt fram
+	PORTC = 0x01;
+	PORTD = 0x40;
+	OCR2A = 180;
+	OCR1A = 180;
+	}
+	if(myposX < startpos[0]) //Om ingången är till höger om roboten
+	{
+	while(myposX < startpos[0])
+	{
+	regulateright();
+	}
 	}
 	else
 	{
-		temporary90left();  //Rotera 90 grader om vi står i fel riktning
+	while(myposX > startpos[0]) //Om ingången är till vänster om roboten
+	{
+	regulateright(); // REGULATE LEFT ?????
+	}
+	}
+	}
+	else
+	{
+	temporary90left();  //Rotera 90 grader om vi står i fel riktning
 	}*/
 }
 
@@ -1289,7 +1290,7 @@ int main(void)
 			}
 			else if(!zigzagdone)
 			{
-				zigzag();				
+				zigzag();
 				print_on_lcd(0xBB);
 			}
 			/*else if(!findemptydone)
