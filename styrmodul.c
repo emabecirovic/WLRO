@@ -469,7 +469,7 @@ void remotecontrol()
 
 void updatepos()
 {
-
+	
 	start = 0;
 	asm("");
 	switch(mydirection)
@@ -1270,9 +1270,10 @@ int main(void)
 		while(home == 0)
 		{
 			
-			if(posdistance > 13)  //40/2.55125)*0.9
+			if(posdistance > 13 + n)  //40/2.55125)*0.9
 			{
 				updatepos();
+				n = n && 0b11111110; //Robert sluta undra bättre än if.
 			}
 			
 			setcursor(1);
