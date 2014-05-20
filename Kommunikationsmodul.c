@@ -31,7 +31,11 @@ char RFID = 0b00001000;
 char direction = 0b00001001;
 char rightspeed = 0b00001010;
 char leftspeed = 0b00001011;
+const char firstdone = 0b00001100;
+const char findzero = 0b00001101;
 char stop = 0x00; //Stopbyte
+volatile char selection; // Används i skicka avbrottet
+
 char room[29][15];
 
 volatile unsigned char storedValues[11] = {11,12,13,14};
@@ -40,7 +44,11 @@ int indexvalue = 0;
 /****************KARTLÄGGNING*******************************/
 bool drivetoY = true; // Y-led är prioriterad riktining om sant i driveto
 
-int firstzero; //Första nollan om man läser matrisen uppifrån och ned
+int firstzeroX; //Första nollan om man läser matrisen uppifrån och ned
+int firstzeroY;
+
+volatile bool doextend = false;
+volatile bool dofindfirst = false;
 
 char room[29][15]; //=.... 0=outforskat, 1=vägg, 2=öppen yta
 
@@ -210,7 +218,7 @@ void updatemap() // Kan väl bara gälla för yttervarvet?
 {
 	char w=30; //Hur långt ifrån vi ska vara för att säga att det är en vägg.
 
-	switch(mydirection)
+	switch(storedValues[8])
 	{
 		case (1): // X+
 		if(sensormeanr<=w) //Vet inte vad som är en lämplig siffra här
@@ -424,9 +432,9 @@ void extended_wall()
 }
 
 /******************GE POSITIONEN FÖR ICKE SÖKT RUTA*********************/
-int * findfirstzero()
+void findfirstzero()
 {
-	static int firstzero[2]={15,0};
+	int firstzero[2]={15,0};
 
 	for(int j=0;j<=17;j++)
 	{
@@ -439,7 +447,10 @@ int * findfirstzero()
 			}
 		}
 	}
-	return firstzero;
+	
+	firstzeroX = firstzero[0];
+	firstzeroY = firstzero[1];
+	
 }
 
 
@@ -486,8 +497,14 @@ int main(void)
 			
 		while(!remote)
 		{
-		
+			if(doextend)
+			{
+					doextend = false;
+					extended_wall();
+			}
+			
 			updatemap();
+			firstzero = findfirstzero();
 			
 			if(bussComplete == true)
 			{
@@ -504,34 +521,45 @@ int main(void)
 	return 0;
 }
 
+
 			/*******************************INTERRUPTS*************************/
 
 			ISR(SPI_STC_vect) // Answer to call from Master
 			{
-			/*SPDR = 0;
-			cli();*/
-			storedValues[indexvalue] = SPDR;
-			indexvalue++;
-			senddataval++;
-			//SPDR = storedValues[indexvalue]; //Just for controll by oscilloscope
-			if(indexvalue > 10)
+				selection = SPDR;
+				
+				if(selection == firstdone)
+				{
+					doextend = true;
+				}
+				else if(selection == findfirstzero)
+				{
+					dofindfirst = true;
+				}
+				else
+				{
+					storedValues[indexvalue] = selection;
+					indexvalue++;
+					senddataval++;
+					if(indexvalue > 10)
+					{
+					
+					indexvalue = 0;
+					
+					}
+					if(senddataval > 150)
+					{
+					bussComplete = true;
+					senddataval = 0;
+					cli();
+					}
 
-			{
-			
-			indexvalue = 0;
-			
-			}
-			if(senddataval > 150)
-			{
-			bussComplete = true;
-			senddataval = 0;
-			cli();
-			}
-
-			/*sei();*/
+				/*sei();*/
+				}
 			}
 			/*
 			ISR(USART0_RX_vect)
 			{
 
 			}*/
+
