@@ -61,10 +61,9 @@ char room[31][17]; //=.... 0=outforskat, 1=vägg, 2=öppen yta
 volatile char mydirection;
 volatile char myposX;
 volatile char myposY;
-volatile char sensorfront;
-volatile char sensorleft;
-volatile char sensorright;
-float sensormeanr;
+float sensorfront;
+float sensorleft;
+float sensorright;
 
 
 char dummy;
@@ -241,13 +240,11 @@ void setwall(int x,int y)
 void updatemap(char w) // Kan väl bara gälla för yttervarvet?
 {
 	//char w=30; //Hur långt ifrån vi ska vara för att säga att det är en vägg.
-
-	sensormeanr = (sensorright + sensorleft)/2;
-
+	
 	switch(mydirection)
 	{
 		case (1): // X+
-		if(sensormeanr<=w) //Vet inte vad som är en lämplig siffra här
+		if(sensorright<=w) //Vet inte vad som är en lämplig siffra här
 		{
 			setwall(myposX,myposY-1);
 		}
@@ -283,7 +280,7 @@ void updatemap(char w) // Kan väl bara gälla för yttervarvet?
 		break;
 
 		case (2): // Y+
-		if(sensormeanr<=w)
+		if(sensorright<=w)
 		{
 			setwall(myposX+1,myposY);
 		}
@@ -319,7 +316,7 @@ void updatemap(char w) // Kan väl bara gälla för yttervarvet?
 		break;
 
 		case (3): // X-
-		if(sensormeanr<=w)
+		if(sensorright<=w)
 		{
 			setwall(myposX,myposY+1);
 		}
@@ -348,14 +345,14 @@ void updatemap(char w) // Kan väl bara gälla för yttervarvet?
 			setwall(myposX-5, myposY);
 		}
 
-		if (!((room[myposX][myposY-1]) || (room[myposX][myposY-1])))
+		if (!((room[myposX][myposY-1]) || (room[myposX][myposY-1] == 4)))
 		{
 			room[myposX+1][myposY]=2;
 		}
 		break;
 
 		case (4): // Y-
-		if(sensormeanr<=w)
+		if(sensorright<=w)
 		{
 			setwall(myposX-1,myposY);
 		}
@@ -384,7 +381,7 @@ void updatemap(char w) // Kan väl bara gälla för yttervarvet?
 			setwall(myposX, myposY-5);
 		}
 
-		if (!((room[myposX][myposY-1] == 1) || (room[myposX][myposY-1])))
+		if (!((room[myposX][myposY-1] == 1) || (room[myposX][myposY-1] == 4)))
 		{
 			room[myposX][myposY+1]=2;
 		}
@@ -413,11 +410,7 @@ void extended_wall()
 			}
 		}
 	}
-	sendmap();
-	for(int i = 0;i < 160000;i++)
-	{
-		
-	}
+
 	for(int i = 0; i < 31; i++ )
 	{
 		for(int j = 0; j < 17; j++)
@@ -432,11 +425,7 @@ void extended_wall()
 			}
 		}
 	}
-	sendmap();
-	for(int i = 0;i < 160000;i++)
-	{
-		
-	}
+	
 	for(int j = 0; j < 17; j++ )
 	{
 		for(int i = 30; i >= 0; i--)
@@ -451,11 +440,7 @@ void extended_wall()
 			}
 		}
 	}
-	sendmap();
-	for(int i = 0;i < 160000;i++)
-	{
-		
-	}
+	
 	for(int i = 0; i < 29; i++ )
 	{
 		for(int j = 16; j >= 0; j--)
@@ -508,6 +493,25 @@ void sendmap()
 	sei();
 }
 
+float sidesensor(unsigned char sensorvalue)
+{
+	float value = sensorvalue;
+	value = 1 / value;
+	value = value - 0.000741938763948;
+	value = value / 0.001637008132828;
+
+	return value;
+}
+
+float frontsensor(unsigned char sensorvalue)
+{
+	float value = sensorvalue;
+	value = 1 / value;
+	value = value - 0.001086689563586;
+	value = value / 0.000191822821525;
+
+	return value;
+}
 
 int main(void)
 {
@@ -527,10 +531,6 @@ int main(void)
 		SlaveInit();
 		sei();
 		remote = false;
-	}
-	sendmap();
-	for(int i = 0; i < 160000; i++)
-	{		
 	}
 	while(1)
 	{
@@ -558,12 +558,10 @@ int main(void)
 				cli();
 					doextend = false;
 					sendmap();
-					sendmap();
 					for(int i = 0;i < 160000;i++)
 					{
 						
 					}
-					updatemap();
 					extended_wall();
 					findfirstzero();
 					USARTWriteChar(6);
@@ -579,9 +577,9 @@ int main(void)
 					sei();
 			}
 			
-			sensorfront = storedValues[0];
-			sensorright = storedValues[1];
-			sensorleft = storedValues[3];
+			sensorfront = frontsensor(storedValues[0]);
+			sensorright = sidesensor(storedValues[1]);
+			sensorleft = sidesensor(storedValues[3]);
 			mydirection = storedValues[8];
 			
 			myposX = storedValues[11];
