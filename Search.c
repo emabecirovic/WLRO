@@ -199,22 +199,22 @@ void TransmitSensor(char invalue)
 
 void TransmitComm()
 {
-		if(start_request == 1)
+	if(start_request == 1)
 	{
 		start_request = 0;
-	PORTB &= 0b11110111; // ss1 low
+		PORTB &= 0b11110111; // ss1 low
 
-	bussdelay();
-	for(int i = 0; i < 11; i ++)
-	{
-		dummy = SPDR; // Dummy läsning för att cleara SPIF
-		MasterTransmit(storedValues[i]);
 		bussdelay();
-	}
+		for(int i = 0; i < 11; i ++)
+		{
+			firstzero = SPDR; // Dummy läsning för att cleara SPIF
+			MasterTransmit(storedValues[i]);
+			bussdelay();
+		}
 
 	PORTB ^= 0b00001000; // ss1 low
 	
-		TCCR0B = 0b00000101; // Start timer
+	TCCR0B = 0b00000101; // Start timer
 	}
 }
 
