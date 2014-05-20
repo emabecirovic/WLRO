@@ -546,13 +546,14 @@ int main(void)
 				{
 					storedValues[indexvalue] = SPDR;
 					indexvalue++;
-					senddataval++;
 					
 					if(indexvalue > 12)
 					{
 						indexvalue = 0;
+						senddataval++;
+						arrayontheway = false;
 					}
-					if(senddataval > 150)
+					if(senddataval > 19)
 					{
 						bussComplete = true;
 						senddataval = 0;
