@@ -225,6 +225,23 @@ void updatemap() // Kan väl bara gälla för yttervarvet?
 		{
 			setwall(myposX,myposY+1);
 		}
+		else if(sensorfront>=45 & sensorfron<=55)
+		{
+			setwall(myposX+2, myposY)
+		}
+		else if(sensorfront>=85 & sensorfron<=95)
+		{
+			setwall(myposX+3, myposY)
+		}	
+		else if(sensorfront>=125 & sensorfron<=135)
+		{
+			setwall(myposX+4, myposY)
+		}	
+		else if(sensorfront>=165 & sensorfron<=175)
+		{
+			setwall(myposX+5, myposY)
+		}
+		
 		if (!room[myposX-1][myposY]==(1|4))
 		{
 			room[myposX-1][myposY]=2;
@@ -244,7 +261,23 @@ void updatemap() // Kan väl bara gälla för yttervarvet?
 		{
 			setwall(myposX-1,myposY);
 		}
-
+		else if(sensorfront>=45 & sensorfron<=55)
+		{
+			setwall(myposX, myposY+2)
+		}
+		else if(sensorfront>=85 & sensorfron<=95)
+		{
+			setwall(myposX, myposY+3)
+		}	
+		else if(sensorfront>=125 & sensorfron<=135)
+		{
+			setwall(myposX, myposY+4)
+		}	
+		else if(sensorfront>=165 & sensorfron<=175)
+		{
+			setwall(myposX, myposY+5)
+		}
+		
 		if (!room[myposX][myposY-1]==(1|4))
 		{
 			room[myposX][myposY-1]=2;
@@ -263,6 +296,22 @@ void updatemap() // Kan väl bara gälla för yttervarvet?
 		else if(sensorleft<w)
 		{
 			setwall(myposX,myposY-1);
+		}
+		else if(sensorfront>=45 & sensorfron<=55)
+		{
+			setwall(myposX-2, myposY)
+		}
+		else if(sensorfront>=85 & sensorfron<=95)
+		{
+			setwall(myposX-3, myposY)
+		}	
+		else if(sensorfront>=125 & sensorfron<=135)
+		{
+			setwall(myposX-4, myposY)
+		}	
+		else if(sensorfront>=165 & sensorfron<=175)
+		{
+			setwall(myposX-5, myposY)
 		}
 
 		if (!room[myposX+1][myposY]==(1|4))
@@ -284,16 +333,38 @@ void updatemap() // Kan väl bara gälla för yttervarvet?
 		{
 			setwall(myposX+1,myposY);
 		}
+		else if(sensorfront>=45 & sensorfron<=55)
+		{
+			setwall(myposX, myposY-2)
+		}
+		else if(sensorfront>=85 & sensorfron<=95)
+		{
+			setwall(myposX, myposY-3)
+		}	
+		else if(sensorfront>=125 & sensorfron<=135)
+		{
+			setwall(myposX, myposY-4)
+		}	
+		else if(sensorfront>=165 & sensorfron<=175)
+		{
+			setwall(myposX, myposY-5)
+		}
+		
 		if (!room[myposX][myposY+1]==(1|4))
 		{
 			room[myposX][myposY+1]=2;
 		}
 		break;
 	}
-	if (storedValues[7]==1)
+	if(storedValues[7]==1)
 	{
 		room[myposX][myposY]=4;
 	}
+	if(sensorfront>=45 sensorfront<=55)
+	{
+		room[myposX][myposY]
+	}
+	
 }
 
 /*********************************RITA UT FÖRLÄNGD VÄGG*************************************/
