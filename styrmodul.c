@@ -345,6 +345,22 @@ void TransmitSensor(char invalue)
 			storedValues[5] = 0;
 		}
 
+		if (isRFID == 0 && storedValues[7] == 1)
+		{
+			isRFID = 1;
+			setcursor(1);
+			storedValues[6] = 123;
+		}
+		else if (isRFID == 1 && storedValues[7] == 0)
+		{
+			isRFID = 1;
+		}
+		else if (isRFID == 0 && storedValues[7] == 0)
+		{
+			isRFID = 0;
+		}
+		
+		
 		TCCR0B = 0b00000101; // Start timer
 	}
 }
@@ -493,7 +509,16 @@ void updatepos()
 	}
 	storedValues[8] = myposX;
 	storedValues[9] = myposY;
-	storedValues[10] = 2; //Besökt ruta, gör för RFID! :D
+	if(isRFID == 1)
+	{
+		setcursor(6);
+		storedValues[10] = 4;
+		isRFID = 0;
+	}
+	else
+	{
+		storedValues[10] = 2;
+	}
 	posdistance = 0;
 }
 
