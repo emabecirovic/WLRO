@@ -360,16 +360,16 @@ void TransmitComm(char invalue)
 		if(invalue == findfirstzero)
 		{
 			dummy = SPDR;
-			MasterTransmit(find);
+			MasterTransmit(findfirstzero);
 			for(int i = 0; i < time; i++){}
 			MasterTransmit(stop);
 			for(int i = 0; i < time; i++){}
 			firstzero = SPDR;
 		}
-		else if(invalue == firstlap)
+		else if(invalue == firstdone)
 		{
 			dummy = SPDR; 
-			MasterTransmit(firstlap);
+			MasterTransmit(firstdone);
 			for(int i = 0; i < time; i++){}
 		}
 		else

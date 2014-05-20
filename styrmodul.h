@@ -22,11 +22,11 @@ const char RFID = 0b00001000;
 const char direction = 0b00001001;
 const char rightspeed = 0b00001010;
 const char leftspeed = 0b00001011;
+const char firstdone = 0b00001100;
+const char findfirstzero = 0b00001101;
 const char stop = 0x00; //Stop bit
 
 //Control signals
-const char right = 1;
-const char left = 2;
 const char turn = 3;
 const char turnstop = 4;
 const char trstraight = 5;
