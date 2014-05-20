@@ -351,20 +351,36 @@ void TransmitSensor(char invalue)
 
 
 
-void TransmitComm()
+void TransmitComm(char invalue)
 {
-	if(start_request == 0)
+	if(start_request == 1)
 	{
 		PORTB &= 0b11110111;
 		
-
-		for(int i = 0; i < time; i++){}
-		for(int i = 0; i < 11; i ++)
+		if(invalue == findfirstzero)
 		{
 			dummy = SPDR;
-			MasterTransmit(storedValues[i]);
+			MasterTransmit(find);
+			for(int i = 0; i < time; i++){}
+			MasterTransmit(stop);
+			for(int i = 0; i < time; i++){}
+			firstzero = SPDR;
+		}
+		else if(invalue == firstlap)
+		{
+			dummy = SPDR; 
+			MasterTransmit(firstlap);
 			for(int i = 0; i < time; i++){}
 		}
+		else
+		{
+			for(int i = 0; i < time; i++){}
+			for(int i = 0; i < 11; i ++)
+			{
+				dummy = SPDR;
+				MasterTransmit(storedValues[i]);
+				for(int i = 0; i < time; i++){}
+			}
 
 		PORTB ^= 0b00001000;
 		
