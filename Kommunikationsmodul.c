@@ -42,7 +42,7 @@ const char arraytransmit = 0b00001111;
 const char stop = 0x00; //Stopbyte
 volatile char selection; // Används i skicka avbrottet
 
-char room[29][15];
+char room[31][17];
 
 volatile unsigned char storedValues[13];
 int indexvalue = 0;
@@ -50,13 +50,13 @@ int indexvalue = 0;
 /****************KARTLÄGGNING*******************************/
 bool drivetoY = true; // Y-led är prioriterad riktining om sant i driveto
 
-int firstzeroX; //Första nollan om man läser matrisen uppifrån och ned
-int firstzeroY;
+int firstzeroX = 0; //Första nollan om man läser matrisen uppifrån och ned
+int firstzeroY = 0;
 
 volatile bool doextend = false;
 volatile bool dofindfirst = false;
 
-char room[29][15]; //=.... 0=outforskat, 1=vägg, 2=öppen yta
+char room[31][17]; //=.... 0=outforskat, 1=vägg, 2=öppen yta
 
 volatile char mydirection;
 volatile char myposX;
@@ -164,11 +164,14 @@ char SlaveRecieve(void) // Används inte just nu men....
 
 }
 
+
+
 void SendStoredVal()
 {
+ storedValues[5] = firstzeroX;
+ storedValues[6] = firstzeroY;
 
-
-	for(int i = 0; i < 11; i++)
+	for(int i = 0; i < 13; i++)
 	{
 		if(i == 0)
 		{
@@ -226,7 +229,6 @@ void SendStoredVal()
 		}
 		USARTWriteChar(storedValues[i]);
 	}
-
 }
 
 
@@ -274,7 +276,7 @@ void updatemap(char w) // Kan väl bara gälla för yttervarvet?
 			setwall(myposX+5, myposY);
 		}
 
-		if (!room[myposX-1][myposY]==(1|4))
+		if (!((room[myposX][myposY-1] == 1) || (room[myposX][myposY-1]== 4)))
 		{
 			room[myposX-1][myposY]=2;
 		}
@@ -310,7 +312,7 @@ void updatemap(char w) // Kan väl bara gälla för yttervarvet?
 			setwall(myposX, myposY+5);
 		}
 
-		if (!room[myposX][myposY-1]==(1|4))
+		if (!((room[myposX][myposY-1] == 1) || (room[myposX][myposY-1]== 4)))
 		{
 			room[myposX][myposY-1]=2;
 		}
@@ -346,7 +348,7 @@ void updatemap(char w) // Kan väl bara gälla för yttervarvet?
 			setwall(myposX-5, myposY);
 		}
 
-		if (!room[myposX+1][myposY]==(1|4))
+		if (!((room[myposX][myposY-1]) || (room[myposX][myposY-1])))
 		{
 			room[myposX+1][myposY]=2;
 		}
@@ -382,7 +384,7 @@ void updatemap(char w) // Kan väl bara gälla för yttervarvet?
 			setwall(myposX, myposY-5);
 		}
 
-		if (!room[myposX][myposY+1]==(1|4))
+		if (!((room[myposX][myposY-1] == 1) || (room[myposX][myposY-1])))
 		{
 			room[myposX][myposY+1]=2;
 		}
@@ -397,55 +399,70 @@ void updatemap(char w) // Kan väl bara gälla för yttervarvet?
 /*********************************RITA UT FÖRLÄNGD VÄGG*************************************/
 void extended_wall()
 {
-	for(int j = 0; j < 15; j++ )
+	for(int j = 0; j < 17; j++ )
 	{
-		for(int i = 0; i < 29; i++)
+		for(int i = 0; i < 31; i++)
 		{
-			if(room[i][j] == (1 | 2))
+			if((room[i][j] == 1) || (room[i][j] == 2))
 			{
-				i = 29;
+				break;
 			}
 			else
 			{
 				room[i][j] = 1;
 			}
 		}
+	}
+	sendmap();
+	for(int i = 0;i < 160000;i++)
+	{
+		
+	}
+	for(int i = 0; i < 31; i++ )
+	{
+		for(int j = 0; j < 17; j++)
+		{
+			if((room[i][j] == 1) || (room[i][j] == 2))
+			{
+				break;
+			}
+			else
+			{
+				room[i][j] = 1;
+			}
+		}
+	}
+	sendmap();
+	for(int i = 0;i < 160000;i++)
+	{
+		
+	}
+	for(int j = 0; j < 17; j++ )
+	{
+		for(int i = 30; i >= 0; i--)
+		{
+			if((room[i][j] == 1) || (room[i][j] == 2))
+			{
+				break;
+			}
+			else
+			{
+				room[i][j] = 1;
+			}
+		}
+	}
+	sendmap();
+	for(int i = 0;i < 160000;i++)
+	{
+		
 	}
 	for(int i = 0; i < 29; i++ )
 	{
-		for(int j = 0; j < 15; j++)
+		for(int j = 16; j >= 0; j--)
 		{
-			if(room[i][j] == (1 | 2))
+			if((room[i][j] == 1) || (room[i][j] == 2))
 			{
-				j = 15;
-			}
-			else
-			{
-				room[i][j] = 1;
-			}
-		}
-	}
-	for(int j = 0; j < 15; j++ )
-	{
-		for(int i = 28; i >= 0; i--)
-		{
-			if(room[i][j] == (1 | 2))
-			{
-				i = -1;
-			}
-			else
-			{
-				room[i][j] = 1;
-			}
-		}
-	}
-	for(int i = 0; i < 29; i++ )
-	{
-		for(int j = 14; j >= 0; i--)
-		{
-			if(room[i][j] == (1 | 2))
-			{
-				j = -1;
+				break;
 			}
 			else
 			{
@@ -458,13 +475,13 @@ void extended_wall()
 /******************GE POSITIONEN FÖR ICKE SÖKT RUTA*********************/
 void findfirstzero()
 {
-	int firstzero[2]={15,0};
+	int firstzero[2]={16,1};
 
-	for(int j=0;j<=17;j++)
+	for(int j=0;j<17;j++)
 	{
-		for(int i=0;i<=31;i++)
+		for(int i=0;i<31;i++)
 		{
-			if(room[j][i]==0)
+			if(room[i][j]==0)
 			{
 				firstzero[0]=i;
 				firstzero[1]=j;
@@ -477,7 +494,19 @@ void findfirstzero()
 	
 }
 
-
+void sendmap()
+{
+	cli();
+	USARTWriteChar(14);
+	for(int i = 0; i < 31; i++)
+	{
+	 for(int j = 0; j < 17; j++)
+	 {
+		 USARTWriteChar(room[i][j]);
+	 }	
+	}
+	sei();
+}
 
 
 int main(void)
@@ -499,7 +528,10 @@ int main(void)
 		sei();
 		remote = false;
 	}
-	
+	sendmap();
+	for(int i = 0; i < 160000; i++)
+	{		
+	}
 	while(1)
 	{
 		
@@ -523,8 +555,28 @@ int main(void)
 		{
 			if(doextend)
 			{
+				cli();
 					doextend = false;
+					sendmap();
+					sendmap();
+					for(int i = 0;i < 160000;i++)
+					{
+						
+					}
+					updatemap();
 					extended_wall();
+					findfirstzero();
+					USARTWriteChar(6);
+					USARTWriteChar(firstzeroX);
+					USARTWriteChar(7);
+					USARTWriteChar(firstzeroY);
+					sendmap();
+					for(int i = 0;i < 160000;i++)
+					{
+						
+					}
+					sendmap();
+					sei();
 			}
 			
 			sensorfront = storedValues[0];
@@ -581,7 +633,7 @@ int main(void)
 				else
 				{
 					selection = SPDR;
-					if(arraytransmit)
+					if(selection == arraytransmit)
 					{
 						arrayontheway = true;
 					}
