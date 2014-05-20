@@ -360,11 +360,6 @@ void updatemap() // Kan väl bara gälla för yttervarvet?
 	{
 		room[myposX][myposY]=4;
 	}
-	if(sensorfront>=45 sensorfront<=55)
-	{
-		room[myposX][myposY]
-	}
-	
 }
 
 /*********************************RITA UT FÖRLÄNGD VÄGG*************************************/
