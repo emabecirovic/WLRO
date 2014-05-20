@@ -17,28 +17,34 @@ enum {false, true};
 
 int senddataval = 0;
 
+volatile bool arrayontheway = false;
+
 volatile bool bussComplete = false;
+
 bool remote = false;
+
 //Lables for transmition
-char front = 0b00000001;
-char rightfront = 0b00000010;
-char rightback = 0b00000011;
-char leftfront = 0b00000100;
-char leftback = 0b00000101;
-char traveldist = 0b00000110;
-char gyro = 0b00000111;
-char RFID = 0b00001000;
-char direction = 0b00001001;
-char rightspeed = 0b00001010;
-char leftspeed = 0b00001011;
+const char front = 0b00000001;
+const char rightfront = 0b00000010;
+const char rightback = 0b00000011;
+const char leftfront = 0b00000100;
+const char leftback = 0b00000101;
+const char traveldist = 0b00000110;
+const char gyro = 0b00000111;
+const char RFID = 0b00001000;
+const char direction = 0b00001001;
+const char rightspeed = 0b00001010;
+const char leftspeed = 0b00001011;
 const char firstdone = 0b00001100;
-const char findzero = 0b00001101;
-char stop = 0x00; //Stopbyte
+const char findzeroX = 0b00001101;
+const char findzeroY = 0b00001110;
+const char arraytransmit = 0b00001111;
+const char stop = 0x00; //Stopbyte
 volatile char selection; // Används i skicka avbrottet
 
 char room[29][15];
 
-volatile unsigned char storedValues[11] = {11,12,13,14};
+volatile unsigned char storedValues[11];
 int indexvalue = 0;
 
 /****************KARTLÄGGNING*******************************/
@@ -503,6 +509,15 @@ int main(void)
 					extended_wall();
 			}
 			
+			sensorfront = storedValues[0];
+			sensorright = storedValues[1];
+			sensorleft = storedValues[3];
+			mydirection = storedValues[8];
+			
+			myposX = storedValues[11];
+			myposY = storedValues[12];
+			
+			
 			updatemap();
 			firstzero = findfirstzero();
 			
@@ -526,35 +541,48 @@ int main(void)
 
 			ISR(SPI_STC_vect) // Answer to call from Master
 			{
-				selection = SPDR;
 				
-				if(selection == firstdone)
+				if(arrayontheway)
 				{
-					doextend = true;
-				}
-				else if(selection == findfirstzero)
-				{
-					dofindfirst = true;
-				}
-				else
-				{
-					storedValues[indexvalue] = selection;
+					storedValues[indexvalue] = SPDR;
 					indexvalue++;
 					senddataval++;
-					if(indexvalue > 10)
+					
+					if(indexvalue > 12)
 					{
-					
-					indexvalue = 0;
-					
+						indexvalue = 0;
 					}
 					if(senddataval > 150)
 					{
-					bussComplete = true;
-					senddataval = 0;
-					cli();
+						bussComplete = true;
+						senddataval = 0;
+						cli();
 					}
-
-				/*sei();*/
+				}
+				else
+				{
+					selection = SPDR;
+					if(arraytransmit)
+					{
+						arrayontheway = true;
+					}
+					else if(selection == firstdone)
+					{
+						doextend = true;
+					}
+					else if(selection == findzeroX)
+					{
+						SPDR = firstzeroX;
+					}
+					else if(selection == findzeroY)
+					{
+						SPDR = firstzeroY;
+					}
+					else if(selection == stop)
+					{
+						
+					}
+					
 				}
 			}
 			/*
