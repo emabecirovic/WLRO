@@ -273,7 +273,7 @@ void updatemap(char w) // Kan väl bara gälla för yttervarvet?
 			setwall(myposX+5, myposY);
 		}
 
-		if (!((room[myposX][myposY-1] == 1) || (room[myposX][myposY-1]== 4)))
+		if (!((room[myposX-1][myposY] == 1) || (room[myposX-1][myposY]== 4)))
 		{
 			room[myposX-1][myposY]=2;
 		}
@@ -345,7 +345,7 @@ void updatemap(char w) // Kan väl bara gälla för yttervarvet?
 			setwall(myposX-5, myposY);
 		}
 
-		if (!((room[myposX][myposY-1]) || (room[myposX][myposY-1] == 4)))
+		if (!((room[myposX+1][myposY]) || (room[myposX + 1][myposY] == 4)))
 		{
 			room[myposX+1][myposY]=2;
 		}
@@ -381,7 +381,7 @@ void updatemap(char w) // Kan väl bara gälla för yttervarvet?
 			setwall(myposX, myposY-5);
 		}
 
-		if (!((room[myposX][myposY-1] == 1) || (room[myposX][myposY-1] == 4)))
+		if (!((room[myposX][myposY+1] == 1) || (room[myposX][myposY+1] == 4)))
 		{
 			room[myposX][myposY+1]=2;
 		}
@@ -392,7 +392,6 @@ void updatemap(char w) // Kan väl bara gälla för yttervarvet?
 		room[myposX][myposY]=4;
 	}
 }
-
 /*********************************RITA UT FÖRLÄNGD VÄGG*************************************/
 void extended_wall()
 {
