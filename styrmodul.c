@@ -366,11 +366,8 @@ void TransmitComm(char invalue)
 		if(invalue == findzero)
 		{
 			dummy = SPDR;
-<<<<<<< HEAD
 			MasterTransmit(findzeroX);
-=======
-			MasterTransmit(findzero);
->>>>>>> origin/master
+
 			for(int i = 0; i < time; i++){}
 			MasterTransmit(findzeroY);
 			for(int i = 0; i < time; i++){}
