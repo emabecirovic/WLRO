@@ -23,8 +23,11 @@ void initiate_variables()
 	start_request = 0;
 
 	// Array för värden från buss
-	storedValues[13];
-
+	storedValues[8] = 1;
+	
+	storedValues[11] = 16;
+	storedValues[12] = 1;
+	
 
 	/******************REGLERING************************/
 
@@ -527,6 +530,8 @@ void updatepos()
 		storedValues[10] = 2;
 	}
 	posdistance = 0;
+	start_request = 1;
+	transmit();
 }
 
 
@@ -556,6 +561,10 @@ void rotateright()
 
 void rotate90left()
 {
+	for(long i = 0; i < 80000; i ++)
+	{
+		stopp();
+	}
 	storedValues[6] = 0;
 	while(turnisDone == 0)
 	{
@@ -593,6 +602,10 @@ void rotate90left()
 
 void rotate90right()
 {
+		for(long i = 0; i < 80000; i ++)
+		{
+			stopp();
+		}
 	storedValues[6] = 0;
 	while(turnisDone == 0)
 	{
@@ -789,6 +802,8 @@ void regulateright()
 			straight();
 			drive(40);
 			updatepos();
+
+			start_request = 1;
 			transmit();
 			sensorright = sidesensor(storedValues[1]);
 			if(sensorright > 25)
@@ -796,8 +811,9 @@ void regulateright()
 				
 				rotate90right();
 
-				transmit();
 				start_request = 1;
+				transmit();
+				
 				sensorfront = frontsensor(storedValues[0]);
 				if(sensorfront < 70)
 				{
@@ -1220,13 +1236,14 @@ void driveto(unsigned int posX, unsigned int posY)
 				rotate90left();
 				}*/
 				rotate90left();
+				transmit();
 				
 			}
 			else //if(sensorfront > 50) // Ingen vägg framför
 			{
-				/*if(sensorright < 25)
+				if(sensorright < 20)
 				regulateright();
-				else*/
+				else
 				driveF();
 			}
 			break;
@@ -1238,6 +1255,7 @@ void driveto(unsigned int posX, unsigned int posY)
 					rotate90left();
 				}*/
 				rotate90left();
+				
 			}
 			else //if(sensorfront > 50) // Ingen vägg framför
 			{
@@ -1438,7 +1456,7 @@ int main(void)
 		while(home == 0)
 		{
 			char i = 0;
-			if(n != 2)
+			if(n == 0 || n == 1 || n == 2)
 			{
 				i = 0;
 			}
@@ -1449,7 +1467,7 @@ int main(void)
 			if(posdistance > 13 + i)  //40/2.55125)*0.9
 			{
 				updatepos();
-				if(n != 2)
+				if(n != 4)
 				{
 					n = n + 1;
 				}
