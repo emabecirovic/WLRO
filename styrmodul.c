@@ -1147,20 +1147,20 @@ void driveto(unsigned int posX, unsigned int posY)
 			case(2): // Y+			
 			if(myposY == posY)
 			{			
-				if(sensorleft < 25)
+				/*if(sensorleft < 25)
 				{
 					rotate90left();
-				}
+				}*/
 				rotate90left();
 			}
-			else if(sensorfront > 50) // Ingen vägg framför
+			else //if(sensorfront > 50) // Ingen vägg framför
 			{
-				if(sensorright < 25)
+				/*if(sensorright < 25)
 				regulateright();
-				else
+				else*/
 				driveF();
 			}
-			else
+			/*else
 			{
 				drive(40);
 				updatepos();
@@ -1172,26 +1172,26 @@ void driveto(unsigned int posX, unsigned int posY)
 					rotate90left();
 				}				
 				rotate90left();				
-			}
+			}*/
 			break;
 			case(3): // X-
 			if(myposX == posX)
 			{
-				if(sensorlright< 25)
+				/*if(sensorlright< 25)
 				{
 				rotate90left();
-				}
-				
+				}*/
+				rotate90right();
 				
 			}
-			else if(sensorfront > 50) // Ingen vägg framför
+			else //if(sensorfront > 50) // Ingen vägg framför
 			{
-				if(sensorright < 25)
+				/*if(sensorright < 25)
 				regulateright();
-				else
+				else*/
 				driveF();
 			}
-			else
+			/*else
 			{
 				drive(40);
 				updatepos();
@@ -1203,7 +1203,7 @@ void driveto(unsigned int posX, unsigned int posY)
 					
 				}
 				rotate90right();
-			}
+			}*/
 			break;
 			case(4): // Y-
 			rotate90right();
@@ -1214,25 +1214,38 @@ void driveto(unsigned int posX, unsigned int posY)
 		switch(mydirection)
 		{
 			case(1): // X+
-			if(sensorfront > 50)
+			if(myposX == posX)
 			{
-				driveF();
-			}
-			else if((posX - myposX) == 1)
-			{
-				drive(40);
+				/*if(sensorlright< 25)
+				{
 				rotate90left();
+				}*/
+				rotate90left();
+				
+			}
+			else //if(sensorfront > 50) // Ingen vägg framför
+			{
+				/*if(sensorright < 25)
+				regulateright();
+				else*/
+				driveF();
 			}
 			break;
 			case(2): //Y+
-			if(sensorfront > 50)
-			{
-				driveF();
+			if(myposY == posY)
+			{			
+				/*if(sensorleft < 25)
+				{
+					rotate90left();
+				}*/
+				rotate90left();
 			}
-			else if((posY - myposY) == 1)
+			else //if(sensorfront > 50) // Ingen vägg framför
 			{
-				drive(40);
-				rotate90right();
+				/*if(sensorright < 25)
+				regulateright();
+				else*/
+				driveF();
 			}
 			break;
 			case(3): // X-
@@ -1248,14 +1261,21 @@ void driveto(unsigned int posX, unsigned int posY)
 		switch(mydirection)
 		{
 			case(1): // X+
-			if(sensorfront > 50)
+			if(myposX == posX)
 			{
-				driveF();
-			}
-			else if((posX - myposX == 1))
-			{
-				drive(40);
+				/*if(sensorlright< 25)
+				{
+				rotate90left();
+				}*/
 				rotate90right();
+				
+			}
+			else //if(sensorfront > 50) // Ingen vägg framför
+			{
+				/*if(sensorright < 25)
+				regulateright();
+				else*/
+				driveF();
 			}
 			/*else
 			{
@@ -1270,14 +1290,20 @@ void driveto(unsigned int posX, unsigned int posY)
 			rotate90left();
 			break;
 			case(4): // Y-
-			if(sensorfront > 50)
-			{
-				driveF();
-			}
-			else if((myposY - posY) == 1)
-			{
-				drive(40);
+			if(myposY == posY)
+			{			
+				/*if(sensorleft < 25)
+				{
+					rotate90left();
+				}*/
 				rotate90left();
+			}
+			else //if(sensorfront > 50) // Ingen vägg framför
+			{
+				/*if(sensorright < 25)
+				regulateright();
+				else*/
+				driveF();
 			}
 			break;
 		}
@@ -1293,24 +1319,43 @@ void driveto(unsigned int posX, unsigned int posY)
 			rotate90left();
 			break;
 			case(3): // X-
-			if(sensorfront > 50)
+			if(myposX == posX)
 			{
+				/*if(sensorlright< 25)
+				{
+				rotate90left();
+				}*/
+				rotate90left();
+				
+			}
+			else //if(sensorfront > 50) // Ingen vägg framför
+			{
+				/*if(sensorright < 25)
+				regulateright();
+				else*/
 				driveF();
 			}
-			else if((myposX - posX) == 1)
+			/*else
 			{
-				drive(40);
-				rotate90right();
-			}
+			drive(40);
+			rotate90right();
+			}*/
 			break;
 			case(4): // Y-
-			if(sensorfront > 50)
-			{
-				driveF();
+			if(myposY == posY)
+			{			
+				/*if(sensorleft < 25)
+				{
+					rotate90left();
+				}*/
+				rotate90right();
 			}
-			else if((myposY - posY) == 1)
+			else //if(sensorfront > 50) // Ingen vägg framför
 			{
-				drive(40);
+				/*if(sensorright < 25)
+				regulateright();
+				else*/
+				driveF();
 			}
 			break;
 		}
