@@ -45,6 +45,7 @@ volatile char selection; // Används i skicka avbrottet
 volatile char room[31][17];
 
 volatile unsigned char storedValues[13];
+
 int indexvalue = 0;
 
 /****************KARTLÄGGNING*******************************/
@@ -59,7 +60,7 @@ volatile bool dofindfirst = false;
 //char room[31][17]; //=.... 0=outforskat, 1=vägg, 2=öppen yta
 
 volatile char mydirection = 1;
-volatile char myposX = 16;
+volatile char myposX = 15;
 volatile char myposY = 1;
 float sensorfront;
 float sensorleft;
@@ -166,18 +167,18 @@ void roominit()
 {
 	for(int i = 0; i < 31; i++)
 	{
-	for(int j = 0; j < 17 ; j++)
-	{
-		room[i][j] = 0;
-	}
+		for(int j = 0; j < 17 ; j++)
+		{
+			room[i][j] = 0;
+		}
 	}
 }
 
 
 void SendStoredVal()
 {
- storedValues[5] = firstzeroX;
- storedValues[6] = firstzeroY;
+	storedValues[5] = firstzeroX;
+	storedValues[6] = firstzeroY;
 
 	for(int i = 0; i < 13; i++)
 	{
@@ -243,7 +244,14 @@ void SendStoredVal()
 /***********************************KARTHANTERING***********************************/
 void setwall(char x,char y)
 {
-	room[x][y]=1;
+	if((room[x][y] == 2) || (room[x][y] == 4))
+	{
+		
+	}
+	else
+	{
+		room[x][y] = 1;
+	}
 }
 
 void updatemap(char w) // Kan väl bara gälla för yttervarvet?
@@ -391,7 +399,7 @@ void updatemap(char w) // Kan väl bara gälla för yttervarvet?
 		{
 			
 		}
-	}
+		}//swich
 	if(storedValues[7]==1)
 	{
 		room[myposX][myposY]=4;
@@ -401,81 +409,54 @@ void updatemap(char w) // Kan väl bara gälla för yttervarvet?
 		room[myposX][myposY] = 2;
 	}
 }
-
-/*********************************RITA UT FÖRLÄNGD VÄGG*************************************/
+	
+			/*********************************RITA UT FÖRLÄNGD VÄGG*************************************/
 void extended_wall()
 {
-	for(int j = 0; j < 17; j++ )
+	/*for(int i = 0; i < 31;i++)
 	{
-		for(int i = 0; i < 31; i++)
+		room[i][0] = 1;
+	}*/
+				
+	volatile char flag = 0;
+		
+	for(int y = 0; y < 17; y++)
+	{
+		flag = 0;
+		for(int x = 0; x < 31; x++)
 		{
-			if((room[i][j] == 1) || (room[i][j] == 2))
+			if(flag == 0)
 			{
-				break;
+				if(room[x][y] == 0)
+				{
+					room[x][y] = 1;
+				}
+						
+				if(room[x][y] == 2)
+				{
+					flag = 1;
+				}
 			}
-			else
+			else if(flag == 1)
 			{
-				room[i][j] = 1;
+				if(room[x][y] == 0)
+				{
+				}
+				if(room[x][y] == 1)
+				{
+					flag = 0;
+				}
 			}
 		}
-	}
-
-	for(int i = 0; i < 31; i++ )
-	{
-		for(int j = 0; j < 17; j++)
-		{
-			if((room[i][j] == 1) || (room[i][j] == 2))
-			{
-				break;
-			}
-			else
-			{
-				room[i][j] = 1;
-			}
-		}
-	}
-	
-	for(int j = 0; j < 17; j++ )
-	{
-		for(int i = 30; i >= 0; i--)
-		{
-			if((room[i][j] == 1) || (room[i][j] == 2))
-			{
-				break;
-			}
-			else
-			{
-				room[i][j] = 1;
-			}
-		}
-	}
-	
-	for(int i = 0; i < 31; i++ )
-	{
-		for(int j = 16; j >= 0; j--)
-		{
-			if((room[i][j] == 1) || (room[i][j] == 2))
-			{
-				break;
-			}
-			else
-			{
-				room[i][j] = 1;
-			}
-		}
-	}
-	
-	for(int i = 0; i < 31;i++)
-	{
-	 room[i][0] = 1;
 	}
 }
+				
+	
 
 /******************GE POSITIONEN FÖR ICKE SÖKT RUTA*********************/
 void findfirstzero()
 {
-	int firstzero[2]={16,1};
-
+	int firstzero[2]={15,1};
 	for(int j=0;j<17;j++)
 	{
 		for(int i=0;i<31;i++)
@@ -487,16 +468,15 @@ void findfirstzero()
 			}
 		}
 	}
-	
+				
 	firstzeroX = firstzero[0];
 	firstzeroY = firstzero[1];
-	
+				
 }
 
 void sendmap()
 {
 	char data;
-	cli();
 	USARTWriteChar(14);
 	for(int i = 0; i < 31; i++)
 	{
@@ -504,13 +484,12 @@ void sendmap()
 		{
 			
 		}
-	 for(int j = 0; j < 17; j++)
-	 {
-		 data = room[i][j];
-		 USARTWriteChar(data);
-	 }	
+		for(int j = 0; j < 17; j++)
+		{
+			data = room[i][j];
+			USARTWriteChar(data);
+		}
 	}
-	sei();
 }
 
 float sidesensor(unsigned char sensorvalue)
@@ -519,7 +498,6 @@ float sidesensor(unsigned char sensorvalue)
 	value = 1 / value;
 	value = value - 0.000741938763948;
 	value = value / 0.001637008132828;
-
 	return value;
 }
 
@@ -529,7 +507,6 @@ float frontsensor(unsigned char sensorvalue)
 	value = 1 / value;
 	value = value - 0.001086689563586;
 	value = value / 0.000191822821525;
-
 	return value;
 }
 
@@ -540,6 +517,9 @@ int main(void)
 	unsigned char data;
 	char select = PIND & 0b01000000;
 	roominit();
+	storedValues[8] = 1;
+	storedValues[11] = 15;
+	storedValues[12] = 1;
 	if(select == 0b01000000)
 	{
 		cli();
@@ -559,40 +539,34 @@ int main(void)
 		
 		while(remote)
 		{
-
 			data = USART_Recive();
-								
+				
 			PORTB = data;
 			/*
 			PORTB &= 0b01000000;
 			PORTB |= data;
-
 			//USART_Flush();
 			//data=USART_Recive();
 			//skicka data*/
 
 		}
-			
+						
 		while(!remote)
 		{
 			if(doextend)
 			{
 				cli();
-					doextend = false;
-					asm("");
-					
-					extended_wall();
-					findfirstzero();
-					USARTWriteChar(6);
-					USARTWriteChar(50);
-					USARTWriteChar(7);
-					USARTWriteChar(sensorright);
-					sendmap();
-					
-					
-					sei();
+				doextend = false;
+				asm("");
+						
+				extended_wall();
+				sendmap();
+				findfirstzero();
+						
+						
+				sei();
 			}
-			
+					
 			sensorfront = frontsensor(storedValues[0]);
 			sensorright = sidesensor(storedValues[1]);
 			sensorleft = sidesensor(storedValues[3]);
@@ -600,86 +574,94 @@ int main(void)
 			
 			myposX = storedValues[11];
 			myposY = storedValues[12];
-			
-			
+						
+						
+						
 			updatemap(25);
-			
-			if(f > 4000)
+			if(f > 2000)
 			{
-			sendmap();
-			f = 0;
+				sendmap();
+				f = 0;
 			}
 			f++;
 			findfirstzero();
-			
+						
 			if(bussComplete == true)
 			{
+				//cli();
+						
 				//SendStoredVal();
-				
+				USARTWriteChar(12);
+				USARTWriteChar(myposX);
+				USARTWriteChar(13);
+				USARTWriteChar(myposY);
+						
 				bussComplete = false;
 				sei();
 			}
-		}
+		}//while!remote
 
-	}
+	}//while 1
 
 
 	return 0;
+}//main
+
+
+/*******************************INTERRUPTS*************************/
+
+ISR(SPI_STC_vect) // Answer to call from Master
+{
+			
+	if(arrayontheway)
+	{
+		storedValues[indexvalue] = SPDR;
+		indexvalue++;
+			
+		if(indexvalue > 12)
+		{
+			indexvalue = 0;
+			senddataval++;
+			arrayontheway = false;
+		}
+		if(senddataval > 0)
+		{
+			bussComplete = true;
+			senddataval = 0;
+			cli();
+		}
+	}
+	else
+	{
+		selection = SPDR;
+		if(selection == arraytransmit)
+		{
+			arrayontheway = true;
+		}
+		else if(selection == firstdone)
+		{
+			doextend = true;
+		}
+		else if(selection == findzeroX)
+		{
+			SPDR = firstzeroX;
+		}
+		else if(selection == findzeroY)
+		{
+			SPDR = firstzeroY;
+		}
+		else if(selection == stop)
+		{
+			
+		}
+			
+	}
 }
 
 
-			/*******************************INTERRUPTS*************************/
+/*
+ISR(USART0_RX_vect)
+{
 
-			ISR(SPI_STC_vect) // Answer to call from Master
-			{
-				
-				if(arrayontheway)
-				{
-					storedValues[indexvalue] = SPDR;
-					indexvalue++;
-					
-					if(indexvalue > 12)
-					{
-						indexvalue = 0;
-						senddataval++;
-						arrayontheway = false;
-					}
-					if(senddataval > 19)
-					{
-						bussComplete = true;
-						senddataval = 0;
-						cli();
-					}
-				}
-				else
-				{
-					selection = SPDR;
-					if(selection == arraytransmit)
-					{
-						arrayontheway = true;
-					}
-					else if(selection == firstdone)
-					{
-						doextend = true;
-					}
-					else if(selection == findzeroX)
-					{
-						SPDR = firstzeroX;
-					}
-					else if(selection == findzeroY)
-					{
-						SPDR = firstzeroY;
-					}
-					else if(selection == stop)
-					{
-						
-					}
-					
-				}
-			}
-			/*
-			ISR(USART0_RX_vect)
-			{
-
-			}*/
+}*/
 
