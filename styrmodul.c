@@ -514,8 +514,8 @@ void updatepos()
 		{
 		}
 	}
-	storedValues[8] = myposX;
-	storedValues[9] = myposY;
+	//storedValues[8] = myposX;
+	//storedValues[9] = myposY;
 	if(isRFID == 1)
 	{
 		setcursor(6);
@@ -583,6 +583,7 @@ void rotate90left()
 		mydirection += 1;
 	}
 	turnisDone = 0;
+	storedValues[8] = mydirection;
 	for(long i = 0; i < 80000; i ++)
 	{
 		stopp();
@@ -900,8 +901,7 @@ void firstlap()
 	if(myposX == startX && myposY == startY && !start)	//Det här kommer gälla de första sekunderna roboten börjar köra också..!
 	{
 		onelap = 1;
-		setcursor(1);
-		print_on_lcd(0xCC);
+		
 		straight();
 		
 		start_request = 1;
@@ -960,8 +960,7 @@ void away() // Få roboten från väggen
 
 	transmit();
 	sensorleft = sidesensor(storedValues[3]);
-	setcursor(1);
-	print_on_lcd(sensorleft);
+
 
 	if(sensorleft < 20) // Vägg till vänster
 	{
@@ -1460,10 +1459,7 @@ int main(void)
 				}
 			}
 			
-			setcursor(1);
-			print_on_lcd(myposX);
-			print_on_lcd(myposY);
-			
+					
 			if(!onelap)
 			{
 				firstlap();
