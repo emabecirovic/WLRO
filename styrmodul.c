@@ -10,7 +10,7 @@
 #include <avr/io.h>
 #include <avr/delay.h>
 #include <avr/interrupt.h>
-#include "styrmodul.h"
+#include "styrRobot.h"
 
 #define F_CPU 1000000UL
 
@@ -44,8 +44,8 @@ void initiate_variables()
 
 	/**************POSITION******************/
 	mydirection = 1; //1=X+ ; 2=Y+ ; 3=X- ; 4=Y-
-	myposX = 15; //Robotens position i X-led
-	myposY = 0; //Robotens position i Y-led
+	myposX = 16; //Robotens position i X-led
+	myposY = 1; //Robotens position i Y-led
 	//startX = 15; //Startpositionen sätts till mitten på nedre långsidan
 	//startY = 0;
 	posdistance = 0;
@@ -371,10 +371,10 @@ void TransmitComm(char invalue)
 			for(int i = 0; i < time; i++){}
 			MasterTransmit(findzeroY);
 			for(int i = 0; i < time; i++){}
-			findzeroX = SPDR;
+			firstzeroX = SPDR;
 			MasterTransmit(stop);
 			for(int i = 0; i < time; i++){}
-			findzeroY = SPDR;
+			firstzeroY = SPDR;
 		}
 		else if(invalue == firstdone)
 		{
@@ -388,7 +388,7 @@ void TransmitComm(char invalue)
 			MasterTransmit(arraytransmit);
 			for(int i = 0; i < time; i++){}
 			
-			for(int i = 0; i < 10; i ++)
+			for(int i = 0; i < 11; i ++)
 			{
 				dummy = SPDR;
 				MasterTransmit(storedValues[i]);
@@ -903,10 +903,39 @@ void firstlap()
 		setcursor(1);
 		print_on_lcd(0xCC);
 		straight();
+		
+		start_request = 1;
+		TransmitComm(firstdone);
+		
 		for(long i = 0; i < 160000; i ++)
 		{
 			stopp();
 		}
+		for(long i = 0; i < 160000; i ++)
+		{
+			stopp();
+		}
+		for(long i = 0; i < 160000; i ++)
+		{
+			stopp();
+		}
+		for(long i = 0; i < 160000; i ++)
+		{
+			stopp();
+		}
+		for(long i = 0; i < 160000; i ++)
+		{
+			stopp();
+		}
+		for(long i = 0; i < 160000; i ++)
+		{
+			stopp();
+		}
+		for(long i = 0; i < 160000; i ++)
+		{
+			stopp();
+		}
+		
 	}
 	else
 	{
@@ -957,7 +986,7 @@ void away() // Få roboten från väggen
 		straight();
 		stopp();
 		rotate90left();
-		print_on_lcd(sensorleft);
+		//print_on_lcd(sensorleft);
 		drivefromstill(40); // Kör en sektion ut i öppen yta
 		updatepos();
 
@@ -1080,9 +1109,30 @@ void rfid()
 }
 
 
+/************************************HITTA FÖRSTA NOLLAN I RUMMET**********************************/
+void findempty()
+{
+	TransmitComm(findzero);
+
+	setcursor(1);
+	print_on_lcd(firstzeroX);
+	print_on_lcd(firstzeroY);
+	
+	if(firstzeroX == startX && firstzeroY == startY)
+	{
+		findemptydone = true;
+	}
+	else
+		driveto(firstzeroX, firstzeroY);
+}
+
 void driveto(unsigned int posX, unsigned int posY)
 {
 	transmit();
+	sensorfront = frontsensor(storedValues[0]);
+	sensorright = sidesensor(storedValues[1]);
+	sensorleft = storedValues[3];
+	
 	if(myposX == posX  && myposY  == posY) // Jämför koordinaterna roboten står på med positionen vi vill åka till
 	{
 		
@@ -1094,25 +1144,64 @@ void driveto(unsigned int posX, unsigned int posY)
 			case(1): // X+
 			rotate90left();
 			break;
-			case(2): // Y+
-			if(sensorfront > 50) // Ingen vägg framför
+			case(2): // Y+			
+			if(myposY == posY)
+			{			
+				if(sensorleft < 25)
+				{
+					rotate90left();
+				}
+				rotate90left();
+			}
+			else if(sensorfront > 50) // Ingen vägg framför
 			{
+				if(sensorright < 25)
+				regulateright();
+				else
 				driveF();
 			}
-			else if((posY - myposY) == 1) // Om vi står endast en ruta ifrån önskad position
+			else
 			{
 				drive(40);
-				rotate90left();
+				updatepos();
+				
+				transmit();
+				sensorleft = storedValues[3];
+				if(sensorleft > 25)
+				{
+					rotate90left();
+				}				
+				rotate90left();				
 			}
 			break;
 			case(3): // X-
-			if(sensorfront > 50) // Ingen vägg framför
+			if(myposX == posX)
 			{
+				if(sensorlright< 25)
+				{
+				rotate90left();
+				}
+				
+				
+			}
+			else if(sensorfront > 50) // Ingen vägg framför
+			{
+				if(sensorright < 25)
+				regulateright();
+				else
 				driveF();
 			}
-			else if((myposX - posX) == 1) // Om vi står endast en ruta ifrån önskad position
+			else
 			{
 				drive(40);
+				updatepos();
+				
+				transmit();
+				sensorleft = storedValues[3];
+				if(sensorleft < 25)
+				{
+					
+				}
 				rotate90right();
 			}
 			break;
@@ -1231,9 +1320,15 @@ void driveto(unsigned int posX, unsigned int posY)
 
 void returntostart()
 {
-	if(myposX == startX && myposY == startY && !(start)) // pos[0] = X-koordinat & pos[1] = Y-koordinat
+	if(myposX == startX && myposY == startY) // pos[0] = X-koordinat & pos[1] = Y-koordinat
 	{
 		home = 1;
+		rotate90right();
+		rotate90right();
+		rotate90left();
+		rotate90right();
+		rotate90left();
+		rotate90left();
 	}
 	else
 	{
@@ -1328,7 +1423,7 @@ int main(void)
 			{
 				firstlap();
 			}
-			else if(!awaydone)
+			/*else if(!awaydone)
 			{
 				away();
 				print_on_lcd(0xAA);
@@ -1337,19 +1432,15 @@ int main(void)
 			{
 				zigzag();
 				print_on_lcd(0xBB);
-			}
-			/*else if(!findemptydone)
+			}*/
+			else if(!findemptydone)
 			{
 			findempty();
 			}
 			else
 			{
-			returntostart();
-			}*/
-			else
-			{
+				returntostart();
 				stopp();
-				home = 1;
 				print_on_lcd(0xAB);
 			}
 		}

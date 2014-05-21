@@ -20,8 +20,9 @@ const char direction = 0b00001001;
 const char rightspeed = 0b00001010;
 const char leftspeed = 0b00001011;
 const char firstdone = 0b00001100;
-const char findzero = 0b00001101;
-const char arraytransmit = 0b00001110;
+const char findzeroX = 0b00001101;
+const char findzeroY = 0b00001110;
+const char arraytransmit = 0b00001111;
 const char stop = 0x00; //Stop byte
 
 
@@ -29,6 +30,7 @@ const char stop = 0x00; //Stop byte
 const char turn = 3;
 const char turnstop = 4;
 const char trstraight = 5;
+const char findzero = 6;
 
 // Delayer för busskomm
 const int time = 200;
@@ -63,10 +65,10 @@ char startregulate = 0;
 
 /**************POSITION******************/
 volatile char mydirection = 1; //1=X+ ; 2=Y+ ; 3=X- ; 4=Y-
-volatile unsigned int myposX=15; //Robotens position i X-led
-volatile unsigned int myposY=0; //Robotens position i Y-led
-const unsigned int startX = 15;
-const unsigned int startY = 0; //Startpositionen sätts till mitten på nedre långsidan
+volatile unsigned int myposX=16; //Robotens position i X-led
+volatile unsigned int myposY=1; //Robotens position i Y-led
+const unsigned int startX = 16;
+const unsigned int startY = 1; //Startpositionen sätts till mitten på nedre långsidan
 volatile float posdistance = 0;
 volatile char isRFID = 0;
 volatile char n = 0; //För 13 14
@@ -95,10 +97,6 @@ const char lcdspace = 0b00100000;
 /*******************FJÄRRSTYRT****************/
 char button = 0x00;
 
-/********************AVSÖKNING*******************/
-
-volatile char findzeroX = 0;
-volatile char findzeroY = 0;
 
 
 /***************FLAGGOR FÖR MAIN******************/
@@ -115,9 +113,10 @@ bool zzfirst = true; // Till första bottensväng i sicksacksak
 
 bool drivetoY = true; // Y-led är prioriterad riktining om sant i driveto
 
-int firstzero; //Första nollan om man läser matrisen uppifrån och ned
+volatile int firstzeroX = 15; //Första nollan om man läser matrisen uppifrån och ned
+volatile int firstzeroY = 1;
 
-char room[29][15]; //=.... 0=outforskat, 1=vägg, 2=öppen yta
+//char room[29][15]; //=.... 0=outforskat, 1=vägg, 2=öppen yta
 
 
 
