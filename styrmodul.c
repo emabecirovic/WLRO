@@ -25,7 +25,7 @@ void initiate_variables()
 	// Array för värden från buss
 	storedValues[8] = 1;
 	
-	storedValues[11] = 16;
+	storedValues[11] = 15;
 	storedValues[12] = 1;
 	
 
@@ -47,7 +47,7 @@ void initiate_variables()
 
 	/**************POSITION******************/
 	mydirection = 1; //1=X+ ; 2=Y+ ; 3=X- ; 4=Y-
-	myposX = 16; //Robotens position i X-led
+	myposX = 15; //Robotens position i X-led
 	myposY = 1; //Robotens position i Y-led
 	//startX = 15; //Startpositionen sätts till mitten på nedre långsidan
 	//startY = 0;
@@ -366,7 +366,13 @@ void TransmitComm(char invalue)
 	{
 		PORTB &= 0b11110111;
 		
-		if(invalue == findzero)
+		if(invalue == update)
+		{
+			dummy = SPDR;
+			MasterTransmit(updateroom);
+			for(int i = 0; i < time; i++){}
+		}
+		else if(invalue == findzero)
 		{
 			dummy = SPDR;
 			MasterTransmit(findzeroX);
@@ -519,7 +525,7 @@ void updatepos()
 	}
 	//storedValues[8] = myposX;
 	//storedValues[9] = myposY;
-	if(isRFID == 1)
+	/*if(isRFID == 1)
 	{
 		setcursor(6);
 		storedValues[10] = 4;
@@ -528,10 +534,10 @@ void updatepos()
 	else
 	{
 		storedValues[10] = 2;
-	}
+	}*/
 	posdistance = 0;
 	start_request = 1;
-	transmit();
+	TransmitComm(update);
 }
 
 
@@ -561,6 +567,8 @@ void rotateright()
 
 void rotate90left()
 {
+	start_request = 1;
+	TransmitComm(update);
 	for(long i = 0; i < 80000; i ++)
 	{
 		stopp();
@@ -597,11 +605,16 @@ void rotate90left()
 	{
 		stopp();
 	}
+	start_request = 1;
+	transmit();
+	TransmitComm(update);
 	n = 0;
 }
 
 void rotate90right()
 {
+		start_request = 1;
+		TransmitComm(update);
 		for(long i = 0; i < 80000; i ++)
 		{
 			stopp();
@@ -632,10 +645,14 @@ void rotate90right()
 		mydirection -= 1;
 	}
 	turnisDone = 0;
+	storedValues[8] = mydirection;
 	for(long i = 0; i < 80000; i ++)
 	{
 		stopp();
 	}
+	start_request = 1;
+	transmit();
+	TransmitComm(update);
 	n = 0;
 }
 
@@ -718,14 +735,14 @@ void driveF()
 {
 	PORTC = 0x01;
 	PORTD = 0x20;
-	OCR2B = speed;
+	OCR2B = speed-2;
 	OCR2A = speed;
 }
 
 void drive(float dist) //kör dist cm
 {
 	distance=0;
-	dist = dist / 2.55125;
+	dist = dist / 1.275625;
 	
 	while (distance < dist * 0.9)
 	{
@@ -739,7 +756,7 @@ void drive(float dist) //kör dist cm
 void drivefromstill(float dist) //kör dist cm
 {
 	distance=0;
-	dist = dist / 2.55125;
+	dist = dist / 1.275625;
 
 	while (distance < dist * 1.05)
 	{
@@ -847,8 +864,8 @@ void regulateright()
 				overflow = 0;
 				PORTC = 0x01;
 				PORTD = 0x20;
-				rightpwm = speed + K * (18 - sensormeanr + Td * (sensormeanr_old - sensormeanr) / dt);
-				leftpwm = speed - K * (18 - sensormeanr + Td * (sensormeanr_old - sensormeanr) / dt);
+				rightpwm = speed + K * (18 - sensormeanr + ((1-onelap)*Td + Td) * (sensormeanr_old - sensormeanr) / dt);
+				leftpwm = speed - K * (18 - sensormeanr + ((1-onelap)*Td + Td) * (sensormeanr_old - sensormeanr) / dt);
 
 				if (rightpwm > 255)
 				{
@@ -935,22 +952,7 @@ void firstlap()
 		{
 			stopp();
 		}
-		for(long i = 0; i < 160000; i ++)
-		{
-			stopp();
-		}
-		for(long i = 0; i < 160000; i ++)
-		{
-			stopp();
-		}
-		for(long i = 0; i < 160000; i ++)
-		{
-			stopp();
-		}
-		for(long i = 0; i < 160000; i ++)
-		{
-			stopp();
-		}
+		
 		
 	}
 	else
@@ -1127,8 +1129,11 @@ void rfid()
 /************************************HITTA FÖRSTA NOLLAN I RUMMET**********************************/
 void findempty()
 {
-	TransmitComm(findzero);
+	//TransmitComm(findzero);
 
+	firstzeroX = 16;
+	firstzeroY = 9;
+	
 	setcursor(1);
 	print_on_lcd(firstzeroX);
 	print_on_lcd(firstzeroY);
@@ -1141,16 +1146,72 @@ void findempty()
 		driveto(firstzeroX, firstzeroY);
 }
 
-void driveto(unsigned int posX, unsigned int posY)
+
+void regulatedriveto()
+{
+	if (fabs(sensor1r - sensor2r) > 2)
+	{
+		straight();
+	}
+	else
+	{
+		//startregulate = 1;
+		timer = TCNT1;
+		dt = (timer + overflow * 65536) * 64;
+		TCNT1 = 0;
+		overflow = 0;
+		PORTC = 0x01;
+		PORTD = 0x20;
+		rightpwm = speed + K * (18 - sensormeanr + ((1-onelap)*Td + Td) * (sensormeanr_old - sensormeanr) / dt);
+		leftpwm = speed - K * (18 - sensormeanr + ((1-onelap)*Td + Td) * (sensormeanr_old - sensormeanr) / dt);
+
+		if (rightpwm > 255)
+		{
+			OCR2B = 255;
+		}
+		else if(rightpwm < 0)
+		{
+			OCR2B = 0;
+		}
+		else
+		{
+			OCR2B = rightpwm;
+		}
+		if (leftpwm > 255)
+		{
+			OCR2A = 255;
+		}
+		else if (leftpwm < 0)
+		{
+			OCR2A = 0;
+		}
+		else
+		{
+			OCR2A = leftpwm;
+		}
+	}
+}
+
+volatile bool drivetoflag = true;
+
+void drivetransmit()
 {
 	transmit();
 	sensorfront = frontsensor(storedValues[0]);
-	sensorright = sidesensor(storedValues[1]);
+	sensor1r = sidesensor(storedValues[1]);
+	sensor2r = sidesensor(storedValues[2]);
 	sensorleft = storedValues[3];
+}
+
+void driveto(unsigned int posX, unsigned int posY)
+{
+	drivetransmit();
 	
 	if(myposX == posX  && myposY  == posY) // Jämför koordinaterna roboten står på med positionen vi vill åka till
 	{
-		
+		rotate90right();
+		rotate90right();
+		rotate90right();
 	}
 	else if(myposX >= posX && myposY <= posY) //Fjärde kvadranten, tänk önskad position som origo
 	{
@@ -1159,68 +1220,71 @@ void driveto(unsigned int posX, unsigned int posY)
 			case(1): // X+
 			rotate90left();
 			break;
-			case(2): // Y+			
+			case(2): // Y+		
+			drivetransmit();	
 			if(myposY == posY)
 			{			
-				/*if(sensorleft < 25)
+				leftturn();
+			}
+			else if(sensorfront > 45) // Ingen vägg framför
+			{
+				drivetransmit();
+				if((sensor1r < 20) && (sensor2r < 20))// && drivetoflag)
 				{
-					rotate90left();
-				}*/
-				rotate90left();
-			}
-			else //if(sensorfront > 50) // Ingen vägg framför
-			{
-				/*if(sensorright < 25)
-				regulateright();
-				else*/
-				driveF();
-			}
-			/*else
-			{
-				drive(40);
+					regulateright();
+				/*drive(20);
 				updatepos();
-				
-				transmit();
-				sensorleft = storedValues[3];
-				if(sensorleft > 25)
+				regulateright();*/
+				}
+				else
 				{
-					rotate90left();
-				}				
-				rotate90left();				
-			}*/
+					drivefromstill(40);
+					updatepos();
+					for(long i = 0; i < 160000; i++){stopp();}
+				}
+			}
+			else
+			{
+				drive(35);
+				updatepos();
+				leftturn();			
+			}
 			break;
 			case(3): // X-
 			if(myposX == posX)
 			{
-				/*if(sensorlright< 25)
+				if(sensorright < 20)
 				{
-				rotate90left();
-				}*/
+					regulateright();
+				}
+				else if(sensorright > 20)
+				{
+					drive(20);
+					updatepos();
+				}
+				else
 				rotate90right();
 				
 			}
-			else //if(sensorfront > 50) // Ingen vägg framför
+			else if(sensorfront > 50) // Ingen vägg framför
 			{
-				/*if(sensorright < 25)
+				if(sensorright < 20)
 				regulateright();
-				else*/
+				else
 				driveF();
 			}
-			/*else
+			else
 			{
 				drive(40);
 				updatepos();
 				
-				transmit();
-				sensorleft = storedValues[3];
-				if(sensorleft < 25)
-				{
-					
-				}
-				rotate90right();
-			}*/
+				leftturn();
+			}
 			break;
 			case(4): // Y-
+			if(sensorright < 20)
+			regulateright();
+			else
 			rotate90right();
 		}
 	}
@@ -1228,48 +1292,54 @@ void driveto(unsigned int posX, unsigned int posY)
 	{																					// Sammma princip som ovan se kommentarer där
 		switch(mydirection)
 		{
-			case(1): // X+
-			if(myposX == posX)
+			case(3): // X-
+			rotate90left();
+			break;
+			case(2): // Y+
+			if(myposY == posY)
 			{
-				/*if(sensorlright< 25)
-				{
-				rotate90left();
-				}*/
-				rotate90left();
-				transmit();
-				
+				leftturn();
 			}
-			else //if(sensorfront > 50) // Ingen vägg framför
+			else if(sensorfront > 50) // Ingen vägg framför
 			{
 				if(sensorright < 20)
 				regulateright();
 				else
 				driveF();
 			}
-			break;
-			case(2): //Y+
-			if(myposY == posY)
-			{			
-				/*if(sensorleft < 25)
-				{
-					rotate90left();
-				}*/
-				rotate90left();
-				
-			}
-			else //if(sensorfront > 50) // Ingen vägg framför
+			else
 			{
-				/*if(sensorright < 25)
+				drive(40);
+				updatepos();
+				leftturn();
+			}
+			break;
+			case(1): // X+
+			if(myposX == posX)
+			{
+				
+				leftturn();			
+			}
+			else if(sensorfront > 50) // Ingen vägg framför
+			{
+				if(sensorright < 20)
 				regulateright();
-				else*/
+				else
 				driveF();
 			}
-			break;
-			case(3): // X-
-			rotate90right();
+			else
+			{
+				drive(40);
+				updatepos();
+				
+				leftturn();
+			}
 			break;
 			case(4): // Y-
-			rotate90left();
+			if(sensorright < 20)
+			regulateright();
+			else
+			rotate90right();
 			break;
 		}
 	}
@@ -1277,51 +1347,64 @@ void driveto(unsigned int posX, unsigned int posY)
 	{
 		switch(mydirection)
 		{
-			case(1): // X+
-			if(myposX == posX)
-			{
-				/*if(sensorlright< 25)
-				{
-				rotate90left();
-				}*/
-				rotate90right();
-				
-			}
-			else //if(sensorfront > 50) // Ingen vägg framför
-			{
-				/*if(sensorright < 25)
-				regulateright();
-				else*/
-				driveF();
-			}
-			/*else
-			{
-			drive(40);
-			rotate90right();
-			}*/
-			break;
-			case(2): // Y+
-			rotate90right();
-			break;
 			case(3): // X-
 			rotate90left();
 			break;
 			case(4): // Y-
 			if(myposY == posY)
-			{			
-				/*if(sensorleft < 25)
-				{
-					rotate90left();
-				}*/
-				rotate90left();
-			}
-			else //if(sensorfront > 50) // Ingen vägg framför
 			{
-				/*if(sensorright < 25)
+				leftturn();
+			}
+			else if(sensorfront > 50) // Ingen vägg framför
+			{
+				if(sensorright < 20)
 				regulateright();
-				else*/
+				else
 				driveF();
 			}
+			else
+			{
+				drive(40);
+				updatepos();
+				leftturn();
+			}
+			break;
+			case(1): // X+
+			if(myposX == posX)
+			{
+				if(sensorright < 20)
+				{
+					regulateright();
+				}
+				else if(sensorright > 20)
+				{
+					drive(20);
+					updatepos();
+				}
+				else
+				rotate90right();
+				
+			}
+			else if(sensorfront > 50) // Ingen vägg framför
+			{
+				if(sensorright < 20)
+				regulateright();
+				else
+				driveF();
+			}
+			else
+			{
+				drive(40);
+				updatepos();
+				
+				leftturn();
+			}
+			break;
+			case(2): // Y+
+			if(sensorright < 20)
+			regulateright();
+			else
+			rotate90right();
 			break;
 		}
 	}
@@ -1330,50 +1413,63 @@ void driveto(unsigned int posX, unsigned int posY)
 		switch(mydirection)
 		{
 			case(1): // X+
-			rotate90right();
-			break;
-			case(2): // Y+
 			rotate90left();
+			break;
+			case(4): // Y-
+			if(myposY == posY)
+			{
+				leftturn();
+			}
+			else if(sensorfront > 50) // Ingen vägg framför
+			{
+				if(sensorright < 20)
+				regulateright();
+				else
+				driveF();
+			}
+			else
+			{
+				drive(40);
+				updatepos();
+				leftturn();
+			}
 			break;
 			case(3): // X-
 			if(myposX == posX)
 			{
-				/*if(sensorlright< 25)
+				if(sensorright < 20)
 				{
-				rotate90left();
-				}*/
-				rotate90left();
+					regulateright();
+				}
+				else if(sensorright > 20)
+				{
+					drive(20);
+					updatepos();
+				}
+				else
+				rotate90right();
 				
 			}
-			else //if(sensorfront > 50) // Ingen vägg framför
+			else if(sensorfront > 50) // Ingen vägg framför
 			{
-				/*if(sensorright < 25)
+				if(sensorright < 20)
 				regulateright();
-				else*/
+				else
 				driveF();
 			}
-			/*else
+			else
 			{
-			drive(40);
-			rotate90right();
-			}*/
+				drive(40);
+				updatepos();
+				
+				leftturn();
+			}
 			break;
-			case(4): // Y-
-			if(myposY == posY)
-			{			
-				/*if(sensorleft < 25)
-				{
-					rotate90left();
-				}*/
-				rotate90right();
-			}
-			else //if(sensorfront > 50) // Ingen vägg framför
-			{
-				/*if(sensorright < 25)
-				regulateright();
-				else*/
-				driveF();
-			}
+			case(2): // Y+
+			if(sensorright < 20)
+			regulateright();
+			else
+			rotate90right();
 			break;
 		}
 	}
@@ -1451,6 +1547,7 @@ int main(void)
 	else
 	{
 		MasterInit();
+		
 		for(long i = 0; i < 480000; i++){}
 		
 		while(home == 0)
@@ -1464,7 +1561,7 @@ int main(void)
 			{
 				i = 1;
 			}
-			if(posdistance > 13 + i)  //40/2.55125)*0.9
+			if(posdistance > 29 + i)  //40/2.55125)*0.9
 			{
 				updatepos();
 				if(n != 4)
@@ -1478,7 +1575,7 @@ int main(void)
 			}
 			
 					
-			if(!onelap)
+			/*if(!onelap)
 			{
 				firstlap();
 			}
