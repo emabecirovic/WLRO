@@ -16,6 +16,7 @@ const char traveldist = 0b00000110;
 const char gyro = 0b00000111;
 const char gyrostop = 0b10000000;
 const char RFID = 0b00001000;
+const char RFIDstop = 0b01010101;
 const char direction = 0b00001001;
 const char rightspeed = 0b00001010;
 const char leftspeed = 0b00001011;
@@ -23,6 +24,7 @@ const char firstdone = 0b00001100;
 const char findzeroX = 0b00001101;
 const char findzeroY = 0b00001110;
 const char arraytransmit = 0b00001111;
+const char updateroom = 0b00010000;
 const char stop = 0x00; //Stop byte
 
 
@@ -31,6 +33,7 @@ const char turn = 3;
 const char turnstop = 4;
 const char trstraight = 5;
 const char findzero = 6;
+const char update = 7;
 
 // Delayer för busskomm
 const int time = 200;
@@ -51,7 +54,7 @@ volatile float leftpwm;
 volatile float distance = 0; // Avlagdsträcka
 
 long overflow = 0; // Räknat för långt
-long dt = 0;
+long double dt = 0;
 int timer = 0;
 
 char speed = 50;
@@ -65,9 +68,9 @@ char startregulate = 0;
 
 /**************POSITION******************/
 volatile char mydirection = 1; //1=X+ ; 2=Y+ ; 3=X- ; 4=Y-
-volatile unsigned int myposX=16; //Robotens position i X-led
+volatile unsigned int myposX=15; //Robotens position i X-led
 volatile unsigned int myposY=1; //Robotens position i Y-led
-const unsigned int startX = 16;
+const unsigned int startX = 15;
 const unsigned int startY = 1; //Startpositionen sätts till mitten på nedre långsidan
 volatile float posdistance = 0;
 volatile char isRFID = 0;
