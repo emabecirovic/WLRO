@@ -741,13 +741,9 @@ int main(void)
 					{
 						doextend = true;
 					}
-				/*	else if(selection == alrdydone) // alrdydone , returnera true or false
+					else if(selection == alrdydone) // alrdydone , returnera true or false
 					{
-						SPDR = firstzeroX;
-					}*/
-					else if(selection == findzeroY)
-					{
-						SPDR = firstzeroY;
+						SPDR = iswall;
 					}
 					else if(selection == stop)
 					{
