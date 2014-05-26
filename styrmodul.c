@@ -10,7 +10,7 @@
 #include <avr/io.h>
 #include <avr/delay.h>
 #include <avr/interrupt.h>
-#include "styrRobot.h"
+#include "styrmodul.h"
 
 #define F_CPU 1000000UL
 
@@ -18,16 +18,16 @@
 void initiate_variables()
 {
 	/************BUSS**********************/
-	
+
 	// Start för busskom
 	start_request = 0;
 
 	// Array för värden från buss
 	storedValues[8] = 1;
-	
+
 	storedValues[11] = 15;
 	storedValues[12] = 1;
-	
+
 
 	/******************REGLERING************************/
 
@@ -47,8 +47,8 @@ void initiate_variables()
 	myposX = 15; //Robotens position i X-led
 	myposY = 1; //Robotens position i Y-led
 	posdistance = 0;
-	
-	
+
+
 	/***************FLAGGOR FÖR MAIN******************/
 	start = 1; //vi står i startpositionen
 
@@ -265,32 +265,32 @@ void transmit()
 
 void TransmitSensor(char invalue)
 {
-    if(start_request == 1)
-    {
-        start_request = 0;
-    
-        PORTB &= 0b11101111; // ss2 low
+	if(start_request == 1)
+	{
+		start_request = 0;
+		
+		PORTB &= 0b11101111; // ss2 low
 
-        if(invalue == turn)
-        {
-            MasterTransmit(gyro);
-            for(int i = 0; i < time; i++){}
-            MasterTransmit(stop);
-            storedValues[6] = SPDR; // Gyro
-        }
-        else if(invalue == turnstop)
-        {
-            MasterTransmit(gyrostop);
-            for(int i = 0; i < time; i++){}
-            dummy = SPDR;
-        }
-        else if(invalue == RFID)
-        {
-            MasterTransmit(RFID);
-            for(int i = 0; i < time; i++){}
-            
-            dummy = SPDR; // inget
-        }
+		if(invalue == turn)
+		{
+			MasterTransmit(gyro);
+			for(int i = 0; i < time; i++){}
+			MasterTransmit(stop);
+			storedValues[6] = SPDR; // Gyro
+		}
+		else if(invalue == turnstop)
+		{
+			MasterTransmit(gyrostop);
+			for(int i = 0; i < time; i++){}
+			dummy = SPDR;
+		}
+		else if(invalue == RFID)
+		{
+			MasterTransmit(RFID);
+			for(int i = 0; i < time; i++){}
+			
+			dummy = SPDR; // inget
+		}
 		else if(invalue == RFIDstop)
 		{
 			MasterTransmit(RFIDstop);
@@ -298,59 +298,45 @@ void TransmitSensor(char invalue)
 			MasterTransmit(stop);
 			storedValues[7] = SPDR; //RFID
 		}
-        else    
-        {
-            //MasterTransmit(RFID);
-            //First communication will contain crap on shift register
-            //for(int i = 0; i < time; i++){}
-            MasterTransmit(traveldist); // Request front sensor
-            for(int i = 0; i < time; i++){}
-            //storedValues[7] = SPDR; // SensorRFID
-            MasterTransmit(front); // Request front sensor
-            for(int i = 0; i < time; i++){}
-            storedValues[5] = SPDR; // Distance
-            MasterTransmit(rightfront);
-            for(int i = 0; i < time; i++){}
-            storedValues[0] = SPDR; // Front
-            MasterTransmit(rightback);
-            for(int i = 0; i < time; i++){}
-            storedValues[1] = SPDR; // Right front
-            MasterTransmit(leftfront);
-            for(int i = 0; i < time; i++){}
-            storedValues[2] = SPDR; // Right back
-            MasterTransmit(leftback);
-            for(int i = 0; i < time; i++){}
-            storedValues[3] = SPDR; // Left front
-            MasterTransmit(stop);
-            for(int i = 0; i < time; i++){}
-            storedValues[4] = SPDR; // Left back
-        }
+		else
+		{
+			//MasterTransmit(RFID);
+			//First communication will contain crap on shift register
+			//for(int i = 0; i < time; i++){}
+			MasterTransmit(traveldist); // Request front sensor
+			for(int i = 0; i < time; i++){}
+			//storedValues[7] = SPDR; // SensorRFID
+			MasterTransmit(front); // Request front sensor
+			for(int i = 0; i < time; i++){}
+			storedValues[5] = SPDR; // Distance
+			MasterTransmit(rightfront);
+			for(int i = 0; i < time; i++){}
+			storedValues[0] = SPDR; // Front
+			MasterTransmit(rightback);
+			for(int i = 0; i < time; i++){}
+			storedValues[1] = SPDR; // Right front
+			MasterTransmit(leftfront);
+			for(int i = 0; i < time; i++){}
+			storedValues[2] = SPDR; // Right back
+			MasterTransmit(leftback);
+			for(int i = 0; i < time; i++){}
+			storedValues[3] = SPDR; // Left front
+			MasterTransmit(stop);
+			for(int i = 0; i < time; i++){}
+			storedValues[4] = SPDR; // Left back
+		}
 
-        PORTB ^= 0b00010000; // ss2 high
+		PORTB ^= 0b00010000; // ss2 high
 
-        if(invalue != trstraight)
-        {
-            distance = distance + storedValues[5];
-            posdistance = posdistance + storedValues[5];
-            storedValues[5] = 0;
-        }
-        /*
-        if (isRFID == 0 && storedValues[7] == 1)
-        {
-            isRFID = 1;    
-        }
-        else if (isRFID == 1 && storedValues[7] == 0)
-        {
-            isRFID = 1;
-        }
-        else if (isRFID == 0 && storedValues[7] == 0)
-        {
-            isRFID = 0;
-        }
-        */
+		if(invalue != trstraight)
+		{
+			distance = distance + storedValues[5];
+			posdistance = posdistance + storedValues[5];
+			storedValues[5] = 0;
+		}
 
-        TCCR0B = 0b00000101; // Start timer
-    }
+		TCCR0B = 0b00000101; // Start timer
+	}
 }
 
 
@@ -359,32 +345,32 @@ void TransmitComm(char invalue)
 {
 	if(start_request == 1)
 	{
-		
+
 		PORTB &= 0b11110111;
-		
+
 		storedValues[5] = posdistance;
-				
+
 		if(invalue == update)
 		{
 			dummy = SPDR;
 			MasterTransmit(arraytransmit);
 			for(int i = 0; i < time; i++){}
-			
+
 			for(int i = 0; i < 11; i ++)
 			{
 				dummy = SPDR;
 				MasterTransmit(storedValues[i]);
 				for(int i = 0; i < time; i++){}
 			}
-						
+
 			dummy = SPDR;
 			MasterTransmit(myposX);
 			for(int i = 0; i < time; i++){}
-			
+
 			dummy = SPDR;
 			MasterTransmit(myposY);
 			for(int i = 0; i < time; i++){}
-			
+
 			dummy = SPDR;
 			MasterTransmit(updateroom);
 			for(int i = 0; i < time; i++){}
@@ -413,26 +399,26 @@ void TransmitComm(char invalue)
 			dummy = SPDR;
 			MasterTransmit(arraytransmit);
 			for(int i = 0; i < time; i++){}
-			
+
 			for(int i = 0; i < 11; i ++)
 			{
 				dummy = SPDR;
 				MasterTransmit(storedValues[i]);
 				for(int i = 0; i < time; i++){}
 			}
-			
+
 			dummy = SPDR;
 			MasterTransmit(myposX);
 			for(int i = 0; i < time; i++){}
-			
+
 			dummy = SPDR;
 			MasterTransmit(myposY);
 			for(int i = 0; i < time; i++){}
 		}
 
-			PORTB ^= 0b00001000;
-			
-			TCCR0B = 0b00000101; // Start timer
+		PORTB ^= 0b00001000;
+
+		TCCR0B = 0b00000101; // Start timer
 	}
 }
 
@@ -510,9 +496,13 @@ void remotecontrol()
 
 void updatepos()
 {
-	/*for(long i = 0; i < 4000; i++){}
-	TransmitSensor(RFIDstop);*/
-	storedValues[7] = 0;
+	if (foundRFID == 0)
+	{
+		stopp();
+		start_request = 1;
+		TransmitSensor(RFID);
+		//storedValues[7] = 0;
+	}
 	start = 0;
 	asm("");
 	switch(mydirection)
@@ -542,21 +532,26 @@ void updatepos()
 		}
 	}
 	posdistance = 0;
-	
-	/*for(long i = 0; i < 160000; i++){}
-	TransmitSensor(RFID); 
-	for(long i = 0; i < 160000; i++)
+	if (foundRFID == 0)
 	{
-		stopp();
-	}//Vänta så vi hinner läsa
-	for(long i = 0; i < 160000; i++){}
-	TransmitSensor(RFIDstop);//storedValues[7] sätts i denna
-	for(long i = 0; i < 160000; i++){}*/
-	
+		for(long i = 0; i < 160000; i++){}
+		for(long i = 0; i < 160000; i++){}
+		start_request = 1;
+		TransmitSensor(RFIDstop);
+		if (storedValues[7] == 1)
+		{
+			foundRFID = 1;
+		}
+	}
+	else
+	{
+		storedValues[7] = 0;
+	}	
+
 	start_request = 1;
 	TransmitComm(update);
-	storedValues[7] = 0 ;
-	
+	//storedValues[7] = 0 ;
+
 }
 
 
@@ -592,7 +587,7 @@ void rotate90left()
 	{
 		stopp();
 	}
-	
+
 	storedValues[6] = 0;
 	while(turnisDone == 0)
 	{
@@ -621,12 +616,12 @@ void rotate90left()
 	}
 	turnisDone = 0;
 	storedValues[8] = mydirection;
-	
+
 	for(long i = 0; i < 80000; i ++)
 	{
 		stopp();
 	}
-	
+
 	start_request = 1;
 	TransmitSensor(0);
 	TransmitComm(update);
@@ -636,13 +631,13 @@ void rotate90left()
 
 void rotate90right()
 {
-		start_request = 1;
-		TransmitComm(update);
-		for(long i = 0; i < 80000; i ++)
-		{
-			stopp();
-		}
-		
+	start_request = 1;
+	TransmitComm(update);
+	for(long i = 0; i < 80000; i ++)
+	{
+		stopp();
+	}
+
 	storedValues[6] = 0;
 	while(turnisDone == 0)
 	{
@@ -670,12 +665,12 @@ void rotate90right()
 	}
 	turnisDone = 0;
 	storedValues[8] = mydirection;
-	
+
 	for(long i = 0; i < 80000; i ++)
 	{
 		stopp();
 	}
-	
+
 	start_request = 1;
 	TransmitSensor(0);
 	TransmitComm(update);
@@ -749,14 +744,14 @@ void drive(float dist) //kör dist cm
 {
 	distance=0;
 	dist = dist / 1.275625;
-	
+
 	while (distance < dist * 0.8)
 	{
 		TransmitSensor(0);
 		driveF();
 	}
 	stopp();
-	
+
 }
 
 void drivefromstill(float dist) //kör dist cm
@@ -800,7 +795,7 @@ void regulateright()
 	{
 		sensormeanr_old = sensormeanr;
 	}
-	
+
 	transmit();
 	//REGLERING
 	//Omvandling till centimeter
@@ -814,7 +809,7 @@ void regulateright()
 	{
 		firstRR = 0;
 		TransmitComm(update);
-		
+
 		stopp();
 		sensormeanr_old = sensormeanr;
 	}
@@ -845,8 +840,8 @@ void regulateright()
 				PORTC = 0x01;
 				PORTD = 0x20;
 				rightpwm = speed + K * ((15 - sensormeanr)) + Td * (sensor2r - sensor1r);
-				leftpwm = speed - K * ((15 - sensormeanr)) - Td * (sensor2r - sensor1r); 
-				
+				leftpwm = speed - K * ((15 - sensormeanr)) - Td * (sensor2r - sensor1r);
+
 				if (rightpwm > 255)
 				{
 					OCR2B = 255;
@@ -883,7 +878,7 @@ void regulateright()
 				rotate90right();
 				drivefromstill(40);
 				updatepos();
-				
+
 				straight();
 			}
 			else
@@ -901,13 +896,13 @@ void firstlap()
 	if(myposX == startX && myposY == startY && mydirection == 1 && !start)	//Det här kommer gälla de första sekunderna roboten börjar köra också..!
 	{
 		onelap = 1;
-		
+
 		straight();
-		
+
 		start_request = 1;
 		TransmitComm(firstdone);
 		start_request = 0;
-		
+
 		for(long i = 0; i < 160000; i ++)
 		{
 			stopp();
@@ -920,8 +915,8 @@ void firstlap()
 		{
 			stopp();
 		}
-		
-		
+
+
 	}
 	else
 	{
@@ -976,7 +971,7 @@ void returntostart()
 		rotate90left();
 		rotate90left();
 	}
-		
+
 }
 
 
@@ -995,18 +990,18 @@ int main(void)
 	else
 	{
 		MasterInit();
-		
+
 		for(long i = 0; i < 480000; i++){}
-		
+
 		while(home == 0)
 		{
 			TransmitSensor(0);
-			if(posdistance > 32)  //40/2.55125)*0.9
+			if(posdistance > 32) //40/2.55125)*0.9
 			{
 				updatepos();
-				
+
 			}
-			
+
 			if(!onelap)
 			{
 				firstlap();
