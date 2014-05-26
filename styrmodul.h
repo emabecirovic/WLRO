@@ -6,7 +6,7 @@ bool remoteControl = false; // Change to Port connected to switch
 /************BUSS**********************/
 char dummy;
 
-// Förenklingar för enklarekodning
+// FÃ¶renklingar fÃ¶r enklarekodning
 const char front = 0b00000001;
 const char rightfront = 0b00000010;
 const char rightback = 0b00000011;
@@ -35,11 +35,11 @@ const char trstraight = 5;
 const char findzero = 6;
 const char update = 7;
 
-// Delayer för busskomm
+// Delayer fÃ¶r busskomm
 const int time = 200;
 char start_request = 0;
 
-// Array för värden från buss
+// Array fÃ¶r vÃ¤rden frÃ¥n buss
 volatile unsigned char storedValues[13];
 
 
@@ -51,14 +51,14 @@ float K;
 long Td;
 volatile float rightpwm;
 volatile float leftpwm;
-volatile float distance = 0; // Avlagdsträcka
+volatile float distance = 0; // AvlagdstrÃ¤cka
 
 char speed = 50;
 
 volatile char turnisDone = 0;
 
 
-// Flaggor för regulateright
+// Flaggor fÃ¶r regulateright
 int firstRR=1;
 char startregulate = 0;
 
@@ -67,10 +67,10 @@ volatile char mydirection = 1; //1=X+ ; 2=Y+ ; 3=X- ; 4=Y-
 volatile unsigned int myposX=15; //Robotens position i X-led
 volatile unsigned int myposY=1; //Robotens position i Y-led
 const unsigned int startX = 15;
-const unsigned int startY = 1; //Startpositionen sätts till mitten på nedre långsidan
+const unsigned int startY = 1; //Startpositionen sÃ¤tts till mitten pÃ¥ nedre lÃ¥ngsidan
 volatile float posdistance = 0;
 volatile char isRFID = 0;
-volatile char n = 0; //För 13 14
+volatile char n = 0; //FÃ¶r 13 14
 
 /*************************LCD***********************/
 
@@ -93,28 +93,28 @@ const char lcdf = 0b01000110;
 const char lcdspace = 0b00100000;
 
 
-/*******************FJÄRRSTYRT****************/
+/*******************FJÃ„RRSTYRT****************/
 char button = 0x00;
 
 
 
-/***************FLAGGOR FÖR MAIN******************/
-volatile bool start = 1; //vi står i startpositionen
+/***************FLAGGOR FÃ–R MAIN******************/
+volatile bool start = 1; //vi stÃ¥r i startpositionen
 
-volatile bool finished=0; //1 då hela kartan utforskad
-volatile bool onelap=0; //1 då yttervarvet körts
-volatile bool home=0; //1 då robten återvänt till startposition
+volatile bool finished=0; //1 dÃ¥ hela kartan utforskad
+volatile bool onelap=0; //1 dÃ¥ yttervarvet kÃ¶rts
+volatile bool home=0; //1 dÃ¥ robten Ã¥tervÃ¤nt till startposition
 
 
-bool zzleftturn = true; // Till första toppsvängen i sicksacksak
-bool zzfirst = true; // Till första bottensväng i sicksacksak
+bool zzleftturn = true; // Till fÃ¶rsta toppsvÃ¤ngen i sicksacksak
+bool zzfirst = true; // Till fÃ¶rsta bottensvÃ¤ng i sicksacksak
 
-bool drivetoY = true; // Y-led är prioriterad riktining om sant i driveto
+bool drivetoY = true; // Y-led Ã¤r prioriterad riktining om sant i driveto
 
-volatile int firstzeroX = 15; //Första nollan om man läser matrisen uppifrån och ned
+volatile int firstzeroX = 15; //FÃ¶rsta nollan om man lÃ¤ser matrisen uppifrÃ¥n och ned
 volatile int firstzeroY = 1;
 
-//char room[29][15]; //=.... 0=outforskat, 1=vägg, 2=öppen yta
+//char room[29][15]; //=.... 0=outforskat, 1=vÃ¤gg, 2=Ã¶ppen yta
 
 
 
@@ -139,7 +139,7 @@ void transmit();
 void TransmitSensor(char invalue);
 void TransmitComm(char invalue);
 
-/*******************FJÄRRSTYRNING***************/
+/*******************FJÃ„RRSTYRNING***************/
 void remotecontrol();
 
 /******************POSITIONERING******************/
@@ -171,7 +171,7 @@ void rotateright();
 float sidesensor(unsigned char sensorvalue);
 float frontsensor(unsigned char sensorvalue);
 
-/******************REGLERING & AVSÖKNING**************/
+/******************REGLERING & AVSÃ–KNING**************/
 void regulateright();
 void firstlap();
 void bajsfunktion();
