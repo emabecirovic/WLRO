@@ -2,7 +2,6 @@
 #include <iostream>
 
 #include "Bluetooth.h"
-//#include "Map.h"
 
 #include <SFML/Audio.hpp>
 #include <SFML/Graphics.hpp>
@@ -16,9 +15,11 @@
 
 using namespace std;
 
+
+/************ Kartritning ***********************/
 void Drawmap(sf::RenderWindow* myWindow, int room[31][17],sf::RectangleShape* robotposition)//,sf::RectangleShape* fire, sf::RectangleShape* robotposition ,sf::RectangleShape* wall)
 {
-    /************ Kartritning ***********************/
+
 
 //Rita ut ett tomt (vitt) fönster, pixlar eller?, i 29*15-storlek, med RenderWindow. Finns redan i nån main
 
@@ -70,14 +71,11 @@ void Drawmap(sf::RenderWindow* myWindow, int room[31][17],sf::RectangleShape* ro
 bool remote_controll(Bluetooth_Serial_comm* Com_Port)
 {
     bool remote = true;
-    int i = 0;
     while(remote)
     {
         if(sf::Keyboard::isKeyPressed(sf::Keyboard::K))
         {
-            Com_Port->Send_to_Bt('K');
             remote = false;
-            // Com_Port->~Bluetooth_Serial_comm();
         }
         else if(sf::Keyboard::isKeyPressed(sf::Keyboard::W))
         {
@@ -121,6 +119,7 @@ bool autonom(Bluetooth_Serial_comm* Com_Port)
 {
     bool remote = false;
     int test;
+    int direction;
 
     float yt;
 
@@ -169,30 +168,13 @@ robotposition.setOutlineColor(sf::Color::White);
 robotposition.setFillColor(sf::Color::Magenta);
 robotposition.setOutlineThickness(1); // och tjockleken.
 
-/*
-sf::RectangleShape wall;
-wall.setSize(sf::Vector2f(20, 20));
-wall.setOutlineColor(sf::Color::White);
-wall.setFillColor(sf::Color::Black);
-wallsetOutlineThickness(1);
-
-sf::RectangleShape* fire;
-fire->setSize(sf::Vector2f(20,20));
-fire->setOutlineColor(sf::Color::White);
-fire->setFillColor(sf::Color::Red);
-fire->setOutlineThickness(1);
-/*
-sf::RectangleShape* searched_area;
-searched_area->setSize(sf::Vector2f(20, 20));
-searched_area->setOutlineColor(sf::Color::Black);
-searched_area->setFillColor(sf::Color::White);
-searched_area->setOutlineThickness(1);
-*/
 int myposX = 15;
-int myposY = 0;
+int myposY = 1;
+int myposXtemp = 0;
+int myposYtemp = 0;
 int x2;
 int y;
-int type = 0;
+int type = 2;
 
 bool isRFID = false;
 
@@ -200,15 +182,10 @@ bool isRFID = false;
 /***********************************************************/
 
 
-
-   // while (myWindow->isOpen())
-
-
-   while(remote == false and myWindow->isOpen())
+   while(myWindow->isOpen())
     {
         if(sf::Keyboard::isKeyPressed(sf::Keyboard::L))
         {
-            remote = true;
             myWindow->close();
         }
         if(sf::Keyboard::isKeyPressed(sf::Keyboard::R))
@@ -220,7 +197,7 @@ bool isRFID = false;
                     room[i][j] = 0;
                     }
             }
-            myposX = 16;
+            myposX = 15;
             myposY = 1;
         }
 
@@ -284,32 +261,42 @@ bool isRFID = false;
             else if(test == 6)
             {
                 test = Com_Port->Read_from_BT();
-                 cout << "firstzeroX: "<< test << " ";
+              //   cout << "distance: "<< test << " ";
             }
             else if(test == 7)
             {
                 test = Com_Port->Read_from_BT();
-                cout << "forstzeroY: "<< test << "\n";
+               // cout << "forstzeroY: "<< test << " ";
             }
             else if(test == 8)
             {
                 test = Com_Port->Read_from_BT();
+                if(test == 1)
+                {
+                 //   cout << "hej2\n";
+                    isRFID = true;
+                }
+                else
+                {
 
+                    isRFID = false;
+                }
 
-               // cout << "RFID: "<< test << " ";
+             //   cout << "RFID: "<< test << " ";
 
 
             }
             else if(test == 9)
             {
                 test = Com_Port->Read_from_BT();
-                // cout << "x: "<< test << " ";
+                direction = test;
+               //  cout << "direction: "<< test << " ";
             }
             else if(test == 10)
             {
                 test = Com_Port->Read_from_BT();
-                 //cout << "type "<< test << " ";
-                 type = test;
+             //    cout << "type "<< test << " ";
+                // type = test;
 
             }
             else if(test == 11)
@@ -321,14 +308,23 @@ bool isRFID = false;
             else if(test == 12)
             {
                 test = Com_Port->Read_from_BT();
-             //   myposX = test;
-                //  cout << "x: "<< test << " ";
+                if(isRFID)
+                {
+                    type = 4;
+                }
+                else
+                {
+                type = 2;
+                }
+
+                myposX = test;
+              //    cout << "myposX: "<< test << " ";
             }
             else if(test == 13)
             {
                 test = Com_Port->Read_from_BT();
-                 // cout << "y: "<< test << "\n";
-                //  myposY = test;
+              //    cout << "myposY: "<< test << "\n";
+                  myposY = test;
             }
             else if(test == 14)
             {
@@ -343,6 +339,31 @@ bool isRFID = false;
                 }
                 cout << "karta kommit\n";
                 // cout << "test fel värde: " << test << "\n";
+            }
+            else if(test == 15)
+            {
+                test = Com_Port->Read_from_BT();
+                if(direction == 1)
+                {
+                    room[myposX][myposY + test] = 1;
+
+                }
+                if(direction == 2)
+                {
+                    room[myposX - test][myposY] = 1;
+                }
+                if(direction == 3)
+                {
+                    room[myposX][myposY - test] = 1;
+                }
+                if(direction == 4)
+                {
+                    room[myposX + test][myposY] = 1;
+                }
+
+
+
+                cout << "rutor till Ö: " << test << "\n";
             }
 
 
@@ -373,9 +394,8 @@ bool isRFID = false;
 myWindow->clear();
 
             myWindow->draw(bgSprite);
-
-        /*****************Fram********************/
-        cirkle.setPosition(755,395 - (y1*2));
+        /*****************Vänster Fram********************/
+        cirkle.setPosition(755,395 - y1);
         myWindow->draw(cirkle);
         /************* Höger Fram****************/
         cirkle.setPosition(155,185 - (y2* 6));
@@ -383,37 +403,28 @@ myWindow->clear();
         /************* Höger Bak****************/
         cirkle.setPosition(267,185 - (y3* 6));
         myWindow->draw(cirkle);
-        /************* Vänster Fram****************/
+        /************* Fram****************/
         cirkle.setPosition(385,185 - (y4* 6));
-        myWindow->draw(cirkle);
-        /************* Vänster Bak****************/
-        cirkle.setPosition(497,185 - (y5* 6));
         myWindow->draw(cirkle);
 
 
 
 
 /*************************************************/
-/*
-if(isRFID == true)
+if(room[myposX][myposY] != 4)
 {
-
-room[myposX][myposY] = 4;
+    room[myposX][myposY] = type;
 }
-else if(room[myposX][myposY] == 4)
-{
-
-}
-else
-*/
-
-    room[myposX][myposY] == type;
+/**********************kartritning************************/
 
 
-Drawmap(myWindow,room,&robotposition);//,fire,robotposition,wall);
 
+   Drawmap(myWindow,room,&robotposition);//,fire,robotposition,wall);
+
+
+/*************************************************************/
         myWindow->display();
-        if(type != 4)
+        if(room[myposX][myposY] == 2)
         {
             room[myposX][myposY] = 5;
         }
@@ -421,13 +432,7 @@ Drawmap(myWindow,room,&robotposition);//,fire,robotposition,wall);
         {
 
         }
-        if(fmod(x,370) <= 1)
-        {
-          //  myWindow->clear();
-          //  myWindow->draw(bgSprite);
-           // newSprite.setColor(sf::Color::Yellow);
-        //    std::cout << "hej" << std::endl;
-        }
+
     }
 
 
@@ -437,274 +442,15 @@ Drawmap(myWindow,room,&robotposition);//,fire,robotposition,wall);
 
 
 /*************tester*****************/
-/*
-char room2[31][17];
-
-void setwall(int x,int y)
-{
-	room2[x][y]=1;
-}
-
-void updatemap(char w,char mydirection,float sensorright,float sensorfront,float sensorleft,int myposX, int myposY) // Kan väl bara gälla för yttervarvet?
-{
-	//char w=30; //Hur långt ifrån vi ska vara för att säga att det är en vägg.
-
-	switch(mydirection)
-	{
-		case (1): // X+
-		if(sensorright<=w) //Vet inte vad som är en lämplig siffra här
-		{
-			setwall(myposX,myposY-1);
-		}
-		else if(sensorfront<=w)
-		{
-			setwall(myposX+1,myposY);
-		}
-		else if(sensorleft<w)
-		{
-			setwall(myposX,myposY+1);
-		}
-		else if((sensorfront>=45) && (sensorfront<=55))
-		{
-			setwall(myposX+2, myposY);
-		}
-		else if((sensorfront>=85) && (sensorfront<=95))
-		{
-			setwall(myposX+3, myposY);
-		}
-		else if((sensorfront>=125) && (sensorfront<=135))
-		{
-			setwall(myposX+4, myposY);
-		}
-		else if((sensorfront>=165) && (sensorfront<=175))
-		{
-			setwall(myposX+5, myposY);
-		}
-
-		if (!((room2[myposX-1][myposY] == 1) || (room2[myposX-1][myposY]== 4)))
-		{
-			room2[myposX-1][myposY]=2;
-		}
-		break;
-
-		case (2): // Y+
-		if(sensorright<=w)
-		{
-			setwall(myposX+1,myposY);
-		}
-		else if(sensorfront<=w)
-		{
-			setwall(myposX,myposY+1);
-		}
-		else if(sensorleft<w)
-		{
-			setwall(myposX-1,myposY);
-		}
-		else if((sensorfront>=45) && (sensorfront<=55))
-		{
-			setwall(myposX, myposY+2);
-		}
-		else if((sensorfront>=85) && (sensorfront<=95))
-		{
-			setwall(myposX, myposY+3);
-		}
-		else if((sensorfront>=125) && (sensorfront<=135))
-		{
-			setwall(myposX, myposY+4);
-		}
-		else if((sensorfront>=165) && (sensorfront<=175))
-		{
-			setwall(myposX, myposY+5);
-		}
-
-		if (!((room2[myposX][myposY-1] == 1) || (room2[myposX][myposY-1]== 4)))
-		{
-			room2[myposX][myposY-1]=2;
-		}
-		break;
-
-		case (3): // X-
-		if(sensorright<=w)
-		{
-			setwall(myposX,myposY+1);
-		}
-		else if(sensorfront<=w)
-		{
-			setwall(myposX-1,myposY);
-		}
-		else if(sensorleft<w)
-		{
-			setwall(myposX,myposY-1);
-		}
-		else if((sensorfront>=45) && (sensorfront<=55))
-		{
-			setwall(myposX-2, myposY);
-		}
-		else if((sensorfront>=85) && (sensorfront<=95))
-		{
-			setwall(myposX-3, myposY);
-		}
-		else if((sensorfront>=125) && (sensorfront<=135))
-		{
-			setwall(myposX-4, myposY);
-		}
-		else if((sensorfront>=165) && (sensorfront<=175))
-		{
-			setwall(myposX-5, myposY);
-		}
-
-		if (!((room2[myposX+1][myposY]) || (room2[myposX + 1][myposY] == 4)))
-		{
-			room2[myposX+1][myposY]=2;
-		}
-		break;
-
-		case (4): // Y-
-		if(sensorright<=w)
-		{
-			setwall(myposX-1,myposY);
-		}
-		else if(sensorfront<=w)
-		{
-			setwall(myposX,myposY-1);
-		}
-		else if(sensorleft<w)
-		{
-			setwall(myposX+1,myposY);
-		}
-		else if((sensorfront>=45) && (sensorfront<=55))
-		{
-			setwall(myposX, myposY-2);
-		}
-		else if((sensorfront>=85) && (sensorfront<=95))
-		{
-			setwall(myposX, myposY-3);
-		}
-		else if((sensorfront>=125) && (sensorfront<=135))
-		{
-			setwall(myposX, myposY-4);
-		}
-		else if((sensorfront>=165) && (sensorfront<=175))
-		{
-			setwall(myposX, myposY-5);
-		}
-
-		if (!((room2[myposX][myposY+1] == 1) || (room2[myposX][myposY+1] == 4)))
-		{
-			room2[myposX][myposY+1]=2;
-		}
-		break;
-	}
-/*	if(storedValues[7]==1)
-	{
-		room2[myposX][myposY]=4;
-	}*/
-//}
 
 /*********************************/
 int main()
 {
 
-/***********tester****************/
-/*
- sf::RenderWindow* myWindow = new sf::RenderWindow(sf::VideoMode(800,600), "Who let the robot out?");
-    myWindow->setFramerateLimit(60);
-
- sf::CircleShape cirkle;
-    cirkle.setRadius(6);
-cirkle.setFillColor(sf::Color::Red);
-
-
-    sf::Clock myClock;
-    sf::Event event;
-    sf::Texture pixelTexture;
-    pixelTexture.loadFromFile("pixel1.png");
-
-    sf::Texture bgTexture;
-    bgTexture.loadFromFile("background.png");
-    sf::Sprite bgSprite(bgTexture);
-    sf::Text Numbers_To_Draw;
-
-    sf::Sprite newSprite(pixelTexture);
-    sf::Sprite y1Sprite(int num);
-
-
-    sf::Font arial;
-    arial.loadFromFile("arial.ttf");
-
-    sf::RectangleShape robotposition;
-robotposition.setSize(sf::Vector2f(20, 20)); //fett osäker på storleken..
-robotposition.setOutlineColor(sf::Color::White);
-robotposition.setFillColor(sf::Color::Magenta);
-robotposition.setOutlineThickness(1); // och tjockleken.
-
-float frontsensor = 150;
-        float rightfront = 10;
-        float leftfront = 40;
-        char mydirection = 1;
-        int myposX = 16;
-        int myposY = 1;
-int i = 0;
-    while(myWindow->isOpen())
-    {
-        if(i< 25)
-        {
-            i++;
-        }
-        if(i <= 5)
-        {
-            myposX++;
-        }
-
-        if((i > 5) and (i <= 10))
-        {
-            mydirection = 2;
-            myposY++;
-        }
-        if((i > 10) and (i <= 15))
-        {
-            mydirection = 3;
-            myposX--;
-        }
-        if((i > 15) and (i <= 20))
-        {
-            mydirection = 4;
-            myposY--;
-        }
-
-
-
-updatemap(30,mydirection,rightfront,frontsensor,leftfront,myposX,myposY);
-
-
-Drawmap(myWindow,room2,&robotposition);
-myWindow->display();
-        while(myWindow->pollEvent(event))
-        {
-            switch(event.type)
-            {
-            case sf::Event::Closed:
-            {
-                myWindow->close();
-                break;
-            }
-            case event.MouseButtonPressed:
-            {
-                int xpressed = event.mouseButton.x;
-                int ypressed = event.mouseButton.y;
-            }
-            }
-
-        }
-    }
-
-/**********************************/
-
-
-
-
     Bluetooth_Serial_comm Com_Port;
     bool remote = false;
+while(1)
+{
 
 
     if(remote == true)
@@ -716,7 +462,7 @@ myWindow->display();
         remote = autonom(&Com_Port);
     }
 
-
+}
 
     Com_Port.disconnect();
 
