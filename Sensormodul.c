@@ -136,7 +136,7 @@ void USART_Init( unsigned int baud )
 	UBRR0H = (unsigned char)(baud>>8);
 	UBRR0L = (unsigned char)baud;
 	/* Enable receiver and transmitter, disable receive interrupt */
-	UCSR0B = (1<<RXEN0)|(1<<TXEN0)|(0<<RXCIE0);
+	UCSR0B = (1<<RXEN0)|(1<<TXEN0)|(1<<RXCIE0);
 	/* Set frame format: 8data, 1stop bit */
 	UCSR0C = (0<<USBS0)|(3<<UCSZ00);
 }
@@ -352,128 +352,123 @@ int main(void)
 				else
 				{
 					angle += (dGyro - gyroref);//*5/256;
-					}
+				}
 
-					//Kolla om vi kommit fram till önskat värde
+				//Kolla om vi kommit fram till önskat värde
 
-					if(angle >= bigvalue)
-					{
+				if(angle >= bigvalue)
+				{
 					sendGyro = 1;
-					}
-					else if (angle <= smallvalue)
-					{
+				}
+				else if (angle <= smallvalue)
+				{
 					sendGyro = 2;
-					}
-					else
-					{
+				}
+				else
+				{
 					sendGyro = 0;
-					}
+				}
 
-					}//gyroflag == 1
-					//Starta samplingsräknare
-					TCCR1B = 0x03;
-					}//ad_complete == 1
-					}//while
-					}//main
+			}//gyroflag == 1
+			//Starta samplingsräknare
+			TCCR1B = 0x03;
+		}//ad_complete == 1
+	}//while
+}//main
 
-					//Avbrott för sampletid
-					ISR(TIMER1_COMPB_vect)
-					{
-					TCCR1B = 0x00;
-					TCNT1 = 0x00;
-					start_sample = 1;
-					ADCSRA = 0b11001011;
-					}
+//Avbrott för sampletid
+ISR(TIMER1_COMPB_vect)
+{
+	TCCR1B = 0x00;
+	TCNT1 = 0x00;
+	start_sample = 1;
+	ADCSRA = 0b11001011;
+}
 
+//Avbrott för knapp
+ISR(INT0_vect) //knapp ska vi inte ha irl, men ja.
+{
+	dummy = 0;
+	//:)
+}
 
-					//Avbrott för knapp
-					ISR(INT0_vect) //knapp ska vi inte ha irl, men ja.
-					{
-					dummy = 0;
-					//:)
-					}
+//Avbortt för AD-omvandlingen är klar
+ISR(ADC_vect)
+{
+	ADCSRA = 0b10001011;
+	ad_complete = 1;
+}
 
-					//Avbortt för AD-omvandlingen är klar
-					ISR(ADC_vect)
-					{
-					ADCSRA = 0b10001011;
-					ad_complete = 1;
-					}
+//Avbrott för buss klar
+ISR(SPI_STC_vect) // Skicka på buss!! // Robert
+{
+	SPDR = 0; //Dummyskrivning
+	selection = SPDR;
+	if(selection == front)
+	{
+		SPDR = sortedValues[0];
+	}
+	else if (selection == rightfront)
+	{
+		SPDR = sortedValues[1];
+		//SPDR = 125;
+	}
+	else if (selection == rightback)
+	{
+		SPDR = sortedValues[2];
+	}
+	else if (selection == leftfront)
+	{
+		SPDR = sortedValues[3];
+	}
+	else if (selection == leftback)
+	{
+		SPDR = sortedValues[4];
+	}
+	else if (selection == traveldist)
+	{
+		SPDR = Distance;
+		asm("");
+		Distance = 0;
+	}
+	else if (selection == gyro)
+	{
+		SPDR = sendGyro;
+		gyroflag = 1;
+		ADMUX = 6;
+		asm("");
+	}
+	else if (selection == gyrostop) // här är den riktiga gyrostop
+	{
+		SPDR = 0;
+		angle = 0;
+		sendGyro = 0;
+		gyroflag = 0;
+		ADMUX = i;
+		dummy = 1;
+	}
+	else if (selection == RFID)
+	{
+		RFIDflag = 1;
+	}
+	else if (selection == RFIDstop)
+	{
+		SPDR = isRFID;
+		RFIDflag = 0;
+		isRFID = 0;
+	}
+	else if (selection == stop)
+	{
+		// behöver förmodligen inte göra något här
+	}
+}
 
-					//Avbrott för buss klar
-					ISR(SPI_STC_vect) // Skicka på buss!! // Robert
-					{
-					SPDR = 0; //Dummyskrivning
-					selection = SPDR;
-					if(selection == front)
-					{
-					SPDR = sortedValues[0];
-					}
-					else if (selection == rightfront)
-					{
-					SPDR = sortedValues[1];
-					//SPDR = 125;
-					}
-					else if (selection == rightback)
-					{
-					SPDR = sortedValues[2];
-					}
-					else if (selection == leftfront)
-					{
-					SPDR = sortedValues[3];
-					}
-					else if (selection == leftback)
-					{
-					SPDR = sortedValues[4];
-					}
-					else if (selection == traveldist)
-					{
-					SPDR = Distance;
-					asm("");
-					Distance = 0;
-
-					}
-					else if (selection == gyro)
-					{
-					SPDR = sendGyro;
-
-					gyroflag = 1;
-					ADMUX = 6;
-					asm("");
-					}
-					else if (selection == gyrostop) // här är den riktiga gyrostop
-					{
-					SPDR = 0;
-					angle = 0;
-					sendGyro = 0;
-					gyroflag = 0;
-					ADMUX = i;
-					dummy = 1;
-					}
-					else if (selection == RFID)
-					{
-						RFIDflag = 1;
-						UCSR0B = (1<<RXCIE0);
-					}
-					else if (selection == RFIDstop)
-					{
-						SPDR = isRFID;
-						RFIDflag = 0;
-						isRFID = 0;
-						UCSR0B = (0<<RXCIE0);
-					}
-					else if (selection == stop)
-					{
-					// behöver förmodligen inte göra något här
-					}
-					}
-
-					ISR(USART0_RX_vect)
-					{
-					rfid_data = UDR0;
-					if(rfid_data == 0x0A)
-					{
-					isRFID = 1;
-					}
-					dummy = 0;
-					}
+ISR(USART0_RX_vect)
+{
+	rfid_data = UDR0;
+	if(rfid_data == 0x0A)
+	{
+		isRFID = 1;
+	}
+	dummy = 0;
+}
