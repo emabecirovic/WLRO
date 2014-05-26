@@ -2,12 +2,12 @@ bool isoutwall = true;
 bool outwall()
 {
 	TransmitComm(outwall);
-	return 
+	return true; //robert
 }
 
 void secondlap()
 {
-	if(sensorleft < 260 || sensorleft >80)
+	if(sensorleft < 260 && sensorleft >80)
 	{
 		outwall();
 		if(!isoutwall)
@@ -24,21 +24,21 @@ void secondlap()
 void traveledDist()
 {
 	if(posdistance > 32)  //40/1.27)*0.9
-		{
-			updatepos();
-		}
+	{
+		updatepos();
+	}
 }
 
 void gotoIsland()
 {
 	while(frontsensor < 15)
-		{
-			traveledDist();
-			driveF();
-		}
+	{
+		traveledDist();
+		driveF();
+	}
 		
-		rotate90left();
-		straight();
+	rotate90left();
+	straight();
 }
 
 void storepos()
@@ -87,10 +87,9 @@ void Island()
 			straight();
 			rotate90left();
 			out = false;
-		}
-		else
-		{
+			
 			throwpos();
+			gotoIsland();
 		}
 }
 
