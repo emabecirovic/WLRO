@@ -7,7 +7,7 @@ bool outwall()
 
 void secondlap()
 {
-	if(sensorleft < 260 && sensorleft >80)
+	if(sensorleft < 250 && sensorleft > 50)
 	{
 		outwall();
 		if(!isoutwall)
