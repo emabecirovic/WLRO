@@ -1,22 +1,19 @@
-bool isoutwall = true;
-bool outwall()
+bool alreadyDone()
 {
-	TransmitComm(outwall);
-	return true; //robert
+	searched = false;
+	TransmitComm(alrdydone);
+	return searched;
 }
 
 void secondlap()
 {
 	if(sensorleft < 250 && sensorleft > 50)
 	{
-		outwall();
-		if(!isoutwall)
+		if(!alreadydone())
 		{
-			isoutwall = true;
 			Island();
 		}
 	}
-	
 	regulateright();
 }
 
@@ -54,18 +51,10 @@ void throwpos()
 }
 
 bool out = false;
-bool Islandstart = true; // För att vi inte ska vara hemma när
-
-bool alreadyDone()
-{
-		
-		
-}
+ // För att vi inte ska vara hemma när
 
 void Island()
 {
-	if(!(alreadyDone()))
-	{
 		out = true;
 		
 		straight();
@@ -91,9 +80,4 @@ void Island()
 			throwpos();
 			gotoIsland();
 		}
-}
-
-
-
-
 }
