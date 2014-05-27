@@ -10,7 +10,7 @@
 #include <avr/io.h>
 #include <avr/delay.h>
 #include <avr/interrupt.h>
-#include "styrmodul.h"
+#include "StyrRobot.h"
 
 #define F_CPU 1000000UL
 
@@ -375,18 +375,15 @@ void TransmitComm(char invalue)
 			MasterTransmit(updateroom);
 			for(int i = 0; i < time; i++){}
 		}
-		else if(invalue == findzero)
+		else if(invalue == alrdyDone)
 		{
 			dummy = SPDR;
-			MasterTransmit(findzeroX);
-
+			MasterTransmit(alrdyDone);
+			
 			for(int i = 0; i < time; i++){}
-			MasterTransmit(findzeroY);
-			for(int i = 0; i < time; i++){}
-			firstzeroX = SPDR;
 			MasterTransmit(stop);
 			for(int i = 0; i < time; i++){}
-			firstzeroY = SPDR;
+			searched = SPDR;
 		}
 		else if(invalue == firstdone)
 		{
@@ -493,6 +490,14 @@ void remotecontrol()
 }
 
 /************************POSITIONSHANTERING**********************/
+void traveledDist()
+{
+	if(posdistance > 32)  //40/1.27)*0.9
+	{
+		updatepos();
+	}
+}
+
 
 void updatepos()
 {
@@ -736,7 +741,7 @@ void driveF()
 {
 	PORTC = 0x01;
 	PORTD = 0x20;
-	OCR2B = speed-2;
+	OCR2B = speed;
 	OCR2A = speed;
 }
 
@@ -769,24 +774,6 @@ void drivefromstill(float dist) //kör dist cm
 
 
 
-void leftturn() //Används när man vet att det är vägg framför och vägg till höger för att kolla om man ska svänga vänster eller vända om helt
-{
-	stopp();
-	TransmitSensor(0);
-
-	sensorleft = sidesensor(storedValues[3]);
-
-	if(sensorleft < 25)
-	{
-		rotate90left();
-		rotate90left();
-	}
-	else
-	{
-		rotate90left();
-	}
-	straight();
-}
 
 
 void regulateright()
@@ -820,7 +807,7 @@ void regulateright()
 		K = 5;
 		if(sensorfront <= 15)
 		{
-			if(posdistance > 25)
+			if(posdistance > 20)
 			{
 				updatepos();
 			}
@@ -830,7 +817,7 @@ void regulateright()
 		}
 		if(((sensor1r - sensor2r) < 15) && ((sensor2r - sensor1r) < 15))
 		{
-			if (fabs(sensor1r - sensor2r) > 10)
+			if (fabs(sensor1r - sensor2r) > 3)
 			{
 				straight();
 			}
@@ -896,12 +883,13 @@ void firstlap()
 	if(myposX == startX && myposY == startY && mydirection == 1 && !start)	//Det här kommer gälla de första sekunderna roboten börjar köra också..!
 	{
 		onelap = 1;
+		start = 1;
 
 		straight();
 
 		start_request = 1;
 		TransmitComm(firstdone);
-		start_request = 0;
+		
 
 		for(long i = 0; i < 160000; i ++)
 		{
@@ -915,6 +903,7 @@ void firstlap()
 		{
 			stopp();
 		}
+		start_request = 0;
 
 
 	}
@@ -924,54 +913,119 @@ void firstlap()
 	}
 }
 
+/***********************SECONDLAP*************************/
 
-
-/*************************RFID****************************/
-void rfid()
+// Hjälpfunktioner
+bool alreadyDone()
 {
-	storedValues[7] = 0;
-	volatile int bajs = 1;
-	while(bajs == 1)
-	{
-
-		transmit();
-		if(storedValues[7] != 1)
-		{
-			PORTC = 0x01;
-			PORTD = 0x20;
-			OCR2B = 50;
-			OCR2A = 50;
-		}
-		else
-		{
-			stopp();
-			bajs = 0;
-
-		}
-
-
-	}
+	searched = false;
+	TransmitComm(alrdyDone);
+	return searched;
 }
 
-void returntostart()
+void gotoIsland()
 {
-	if(myposX == startX && myposY == startY) // pos[0] = X-koordinat & pos[1] = Y-koordinat
+	start_request = 1;
+	TransmitSensor(0);
+	sensorfront = sidesensor(storedValues[3]);
+	while(sensorfront > 15)
 	{
-		home = 1;
-		rotate90right();
-		rotate90right();
-		rotate90left();
-		rotate90right();
-		rotate90left();
-		rotate90left();
+		driveF();
+		traveledDist();
+		
+		TransmitSensor(0);
+		sensorfront = sidesensor(storedValues[3]);
+	}
+
+	if(posdistance > 25)
+	{
+		updatepos();
+	}
+	rotate90left();
+	straight();
+}
+
+void storepos()
+{
+	start = true;
+	storeposX = myposX;
+	storeposY = myposY;
+	storedirection = mydirection;
+}
+
+void throwpos()
+{
+	storeposX = 42;
+	storeposY = 42;
+	storedirection = 42;
+}
+
+volatile bool balle = true;
+
+void secondlap()
+{
+	if(myposX == startX && myposY == startY && mydirection == 1 && !start)	//Det här kommer gälla de första sekunderna roboten börjar köra också..!
+	{
+		home = true;	
 	}
 	else
 	{
-		rotate90left();
-		rotate90left();
-		rotate90left();
+		
+		//print_on_lcd(0xAA);
+		TransmitSensor(0);
+		sensorleft = frontsensor(storedValues[0]);
+		if(sensorleft < 120 && sensorleft > 45)
+		{
+			if(balle)
+			{	
+				balle = false;
+				drive(20);
+				updatepos();
+			}
+		
+			if(!alreadyDone())
+			{
+				print_on_lcd(0xCC);
+				Island();
+			}
+		}
+		else
+		{
+			balle = true;
+		}
+		
+		regulateright();
+		
 	}
+}
 
+void Island()
+{
+	out = true;
+	
+	straight();
+	rotate90left();
+	
+	gotoIsland();
+	
+	// Around Island
+	if(out)
+	{
+		storepos();
+		
+		while(myposX != storeposX || myposY != storeposY || mydirection != 1 || start)
+		{
+			traveledDist();
+			regulateright();			
+		}
+		
+		straight();
+		rotate90left();
+		out = false;
+		
+		throwpos();
+		gotoIsland();
+	}
 }
 
 
@@ -995,7 +1049,7 @@ int main(void)
 
 		while(home == 0)
 		{
-			TransmitSensor(0);
+			transmit();
 			if(posdistance > 32) //40/2.55125)*0.9
 			{
 				updatepos();
@@ -1006,15 +1060,9 @@ int main(void)
 			{
 				firstlap();
 			}
-			/*else if(!findemptydone)
-			{
-			findempty();
-			}*/
 			else
 			{
-				returntostart();
-				stopp();
-				print_on_lcd(0xAB);
+				secondlap();
 			}
 		}
 	}
