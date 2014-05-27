@@ -21,8 +21,8 @@ const char direction = 0b00001001;
 const char rightspeed = 0b00001010;
 const char leftspeed = 0b00001011;
 const char firstdone = 0b00001100;
-const char findzeroX = 0b00001101;
-const char findzeroY = 0b00001110;
+const char alrdyDone = 0b00001101;
+//const char findzeroY = 0b00001110; Fixa det här !!!!
 const char arraytransmit = 0b00001111;
 const char updateroom = 0b00010000;
 const char stop = 0x00; //Stop byte
@@ -105,14 +105,13 @@ volatile bool finished=0; //1 då hela kartan utforskad
 volatile bool onelap=0; //1 då yttervarvet körts
 volatile bool home=0; //1 då robten återvänt till startposition
 
+//secondlap
+volatile bool searched = false;
+bool out = false;
 
-bool zzleftturn = true; // Till första toppsvängen i sicksacksak
-bool zzfirst = true; // Till första bottensväng i sicksacksak
-
-bool drivetoY = true; // Y-led är prioriterad riktining om sant i driveto
-
-volatile int firstzeroX = 15; //Första nollan om man läser matrisen uppifrån och ned
-volatile int firstzeroY = 1;
+volatile int storeposX = 42;
+volatile int storeposY = 42;
+volatile char storedirection = 42;
 
 //char room[29][15]; //=.... 0=outforskat, 1=vägg, 2=öppen yta
 
@@ -157,13 +156,9 @@ void drive(float dist);
 void drivefromstill(float dist);
 void straight();
 
-void temporary90right();
-void temporary90left();
-
 void rotate90left();
 void rotate90right();
 
-void leftturn();
 void rotateleft();
 void rotateright();
 
@@ -174,13 +169,12 @@ float frontsensor(unsigned char sensorvalue);
 /******************REGLERING & AVSÖKNING**************/
 void regulateright();
 void firstlap();
-void bajsfunktion();
 
-
-void away();
-void zigzag();
-void findfirstzero();
-void driveto(unsigned int posX, unsigned int posY);
-void findempty();
+bool alreadyDone();
+void gotoIsland();
+void storepos();
+void throwpos();
+void secondlap();
+void Island();
 
 void returntostart(); // Kolla om vi ska ha den
