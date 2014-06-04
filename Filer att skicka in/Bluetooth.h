@@ -1,3 +1,13 @@
+/*
+* FILNAMN: Bluetooth.h
+* PROGRAMMERARE: Grupp 9 - WLRO
+* DATUM: 2014-06-04
+*
+* .h-fil till klassen Bluetooth
+*
+*
+*/
+
 #ifndef BLUETOOTH_H
 #define BLUETOOTH_H
 
