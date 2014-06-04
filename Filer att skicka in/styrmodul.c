@@ -11,7 +11,7 @@
 #include <avr/io.h>
 #include <avr/delay.h>
 #include <avr/interrupt.h>
-#include "StyrRobot.h"
+#include "styrmodul.h"
 
 #define F_CPU 1000000UL
 
