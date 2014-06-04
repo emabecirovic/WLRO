@@ -5,7 +5,7 @@
 *
 * .h-fil till styrmodulens ATmega1284P
 *
-*
+* 
 */
 
 typedef int bool;
@@ -32,7 +32,7 @@ const char rightspeed = 0b00001010;
 const char leftspeed = 0b00001011;
 const char firstdone = 0b00001100;
 const char alrdyDone = 0b00001101;
-//const char findzeroY = 0b00001110; Fixa det här !!!!
+
 const char arraytransmit = 0b00001111;
 const char updateroom = 0b00010000;
 const char stop = 0x00; //Stop byte
@@ -63,7 +63,7 @@ volatile float rightpwm;
 volatile float leftpwm;
 volatile float distance = 0; // Avlagdsträcka
 
-char speed = 50;
+char speed = 60;
 
 volatile char turnisDone = 0;
 
@@ -78,9 +78,12 @@ volatile unsigned int myposX=15; //Robotens position i X-led
 volatile unsigned int myposY=1; //Robotens position i Y-led
 const unsigned int startX = 15;
 const unsigned int startY = 1; //Startpositionen sätts till mitten på nedre långsidan
+
+volatile unsigned int RFIDX = 42;
+volatile unsigned int RFIDY = 42;
+
 volatile float posdistance = 0;
 volatile char foundRFID = 0;
-volatile char n = 0; //För 13 14
 
 /*************************LCD***********************/
 
@@ -106,8 +109,6 @@ const char lcdspace = 0b00100000;
 /*******************FJÄRRSTYRT****************/
 char button = 0x00;
 
-
-
 /***************FLAGGOR FÖR MAIN******************/
 volatile bool start = 1; //vi står i startpositionen
 
@@ -117,11 +118,11 @@ volatile bool home=0; //1 då robten återvänt till startposition
 
 //secondlap
 volatile bool searched = false;
-bool out = false;
+volatile bool controlisland = false;
 
 volatile int storeposX = 42;
 volatile int storeposY = 42;
-volatile char storedirection = 42;
+volatile char storedirection = 0;
 
 //char room[29][15]; //=.... 0=outforskat, 1=vägg, 2=öppen yta
 
@@ -129,42 +130,53 @@ volatile char storedirection = 42;
 
 
 /************FUNKTIONER I ORDNING ENL .c*************/
-void initiate_variables();
+void initiate_variables(); // Variabel initation vid reset av proc
 
-void initiate_request_timer(); //D-regulation
-void initiate_timer(); // Busstimer
+void initiate_request_timer(); // Busstimer
 
 
 void Initiation(); // styr och LCD
-void writechar(unsigned char data);
+
+/****************LCD*******************/
+void writechar(unsigned char data); // Skriv tecken på LCD
+void shift(int steps); // Skifta pekaren höger på LCD ett antal steg
+void shiftcursorleft(); // skifta pekaren till vänster
+char what_lcd_number(char number); // Look up för Hex till LCD
+void print_on_lcd(char number); // Skriv ett nummer på LCD
+void setcursor(char place); // Placera pekaren på specifik plats
+
 
 /*****************BUSS********************/
 void MasterInit(void);
-void MasterTransmit(char cData);
+void MasterTransmit(char cData); // Skicka en byte på bussen
 
+// Egen delay till bussen som skrivits för att delay bibloteket
+// inte funkar när man programmerar utan optimering.
 void bussdelay();
 
-void transmit();
-void TransmitSensor(char invalue);
-void TransmitComm(char invalue);
+void transmit(); // Skicka sensorvärden från sensor till styr till komm
+
+// Funktioner som används för att skicka sensorvärden/rapporterar händelser 
+// mellan moduler.
+void TransmitSensor(char invalue); //Skickar data mellan sensor och styr
+void TransmitComm(char invalue); // Skickar data mellan komm och styr
 
 /*******************FJÄRRSTYRNING***************/
 void remotecontrol();
 
 /******************POSITIONERING******************/
-void updatepos();
+//Variabel för att variera antal sektorer som representerar 40 cm
+volatile char n = 0;
 
-/***********************KARTA************************/
-void setwall(int x,int y);
-void updatemap();
-void extended_wall();
+// Se till att uppdaterapositionen efter 40cm
+void traveledDist();
+
+// Uppdatera positionen på karta samt gör åtgärder som krävs i mitten av en ruta
+void updatepos(); 
+
 
 /*****************STYRNING********************/
-void stopp();
-void driveF();
-void drive(float dist);
-void drivefromstill(float dist);
-void straight();
+void stopp(); // stoppa motorer
 
 void rotate90left();
 void rotate90right();
@@ -173,18 +185,24 @@ void rotateleft();
 void rotateright();
 
 /****************KONVERTERING*************/
-float sidesensor(unsigned char sensorvalue);
-float frontsensor(unsigned char sensorvalue);
+// konverterar digitala värden till cm
+float shortsensor(unsigned char sensorvalue);
+float longsensor(unsigned char sensorvalue);
 
 /******************REGLERING & AVSÖKNING**************/
-void regulateright();
-void firstlap();
+void straight(); // räta upp roboten mot vägg
 
-bool alreadyDone();
-void gotoIsland();
-void storepos();
-void throwpos();
-void secondlap();
-void Island();
+void driveF();	// kör framåt
+void drive(float dist); // kör en viss sträcka
+void drivefromstill(float dist); // kör en viss sträcka från stillastående
 
-void returntostart(); // Kolla om vi ska ha den
+void regulateright(); // reglerar efter högervägg
+void firstlap();	// Process för första varvet
+
+// Andra varvet
+bool alreadyDone(); // Har vi varit vid väggen vänster sensor ser
+void gotoIsland(); // Åk ut till ö
+void storepos(); // skapar startpunkt för att åka runt ö
+void throwpos(); // kastar den punkten
+void secondlap(); // Process för andra varvet
+void Island(); // kör runt ön
