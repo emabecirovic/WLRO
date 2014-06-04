@@ -34,7 +34,7 @@ void initiate_variables()
 
 	distance = 0; // Avlagdsträcka
 
-	speed = 50;
+	speed = 60;
 
 	turnisDone = 0;
 
@@ -47,17 +47,34 @@ void initiate_variables()
 	mydirection = 1; //1=X+ ; 2=Y+ ; 3=X- ; 4=Y-
 	myposX = 15; //Robotens position i X-led
 	myposY = 1; //Robotens position i Y-led
+	
+	RFIDX = 42;
+	RFIDY = 42;
+	
 	posdistance = 0;
-
-
+	foundRFID = 0;
+	
+	
+	/****************FJÄRRSTYRT**************************/
+	button = 0x00;
+	
+	
 	/***************FLAGGOR FÖR MAIN******************/
 	start = 1; //vi står i startpositionen
 
 	finished = 0; //1 då hela kartan utforskad
 	onelap = 0; //1 då yttervarvet körts
 	home = 0; //1 då roboten återvänt till startposition
+	
+	//secondlap
+	searched = false;
+	controlisland = false;
+	
+	// Position utanför kartan innan vi har varit vid en ö
+	storeposX = 42;
+	storeposY = 42;
+	storedirection = 0;
 }
-
 
 void initiate_request_timer()
 {
@@ -151,8 +168,6 @@ void shiftcursorleft()
 	_delay_ms(30);
 }
 
-//------------------------------------------------------------------------------
-
 char what_lcd_number(char number)
 {
 	switch (number)
@@ -234,14 +249,15 @@ void setcursor(char place) //16 platser på en rad. 0x00-0x0F
 
 void MasterInit(void)
 {
-	/* Set MOSI and SCK output, alla others input*/
-	/* Ersätt DDR_SPI med den port "serie" som används ex DD_SPI -> DDRB
-	samt DD_MOSI och DD_SCK med specifik pinne ex DD_MOSI -> DDB5 */
-	DDRB = (1<<DDB3)|(1<<DDB4)|(1<<DDB5)|(1<<DDB7);
+	/* PORTB används som buss */
+	/* Sätter MOSI, SSx och SCK utgångar, alla andra ingångar*/
+	/* PORTB4 = SS1 och PORTB5 = SS2
+	DDRB = (1<<DDB3)|(1<<DDB4)|(1<<DDB5)|(1<<DDB7);*/
 
-	/* Enable SPI, Master, set clock rate fosc/16 */
+	/* Enable SPI, Master, clock rate fosc/64, mode 3 SPI */
 	SPCR = (1<<SPE)|(1<<MSTR)|(0<<SPI2X)|(1<<SPR1)|(0<<SPR0)|(1<<CPHA)|(1<<CPOL);
 
+	// Ettställer SSx
 	PORTB = (1<<PORTB3)|(1<<PORTB4);
 
 	/* Enable External Interrupts */
@@ -250,11 +266,19 @@ void MasterInit(void)
 
 void MasterTransmit(char cData)
 {
-	/* Start transmission */
+	/* Start överföring */
 	SPDR = cData;
-	/* Wait for transmission complete */
+	/* Vänta på att överföringen ska bli klar */
 	while(!(SPSR & (1<<SPIF)))
 	;
+	
+	// Ge tid till bearbetning av överföring
+	bussdelay();
+}
+
+void bussdelay()
+{
+	for(int i = 0; i < time; i++){}
 }
 
 
@@ -266,6 +290,11 @@ void transmit()
 
 void TransmitSensor(char invalue)
 {
+	// Vänta på timer som ser till att sensor får tid till AD-omvandling
+	while(start_request == 0)
+	{
+	}
+	
 	if(start_request == 1)
 	{
 		start_request = 0;
@@ -275,61 +304,58 @@ void TransmitSensor(char invalue)
 		if(invalue == turn)
 		{
 			MasterTransmit(gyro);
-			for(int i = 0; i < time; i++){}
+			
 			MasterTransmit(stop);
-			storedValues[6] = SPDR; // Gyro
+			storedValues[6] = SPDR; // Gyrovärde
 		}
 		else if(invalue == turnstop)
 		{
 			MasterTransmit(gyrostop);
-			for(int i = 0; i < time; i++){}
+			
 			dummy = SPDR;
 		}
 		else if(invalue == RFID)
 		{
 			MasterTransmit(RFID);
-			for(int i = 0; i < time; i++){}
+			
 			
 			dummy = SPDR; // inget
 		}
 		else if(invalue == RFIDstop)
 		{
 			MasterTransmit(RFIDstop);
-			for(int i = 0; i < time; i++){}
+			
 			MasterTransmit(stop);
-			storedValues[7] = SPDR; //RFID
+			storedValues[7] = SPDR; //RFID hittat eller inte
 		}
 		else
 		{
-			//MasterTransmit(RFID);
-			//First communication will contain crap on shift register
-			//for(int i = 0; i < time; i++){}
 			MasterTransmit(traveldist); // Request front sensor
-			for(int i = 0; i < time; i++){}
-			//storedValues[7] = SPDR; // SensorRFID
+			dummy = SPDR; //Första värdet är vi inte intresserade av
+			
 			MasterTransmit(front); // Request front sensor
-			for(int i = 0; i < time; i++){}
-			storedValues[5] = SPDR; // Distance
+			
+			storedValues[5] = SPDR; // Antal sektorer på svart/vit skiva
 			MasterTransmit(rightfront);
-			for(int i = 0; i < time; i++){}
-			storedValues[0] = SPDR; // Front
+			
+			storedValues[0] = SPDR; // vänster lång sensor
 			MasterTransmit(rightback);
-			for(int i = 0; i < time; i++){}
-			storedValues[1] = SPDR; // Right front
+			
+			storedValues[1] = SPDR; // höger fram sensor
 			MasterTransmit(leftfront);
-			for(int i = 0; i < time; i++){}
-			storedValues[2] = SPDR; // Right back
+			
+			storedValues[2] = SPDR; // höger bak sensor
 			MasterTransmit(leftback);
-			for(int i = 0; i < time; i++){}
-			storedValues[3] = SPDR; // Left front
+			
+			storedValues[3] = SPDR; // Fram sensor
 			MasterTransmit(stop);
-			for(int i = 0; i < time; i++){}
-			storedValues[4] = SPDR; // Left back
+			
+			storedValues[4] = SPDR; // vänster kort sensor
 		}
 
 		PORTB ^= 0b00010000; // ss2 high
 
-		if(invalue != trstraight)
+		if(invalue != trstraight) // Uppdatera ingen avlagd sträcka när vi kör straight
 		{
 			distance = distance + storedValues[5];
 			posdistance = posdistance + storedValues[5];
@@ -340,84 +366,91 @@ void TransmitSensor(char invalue)
 	}
 }
 
-
-
 void TransmitComm(char invalue)
 {
-	if(start_request == 1)
+	PORTB &= 0b11110111;
+
+	if(invalue == update)
 	{
+		dummy = SPDR;
+		MasterTransmit(arraytransmit);
+		
 
-		PORTB &= 0b11110111;
-
-		storedValues[5] = posdistance;
-
-		if(invalue == update)
+		for(int i = 0; i < 11; i ++)
 		{
 			dummy = SPDR;
-			MasterTransmit(arraytransmit);
-			for(int i = 0; i < time; i++){}
-
-			for(int i = 0; i < 11; i ++)
-			{
-				dummy = SPDR;
-				MasterTransmit(storedValues[i]);
-				for(int i = 0; i < time; i++){}
-			}
-
-			dummy = SPDR;
-			MasterTransmit(myposX);
-			for(int i = 0; i < time; i++){}
-
-			dummy = SPDR;
-			MasterTransmit(myposY);
-			for(int i = 0; i < time; i++){}
-
-			dummy = SPDR;
-			MasterTransmit(updateroom);
-			for(int i = 0; i < time; i++){}
-		}
-		else if(invalue == alrdyDone)
-		{
-			dummy = SPDR;
-			MasterTransmit(alrdyDone);
+			MasterTransmit(storedValues[i]);
 			
-			for(int i = 0; i < time; i++){}
-			MasterTransmit(stop);
-			for(int i = 0; i < time; i++){}
-			searched = SPDR;
-		}
-		else if(invalue == firstdone)
-		{
-			dummy = SPDR;
-			MasterTransmit(firstdone);
-			for(int i = 0; i < time; i++){}
-		}
-		else
-		{
-			dummy = SPDR;
-			MasterTransmit(arraytransmit);
-			for(int i = 0; i < time; i++){}
-
-			for(int i = 0; i < 11; i ++)
-			{
-				dummy = SPDR;
-				MasterTransmit(storedValues[i]);
-				for(int i = 0; i < time; i++){}
-			}
-
-			dummy = SPDR;
-			MasterTransmit(myposX);
-			for(int i = 0; i < time; i++){}
-
-			dummy = SPDR;
-			MasterTransmit(myposY);
-			for(int i = 0; i < time; i++){}
 		}
 
-		PORTB ^= 0b00001000;
+		dummy = SPDR;
+		MasterTransmit(myposX);
+		
 
-		TCCR0B = 0b00000101; // Start timer
+		dummy = SPDR;
+		MasterTransmit(myposY);
+		
+		
+		dummy = SPDR;
+		MasterTransmit(RFIDX);
+		
+		
+		dummy = SPDR;
+		MasterTransmit(RFIDY);
+		
+
+		dummy = SPDR;
+		MasterTransmit(updateroom);
+		
 	}
+	else if(invalue == alrdyDone)
+	{
+		dummy = SPDR;
+		MasterTransmit(alrdyDone);
+		
+		
+		MasterTransmit(stop);
+		
+		searched = SPDR;
+	}
+	else if(invalue == firstdone)
+	{
+		dummy = SPDR;
+		MasterTransmit(firstdone);
+		
+	}
+	else
+	{
+		dummy = SPDR;
+		MasterTransmit(arraytransmit);
+		
+		// Skicka hela arrayen med sensorvärden
+		for(int i = 0; i < 11; i ++)
+		{
+			dummy = SPDR;
+			MasterTransmit(storedValues[i]);
+			
+		}
+
+		dummy = SPDR;
+		MasterTransmit(myposX);
+		
+
+		dummy = SPDR;
+		MasterTransmit(myposY);
+		
+		
+		dummy = SPDR;
+		MasterTransmit(RFIDX);
+		
+
+		dummy = SPDR;
+		MasterTransmit(RFIDY);
+		
+		
+	}
+
+	PORTB ^= 0b00001000;
 }
 
 
@@ -493,9 +526,27 @@ void remotecontrol()
 /************************POSITIONSHANTERING**********************/
 void traveledDist()
 {
-	if(posdistance > 32)  //40/1.27)*0.9
+	char i = 0;
+	if(n == 0)
+	{
+		i = 0;
+	}
+	else
+	{
+		i = 1;
+	}
+
+	if(posdistance > 31 + i)  //40/2.55125)*0.9
 	{
 		updatepos();
+		if(n != 4)
+		{
+			n = n + 1;
+		}
+		else
+		{
+			n = 0;
+		}
 	}
 }
 
@@ -507,7 +558,6 @@ void updatepos()
 		stopp();
 		start_request = 1;
 		TransmitSensor(RFID);
-		//storedValues[7] = 0;
 	}
 	start = 0;
 	asm("");
@@ -537,7 +587,11 @@ void updatepos()
 		{
 		}
 	}
+	
+	// Nollställ avlagdstäcka till nästa position i rutnätet
 	posdistance = 0;
+	
+	
 	if (foundRFID == 0)
 	{
 		for(long i = 0; i < 160000; i++){}
@@ -546,17 +600,23 @@ void updatepos()
 		TransmitSensor(RFIDstop);
 		if (storedValues[7] == 1)
 		{
-			foundRFID = 1;
+			//foundRFID = 1;
+			RFIDX = myposX;
+			RFIDY = myposY;
+			
 		}
+		
 	}
 	else
 	{
 		storedValues[7] = 0;
-	}	
-
+	}
+	
+	// Tillåt att kolla vänster efter ö
+	controlisland = true;
+	//Tvinga en överföring på buss direkt
 	start_request = 1;
 	TransmitComm(update);
-	//storedValues[7] = 0 ;
 
 }
 
@@ -565,22 +625,27 @@ void updatepos()
 /**************************************STYRNING*************************************/
 void stopp()
 {
+	//Hastighet höger, vänster
 	OCR2A = 0;
 	OCR2B = 0;
 }
 
 void rotateleft()
 {
+	// Riktning höger, vänster
 	PORTC = 0x00;
 	PORTD = 0x20;
+	//Hastighet höger, vänster
 	OCR2B = 100;
 	OCR2A = 100;
 }
 
 void rotateright()
 {
+	// Riktning höger, vänster
 	PORTC = 0x01;
 	PORTD = 0x00;
+	// Hastighet höger, vänster
 	OCR2B = 100;
 	OCR2A = 100;
 }
@@ -589,16 +654,19 @@ void rotate90left()
 {
 	start_request = 1;
 	TransmitComm(update);
+	
+	//stå still och kontrollera väggar runt roboten
 	for(long i = 0; i < 80000; i ++)
 	{
 		stopp();
 	}
-
+	
+	
 	storedValues[6] = 0;
 	while(turnisDone == 0)
 	{
 		start_request = 1;
-		TransmitSensor(turn);
+		TransmitSensor(turn); // Start gyro hos sensormodul
 		if (storedValues[6] != 1)
 		{
 			rotateleft();
@@ -606,12 +674,14 @@ void rotate90left()
 		else
 		{
 			start_request = 1;
-			TransmitSensor(turnstop);
+			TransmitSensor(turnstop); // kolla med sensormodul om vi roterat 90
 			stopp();
 			turnisDone = 1;
 		}
 
 	}
+	
+	// uppdatera riktning på roboten
 	if(mydirection == 4)
 	{
 		mydirection = 1;
@@ -622,7 +692,8 @@ void rotate90left()
 	}
 	turnisDone = 0;
 	storedValues[8] = mydirection;
-
+	
+	//stå still och kontrollera väggar runt roboten
 	for(long i = 0; i < 80000; i ++)
 	{
 		stopp();
@@ -633,6 +704,9 @@ void rotate90left()
 	TransmitComm(update);
 	posdistance = 0;
 	n = 0;
+	
+	// Tållåt kontrol efter ö
+	controlisland = true;
 }
 
 void rotate90right()
@@ -686,7 +760,7 @@ void rotate90right()
 
 
 //-----------------------------------KONVERTERING-------------------------
-float sidesensor(unsigned char sensorvalue)
+float shortsensor(unsigned char sensorvalue)
 {
 	float value = sensorvalue;
 	value = 1 / value;
@@ -696,7 +770,7 @@ float sidesensor(unsigned char sensorvalue)
 	return value;
 }
 
-float frontsensor(unsigned char sensorvalue)
+float longsensor(unsigned char sensorvalue)
 {
 	float value = sensorvalue;
 	value = 1 / value;
@@ -706,24 +780,26 @@ float frontsensor(unsigned char sensorvalue)
 	return value;
 }
 
+/*****************************REGLERING & AVSÖKNING***************************/
+
 void straight()
 {
 	start_request = 1;
 	TransmitSensor(trstraight);
-	sensor1r = sidesensor(storedValues[1]);
-	sensor2r = sidesensor(storedValues[2]);
+	sensor1r = shortsensor(storedValues[1]);
+	sensor2r = shortsensor(storedValues[2]);
 
 
-	while (fabs(sensor1r - sensor2r) > 0.8)
+	while (fabs(sensor1r - sensor2r) > 0.5)
 	{
-		if((sensor1r - sensor2r) > 0.8)
+		if((sensor1r - sensor2r) > 0.5)
 		{
 			PORTC = 0x01; //rotera höger
 			PORTD = 0x00;
 			OCR2A = 60;
 			OCR2B = 60;
 		}
-		else if((sensor2r - sensor1r) > 0.8)
+		else if((sensor2r - sensor1r) > 0.2)
 		{
 			PORTC = 0x00; //rotera vänster
 			PORTD = 0x20;
@@ -732,18 +808,20 @@ void straight()
 		}
 
 		TransmitSensor(trstraight);
-		sensor1r = sidesensor(storedValues[1]);
-		sensor2r = sidesensor(storedValues[2]);
+		sensor1r = shortsensor(storedValues[1]);
+		sensor2r = shortsensor(storedValues[2]);
 	}
 
 }
 
 void driveF()
 {
+	// Riktning
 	PORTC = 0x01;
 	PORTD = 0x20;
-	OCR2B = speed;
-	OCR2A = speed;
+	// Hastighet
+	OCR2B = speed-3;
+	OCR2A = speed+1;
 }
 
 void drive(float dist) //kör dist cm
@@ -765,7 +843,7 @@ void drivefromstill(float dist) //kör dist cm
 	distance=0;
 	dist = dist / 1.275625;
 
-	while (distance < dist * 1.05)
+	while (distance < dist * 1)
 	{
 		TransmitSensor(0);
 		driveF();
@@ -774,32 +852,24 @@ void drivefromstill(float dist) //kör dist cm
 }
 
 
-
-
-
 void regulateright()
 {
-	if(firstRR == 0)
-	{
-		sensormeanr_old = sensormeanr;
-	}
-
 	transmit();
 	//REGLERING
 	//Omvandling till centimeter
 
-	sensor1r = sidesensor(storedValues[1]);
-	sensor2r = sidesensor(storedValues[2]);
-	sensorfront = sidesensor(storedValues[3]);
+	sensor1r = shortsensor(storedValues[1]);
+	sensor2r = shortsensor(storedValues[2]);
+	sensorfront = shortsensor(storedValues[3]);
 	sensormeanr = ((sensor1r + sensor2r) / 2) + 4 ;
-
+	
+	// Uppdatera kommunikationsmodulen med sensorvärden innan reglering börjar
 	if(firstRR == 1)
 	{
 		firstRR = 0;
 		TransmitComm(update);
 
 		stopp();
-		sensormeanr_old = sensormeanr;
 	}
 	else
 	{
@@ -808,7 +878,7 @@ void regulateright()
 		K = 5;
 		if(sensorfront <= 15)
 		{
-			if(posdistance > 20)
+			if(posdistance > 25)
 			{
 				updatepos();
 			}
@@ -816,58 +886,58 @@ void regulateright()
 			rotate90left();
 			straight();
 		}
-		if(((sensor1r - sensor2r) < 15) && ((sensor2r - sensor1r) < 15))
+		if(sensor1r < 25 && sensor2r < 25)
 		{
-			if (fabs(sensor1r - sensor2r) > 3)
+			startregulate = 1;
+			PORTC = 0x01;
+			PORTD = 0x20;
+			rightpwm = speed + K * ((15 - sensormeanr)) + Td * (sensor2r - sensor1r);
+			leftpwm = speed - K * ((15 - sensormeanr)) - Td * (sensor2r - sensor1r);
+
+			if (rightpwm > 150)
 			{
-				straight();
+				OCR2B = 150;
+			}
+			else if(rightpwm < 0)
+			{
+				OCR2B = 0;
 			}
 			else
 			{
-				startregulate = 1;
-				PORTC = 0x01;
-				PORTD = 0x20;
-				rightpwm = speed + K * ((15 - sensormeanr)) + Td * (sensor2r - sensor1r);
-				leftpwm = speed - K * ((15 - sensormeanr)) - Td * (sensor2r - sensor1r);
-
-				if (rightpwm > 255)
-				{
-					OCR2B = 255;
-				}
-				else if(rightpwm < 0)
-				{
-					OCR2B = 0;
-				}
-				else
-				{
-					OCR2B = rightpwm;
-				}
-				if (leftpwm > 255)
-				{
-					OCR2A = 255;
-				}
-				else if (leftpwm < 0)
-				{
-					OCR2A = 0;
-				}
-				else
-				{
-					OCR2A = leftpwm;
-				}
+				OCR2B = rightpwm;
 			}
-		}//Om inte på båda
-		else
+			if (leftpwm > 150)
+			{
+				OCR2A = 150;
+			}
+			else if (leftpwm < 0)
+			{
+				OCR2A = 0;
+			}
+			else
+			{
+				OCR2A = leftpwm;
+			}
+			
+		}// Tappat konakt med bakhöger men inte framhöger
+		else if(sensor2r > 20 && sensor1r < 20 )
 		{
+			driveF();
+		}
+		else // Tappat kontakt med framhöger
+		{
+			//har vi reglerat mot vägg innan
 			if(startregulate == 1)
 			{
+				
 				startregulate = 0;
-				drive(25);
+				drive(20); // Kör fram till mitten av ruta
 				updatepos();
-				rotate90right();
-				drivefromstill(40);
+				rotate90right(); // sväng höger
+				drivefromstill(35); // Kör så att du har vägg att reglera mot
 				updatepos();
 
-				straight();
+				straight(); // korrigera om roboten står snett efter sväng
 			}
 			else
 			{
@@ -881,32 +951,17 @@ void regulateright()
 
 void firstlap()
 {
-	if(myposX == startX && myposY == startY && mydirection == 1 && !start)	//Det här kommer gälla de första sekunderna roboten börjar köra också..!
+	if(myposX == startX && myposY == startY && mydirection == 1 && !start)
 	{
+		stopp();
 		onelap = 1;
 		start = 1;
 
 		straight();
 
 		start_request = 1;
-		TransmitComm(firstdone);
-		
-
-		for(long i = 0; i < 160000; i ++)
-		{
-			stopp();
-		}
-		for(long i = 0; i < 160000; i ++)
-		{
-			stopp();
-		}
-		for(long i = 0; i < 160000; i ++)
-		{
-			stopp();
-		}
+		TransmitComm(firstdone); // Berätta för komm att första varvet är klart
 		start_request = 0;
-
-
 	}
 	else
 	{
@@ -920,6 +975,9 @@ void firstlap()
 bool alreadyDone()
 {
 	searched = false;
+	TransmitComm(update); // uppdatera kartan på kommunikationsmodulen
+	for(int i = 0; i < 500; i++){}
+	// Fråga kommunikationsmodulen om vi har varit vid väggen vi ser
 	TransmitComm(alrdyDone);
 	return searched;
 }
@@ -928,22 +986,32 @@ void gotoIsland()
 {
 	start_request = 1;
 	TransmitSensor(0);
-	sensorfront = sidesensor(storedValues[3]);
-	while(sensorfront > 15)
+	sensorfront = shortsensor(storedValues[3]);
+	while(sensorfront > 15) // Kör tills roboten står vid ön
 	{
 		driveF();
 		traveledDist();
 		
 		TransmitSensor(0);
-		sensorfront = sidesensor(storedValues[3]);
+		sensorfront = shortsensor(storedValues[3]);
 	}
 
-	if(posdistance > 25)
+	if(posdistance > 25) // korrigering för om vi inte har hamnat mitt i ruta
 	{
 		updatepos();
 	}
-	rotate90left();
-	straight();
+	rotate90left(); // ställ dig längsvägg
+	
+	start_request = 1;
+	TransmitSensor(0);
+	sensor1r = shortsensor(storedValues[1]);
+	sensor2r = shortsensor(storedValues[2]);
+	
+	// räta upp roboten om du har kontakt med fram och bak sensor höger
+	if(sensor2r < 20 && sensor1r < 20)
+	{
+		straight();
+	}
 }
 
 void storepos()
@@ -958,41 +1026,27 @@ void throwpos()
 {
 	storeposX = 42;
 	storeposY = 42;
-	storedirection = 42;
+	storedirection = 0;
 }
-
-volatile bool balle = true;
 
 void secondlap()
 {
 	if(myposX == startX && myposY == startY && mydirection == 1 && !start)	//Det här kommer gälla de första sekunderna roboten börjar köra också..!
 	{
-		home = true;	
+		home = true; // Klar med hela körningen
 	}
 	else
 	{
-		
-		//print_on_lcd(0xAA);
 		TransmitSensor(0);
-		sensorleft = frontsensor(storedValues[0]);
-		if(sensorleft < 120 && sensorleft > 45)
+		sensorleft = longsensor(storedValues[0]);
+		if(sensorleft < 190 && sensorleft > 45 && controlisland)
 		{
-			if(balle)
-			{	
-				balle = false;
-				drive(20);
-				updatepos();
-			}
-		
+			controlisland = false;
 			if(!alreadyDone())
 			{
-				print_on_lcd(0xCC);
 				Island();
 			}
-		}
-		else
-		{
-			balle = true;
+			
 		}
 		
 		regulateright();
@@ -1002,31 +1056,31 @@ void secondlap()
 
 void Island()
 {
-	out = true;
-	
 	straight();
 	rotate90left();
 	
-	gotoIsland();
+	gotoIsland(); // kör till ön
 	
-	// Around Island
-	if(out)
+	storepos();
+	
+	// Reglera runt ön tills vi är tillbaka till storepos
+	while(myposX != storeposX || myposY != storeposY || mydirection != storedirection || start)
 	{
-		storepos();
-		
-		while(myposX != storeposX || myposY != storeposY || mydirection != 1 || start)
-		{
-			traveledDist();
-			regulateright();			
-		}
-		
-		straight();
-		rotate90left();
-		out = false;
-		
-		throwpos();
-		gotoIsland();
+		traveledDist();
+		regulateright();
 	}
+	
+	straight();
+	rotate90left();
+
+	TransmitComm(firstdone); // Meddela komm att vi kört runt en hel ö
+	
+	throwpos();
+	gotoIsland(); // kör från ön
+	start = 1;
+	controlisland = false;
+	
+	
 }
 
 
@@ -1036,13 +1090,14 @@ int main(void)
 	initiation();
 	int fjarrstyrt = (PIND & 0x01); //1 då roboten är i fjärrstyrt läge
 	initiate_request_timer();
+	
 
-	if(fjarrstyrt == 1)
+	if(fjarrstyrt == 1) // fjärrstyrt läge
 	{
 		for(long i = 0; i < 480000; i++){}
 		remotecontrol();
 	}
-	else
+	else // Autonom
 	{
 		MasterInit();
 
@@ -1050,21 +1105,47 @@ int main(void)
 
 		while(home == 0)
 		{
-			transmit();
-			if(posdistance > 32) //40/2.55125)*0.9
+			TransmitSensor(0);
+			
+			char i = 0;
+			if(n == 0)
+			{
+				i = 0;
+			}
+			else
+			{
+				i = 1;
+			}
+			if(posdistance > 31 + i)  //40/2.55125)*0.9
 			{
 				updatepos();
-
+				if(n != 4)
+				{
+					n = n + 1;
+				}
+				else
+				{
+					n = 0;
+				}
 			}
+			
 
 			if(!onelap)
 			{
 				firstlap();
 			}
-			else
+			else if(1) // else vill inte fungera på atmegan
 			{
 				secondlap();
 			}
+		}
+		stopp();
+		
+		// Liten dans när den är på startpositionen
+		while(1)
+		{
+			rotate90right();
+			rotate90left();
 		}
 	}
 	return 0;
