@@ -3,10 +3,12 @@
 * PROGRAMMERARE: Grupp 9 - WLRO
 * DATUM: 2014-06-04
 *
-* .cc-fil till klassen för Bluetooth
+* .cc-fil för klassen Bluetooth som sköter kommunikationen med bluetooth via
+* en serriell COM port.
 *
 *
 */
+
 
 #include <SFML/Graphics.hpp>
 #include <iostream>
@@ -22,6 +24,7 @@ Bluetooth_Serial_comm::Bluetooth_Serial_comm()
 {
     hSerial = Settup_BT();
     osReadWrite.hEvent = CreateEvent(NULL,TRUE,FALSE,NULL);
+    osReadWrite.Offset = 0;
 
 }
 
@@ -58,9 +61,9 @@ HANDLE Bluetooth_Serial_comm::Settup_BT()
 
     /****************************** Timeouts **************************/
     COMMTIMEOUTS timeouts= {0};
-    timeouts.ReadIntervalTimeout=50;
-    timeouts.ReadTotalTimeoutConstant=50;
-    timeouts.ReadTotalTimeoutMultiplier=100;
+    timeouts.ReadIntervalTimeout=10;
+    timeouts.ReadTotalTimeoutConstant=10;
+    timeouts.ReadTotalTimeoutMultiplier=50;
     timeouts.WriteTotalTimeoutConstant=50;
     timeouts.WriteTotalTimeoutMultiplier=100;
 
@@ -75,10 +78,9 @@ HANDLE Bluetooth_Serial_comm::Settup_BT()
     DCB dcb = {0};
     dcb.DCBlength = sizeof(dcb);
     dcb.BaudRate = CBR_115200;     // set the baud rate
-    dcb.ByteSize = 8;             // data size, xmit, and rcv
-    dcb.Parity = NOPARITY;        // no parity bit
+    dcb.ByteSize = 8;             // data size
+    dcb.Parity = NOPARITY;        // no parity
     dcb.StopBits = ONESTOPBIT;    // one stop bit
-    //dcb.fBinary = true;
 
     if(!(SetCommState(hSerial, &dcb)))
     {
@@ -87,10 +89,10 @@ HANDLE Bluetooth_Serial_comm::Settup_BT()
     }
 
 
-  /*   (INVALID_SET_FILE_POINTER != SetFilePointer(hSerial,
+     (INVALID_SET_FILE_POINTER != SetFilePointer(hSerial,
             0,
             0,
-            FILE_BEGIN));*/
+            FILE_BEGIN));
 
 
 
@@ -102,14 +104,15 @@ HANDLE Bluetooth_Serial_comm::Settup_BT()
 void Bluetooth_Serial_comm::Send_to_Bt(int t)
 {
     fWaitingOnRead = false;
-
+ FlushFileBuffers(hSerial);
+ szBuff[0] = t;
 
     if(!fWaitingOnRead)
     {
         if(!WriteFile(hSerial,szBuff,1,&dwByte,&osReadWrite))
         {
-            if (GetLastError() != ERROR_IO_PENDING)     // read not delayed?
-                // Error in communications; report it.
+            if (GetLastError() != ERROR_IO_PENDING)     // read delayed?
+                // Error in communications
             {
                 cout << "error in communication write \n";
                 cout << GetLastError() << "\n";
@@ -117,11 +120,11 @@ void Bluetooth_Serial_comm::Send_to_Bt(int t)
             else
             {
                 fWaitingOnRead = true;
-                //cout << "io pendeling\n";
+
             }
         }
     }
-    FlushFileBuffers(hSerial);
+
 }
 
 
@@ -139,26 +142,19 @@ if(!fWaitingOnRead)
     {
         if(!ReadFile(hSerial,szBuff2,1,&dwByte,&osReadWrite))
         {
-            if (GetLastError() != ERROR_IO_PENDING)     // read not delayed?
-                // Error in communications; report it.
+            if (GetLastError() != ERROR_IO_PENDING)     // read delayed?
+                // Error in communications
             {
-              // cout << "error in communication read \n";
-               cout << GetLastError() << "\n";
-              // if(GetLastError() == ERROR_IO)
+               cout << "error in communication read \n";
 
             }
 
             else
             {
                 fWaitingOnRead = true;
-              // cout << "io pendeling\n";
+
 
             }
-        }
-        else
-        {
-           // return szBuff2[0];
-            // cout << "read complete imidietly!! \n";
         }
 
     }
@@ -166,7 +162,7 @@ if(!fWaitingOnRead)
 
 
 
-#define READ_TIMEOUT      500      // milliseconds
+#define READ_TIMEOUT      500
 
 
     if (fWaitingOnRead)
@@ -180,46 +176,27 @@ if(!fWaitingOnRead)
             if (!GetOverlappedResult(hSerial, &osReadWrite, &dwByte, FALSE))
             {
                 cout << "error in communication \n";
-            } // Error in communications; report it.
+            }
             else
             {
-               //  cout << "read complete success\n";
-                // cout << dwRes << "\n";
+
                 // Read completed successfully.
-                //  Reset flag so that another opertion can be issued.
                 fWaitingOnRead = FALSE;
-               // cout << "read completed \n";
+
             }
             break;
 
         case WAIT_TIMEOUT:
-            // Operation isn't complete yet. fWaitingOnRead flag isn't
-            // changed since I'll loop back around, and I don't want
-            // to issue another read until the first one finishes.
-            //
-            // This is a good time to do some background work.
+
             cout << "operation not complete Wait_TIMEOUT\n";
             break;
 
         default:
-            // Error in the WaitForSingleObject; abort.
-            // This indicates a problem with the OVERLAPPED structure's
-            // event handle.
+
             cout << "Error in wait for single object \n";
             break;
         }
     }
-
-    /************************************************************************************************/
-    //FlushFileBuffers(hSerial);
-
-
-    //char a = szBuff2[0];
- //   char b = szBuff2[1];
-   // bitset<8> z(szBuff2);
-  // bitset<8> y(b);
- // bitset<8> x(a);
- //cout << szBuff2 << "  " << y << "   " <<x << "\n\n";
 
     return szBuff2[0];
 }
