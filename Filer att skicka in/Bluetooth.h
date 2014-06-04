@@ -3,7 +3,7 @@
 * PROGRAMMERARE: Grupp 9 - WLRO
 * DATUM: 2014-06-04
 *
-* .h-fil till klassen Bluetooth
+* .h-fil för Bluetooth.cc
 *
 *
 */
@@ -11,7 +11,6 @@
 #ifndef BLUETOOTH_H
 #define BLUETOOTH_H
 
-#include <SFML/Graphics.hpp>
 #include <iostream>
 #include <windows.h>
 #include <SFML/System.hpp>
@@ -34,7 +33,6 @@ Bluetooth_Serial_comm();
 ~Bluetooth_Serial_comm();
 
 bool IsOpen();
-
 unsigned char Read_from_BT();
 void Send_to_Bt(int);
 void disconnect();
