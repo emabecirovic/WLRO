@@ -8,6 +8,13 @@
 *
 */
 
+/*
+* Kommunikationsmodul.c
+*
+* Created: 3/27/2014 8:23:02 AM
+*  Author: poner538
+*/
+
 
 #include <avr/io.h>
 #include <inttypes.h>
@@ -18,14 +25,16 @@
 typedef int bool;
 enum {false, true};
 
-int senddataval = 0;
 
-volatile bool arrayontheway = false;
+int senddataval = 0; //fördröjning för att skicka data på bluetooth
+
+volatile bool arrayontheway = false; // indikation på att storedvalues kommer på bussen
 
 volatile bool bussComplete = false;
 
 bool remote = false;
 bool iswall = false;
+bool updateroombool = false;
 
 //Lables for transmition
 const char front = 0b00000001;
@@ -40,15 +49,16 @@ const char direction = 0b00001001;
 const char rightspeed = 0b00001010;
 const char leftspeed = 0b00001011;
 const char firstdone = 0b00001100;
-const char findzeroX = 0b00001101;
+const char alrdydone = 0b00001101;
 const char findzeroY = 0b00001110;
+const char updateroom = 0b00010000;
 const char arraytransmit = 0b00001111;
 const char stop = 0x00; //Stopbyte
 volatile char selection; // Används i skicka avbrottet
 
 char room[31][17];
 
-volatile unsigned char storedValues[13];
+volatile unsigned char storedValues[15];
 int indexvalue = 0;
 
 /****************KARTLÄGGNING*******************************/
@@ -85,9 +95,8 @@ void USARTInit(unsigned int ubrr_value)
 
 
 	/* Tillåt reciever och transmitter kl*/
-	UCSR0B=(1<<RXEN0)|(1<<TXEN0); //|(1<<RXCIE0);
+	UCSR0B=(1<<RXEN0)|(1<<TXEN0);
 
-	/* */
 }
 void USARTInit2(unsigned int ubrr_value)
 {
@@ -102,16 +111,13 @@ void USARTInit2(unsigned int ubrr_value)
 
 
 	/* Tillåt reciever och transmitter kl*/
-	UCSR0B=(1<<RXEN0)|(1<<TXEN0); //|(1<<RXCIE0);
+	UCSR0B=(1<<RXEN0)|(1<<TXEN0);
 
-	/* */
 }
 
 unsigned char USART_Recive(void)
 {
 	//väta tills det finns data i bufferten
-	//while( !(UCSR0A & (1<<UDRE0)));
-	//PORTB=UDR0;
 	while(!(UCSR0A & (1<<RXC0)))
 	{
 
@@ -127,11 +133,8 @@ void USARTWriteChar(unsigned char data)
 	//Wait until the transmitter is ready
 	while(!(UCSR0A & (1<<UDRE0)))
 	{
-		//Do nothing
 	}
 	UDR0=data;
-
-	//Now write the data to USART buffer
 
 }
 
@@ -153,8 +156,6 @@ void SlaveInit(void)
 	/* Enable SPI */
 	SPCR = (1<<SPE)|(1<<SPIE)|(1<<CPHA)|(1<<CPOL);
 
-	/* Enable external interrupts */
-	//sei();
 }
 
 char SlaveRecieve(void) // Används inte just nu men....
@@ -167,14 +168,11 @@ char SlaveRecieve(void) // Används inte just nu men....
 
 }
 
-
+//Skickar all data till PC-klienten
 
 void SendStoredVal()
 {
- //storedValues[5] = firstzeroX;
- //storedValues[6] = firstzeroY;
-
-	for(int i = 0; i < 13; i++)
+	for(int i = 0; i < 15; i++)
 	{
 		if(i == 0)
 		{
@@ -199,12 +197,10 @@ void SendStoredVal()
 		else if (i == 5)
 		{
 			USARTWriteChar(traveldist);
-			//Distance = 0;
 		}
 		else if (i == 6)
 		{
 			USARTWriteChar(gyro);
-			//sendGyro = 0;
 		}
 		else if (i == 7)
 		{
@@ -212,23 +208,31 @@ void SendStoredVal()
 		}
 		else if (i == 8)
 		{
-			USARTWriteChar(direction);// behöver förmodligen inte göra något här
+			USARTWriteChar(direction);
 		}
 		else if (i == 9)
 		{
-			USARTWriteChar(leftspeed);// behöver förmodligen inte göra något här
+			USARTWriteChar(leftspeed);
 		}
 		else if (i == 10)
 		{
-			USARTWriteChar(rightspeed);// behöver förmodligen inte göra något här
+			USARTWriteChar(rightspeed);
 		}
 		else if (i == 11)
 		{
-			USARTWriteChar(12);// behöver förmodligen inte göra något här
+			USARTWriteChar(12);
 		}
 		else if (i == 12)
 		{
-			USARTWriteChar(13);// behöver förmodligen inte göra något här
+			USARTWriteChar(13);
+		}
+		else if(i == 13)
+		{
+			USARTWriteChar(14);
+		}
+		else if(i == 14)
+		{
+			USARTWriteChar(15);
 		}
 		USARTWriteChar(storedValues[i]);
 	}
@@ -241,152 +245,41 @@ void setwall(int x,int y)
 	if(!((room[x][y] == 2) || (room[x][y] == 4)))
 	{
 		
-	room[x][y]=1;
+		room[x][y]=1;
 	}
 }
-
-void updatemap(char w) // Kan väl bara gälla för yttervarvet?
+//uppdaterar kartan
+void updatemap(char w) // w är hur långt det ska va till väggen på höger sida för att en vägg ska läggas till
 {
-	//char w=30; //Hur långt ifrån vi ska vara för att säga att det är en vägg.
 
 	switch(mydirection)
 	{
 		case (1): // X+
-		if(sensorright<=w) //Vet inte vad som är en lämplig siffra här
+		if(sensorright<=w)
 		{
 			setwall(myposX,myposY-1);
 		}
-	/*	else if(sensorfront<=w)
-		{
-			setwall(myposX+1,myposY);
-		}
-		else if(sensorleft<w)
-		{
-			setwall(myposX,myposY+1);
-		}
-		else if((sensorfront>=45) && (sensorfront<=55))
-		{
-			setwall(myposX+2, myposY);
-		}
-		else if((sensorfront>=85) && (sensorfront<=95))
-		{
-			setwall(myposX+3, myposY);
-		}
-		else if((sensorfront>=125) && (sensorfront<=135))
-		{
-			setwall(myposX+4, myposY);
-		}
-		else if((sensorfront>=165) && (sensorfront<=175))
-		{
-			setwall(myposX+5, myposY);
-		}*/
-
-		
 		break;
-
 		case (2): // Y+
 		if(sensorright<=w)
 		{
 			setwall(myposX+1,myposY);
 		}
-	/*	else if(sensorfront<=w)
-		{
-			setwall(myposX,myposY+1);
-		}
-		else if(sensorleft<w)
-		{
-			setwall(myposX-1,myposY);
-		}
-		else if((sensorfront>=45) && (sensorfront<=55))
-		{
-			setwall(myposX, myposY+2);
-		}
-		else if((sensorfront>=85) && (sensorfront<=95))
-		{
-			setwall(myposX, myposY+3);
-		}
-		else if((sensorfront>=125) && (sensorfront<=135))
-		{
-			setwall(myposX, myposY+4);
-		}
-		else if((sensorfront>=165) && (sensorfront<=175))
-		{
-			setwall(myposX, myposY+5);
-		}*/
-
-		
 		break;
-
 		case (3): // X-
 		if(sensorright<=w)
 		{
 			setwall(myposX,myposY+1);
 		}
-	/*	else if(sensorfront<=w)
-		{
-			setwall(myposX-1,myposY);
-		}
-		else if(sensorleft<w)
-		{
-			setwall(myposX,myposY-1);
-		}
-		else if((sensorfront>=45) && (sensorfront<=55))
-		{
-			setwall(myposX-2, myposY);
-		}
-		else if((sensorfront>=85) && (sensorfront<=95))
-		{
-			setwall(myposX-3, myposY);
-		}
-		else if((sensorfront>=125) && (sensorfront<=135))
-		{
-			setwall(myposX-4, myposY);
-		}
-		else if((sensorfront>=165) && (sensorfront<=175))
-		{
-			setwall(myposX-5, myposY);
-		}
-
-		if (!((room[myposX+1][myposY]) || (room[myposX + 1][myposY] == 4)))
-		{
-			room[myposX+1][myposY]=2;
-		}*/
 		break;
-
 		case (4): // Y-
 		if(sensorright<=w)
 		{
 			setwall(myposX-1,myposY);
 		}
-	/*	else if(sensorfront<=w)
-		{
-			setwall(myposX,myposY-1);
-		}
-		else if(sensorleft<w)
-		{
-			setwall(myposX+1,myposY);
-		}
-		else if((sensorfront>=45) && (sensorfront<=55))
-		{
-			setwall(myposX, myposY-2);
-		}
-		else if((sensorfront>=85) && (sensorfront<=95))
-		{
-			setwall(myposX, myposY-3);
-		}
-		else if((sensorfront>=125) && (sensorfront<=135))
-		{
-			setwall(myposX, myposY-4);
-		}
-		else if((sensorfront>=165) && (sensorfront<=175))
-		{
-			setwall(myposX, myposY-5);
-		}*/
-
-		
 		break;
 		default:
-		{			
+		{
 		}
 	}
 	if(storedValues[7]==1)
@@ -487,16 +380,16 @@ void findfirstzero()
 void sendmap()
 {
 	cli();
-	USARTWriteChar(14);
+	USARTWriteChar(16);
 	for(int i = 0; i < 31; i++)
 	{
 		for(int x = 0; x < 200; x++)
 		{
 		}
-	 for(int j = 0; j < 17; j++)
-	 {
-		 USARTWriteChar(room[i][j]);
-	 }	
+		for(int j = 0; j < 17; j++)
+		{
+			USARTWriteChar(room[i][j]);
+		}
 	}
 	sei();
 }
@@ -514,31 +407,32 @@ void clearroom()
 
 void findclosestwall()
 {
-	
-	
-	if((sensorleft > 45) && (sensorleft < 55))
+	if((sensorleft > 45) && (sensorleft < 75))
 	{
 		testforwall(2);
 	}
-	else if((sensorleft > 85) && (sensorleft < 95))
+	else if((sensorleft > 75) && (sensorleft < 115))
 	{
 		testforwall(3);
 	}
-	else if((sensorleft > 125) && (sensorleft < 135))
+	else if((sensorleft > 115) && (sensorleft < 145))
 	{
 		testforwall(4);
+		
 	}
-	else if((sensorleft > 165) && (sensorleft < 175))
+	else if((sensorleft > 145) && (sensorleft < 190))
 	{
 		testforwall(5);
+		
 	}
 	else if((sensorleft > 205) && (sensorleft < 215))
 	{
-		testforwall(6);
+		iswall = true;
+		
 	}
 	else if((sensorleft > 245) && (sensorleft < 265))
 	{
-		testforwall(7);
+		iswall = true;
 	}
 	else
 	{
@@ -551,23 +445,19 @@ void testforwall(int checkval)
 	switch(mydirection)
 	{
 		case(1):
-		if(room[myposX][myposY + checkval] == 0)
+		if(room[myposX][myposY + checkval] == 0 && room[myposX][myposY + 1] != 1)
 		{
 			iswall = false;
-			USARTWriteChar(15);
-			USARTWriteChar(checkval);
 		}
 		else
-		{	
+		{
 			iswall = true;
 		}
 		break;
 		case(2):
-		if(room[myposX - checkval][myposY] == 0)
+		if(room[myposX - checkval][myposY] == 0 && room[myposX - 1][myposY] != 1)
 		{
 			iswall = false;
-			USARTWriteChar(15);
-			USARTWriteChar(checkval);
 		}
 		else
 		{
@@ -575,11 +465,9 @@ void testforwall(int checkval)
 		}
 		break;
 		case(3):
-		if(room[myposX][myposY - checkval] == 0)
+		if(room[myposX][myposY - checkval] == 0 && room[myposX][myposY - 1] != 1)
 		{
 			iswall = false;
-			USARTWriteChar(15);
-			USARTWriteChar(checkval);
 		}
 		else
 		{
@@ -587,11 +475,9 @@ void testforwall(int checkval)
 		}
 		break;
 		case(4):
-		if(room[myposX + checkval][myposY] == 0)
+		if((room[myposX + checkval][myposY] == 0) && (room[myposX + 1][myposY] != 1))
 		{
 			iswall = false;
-			USARTWriteChar(15);
-			USARTWriteChar(checkval);
 		}
 		else
 		{
@@ -627,15 +513,17 @@ float frontsensor(unsigned char sensorvalue)
 
 int main(void)
 {
-	// char data;
 	clearroom();
+	bool secondlap = false;
 	sensorright = 10;
 	storedValues[11] = 16;
 	storedValues[12] = 1;
 	unsigned char data;
 	char select = PIND & 0b01000000;
+	// select avgör om roboten ska styras autonomt eller fjärrstyrt, olika initieringar för båda
 	if(select == 0b01000000)
 	{
+		//fjärrstyrt
 		cli();
 		DDRB = 0b00000111;
 		USARTInit2(3);
@@ -643,6 +531,7 @@ int main(void)
 	}
 	else
 	{
+		//autonomt
 		USARTInit(8);
 		SlaveInit();
 		sei();
@@ -651,32 +540,26 @@ int main(void)
 	while(1)
 	{
 
-		while(remote)
+		while(remote) //fjärrstyrt
 		{
 
 			data = USART_Recive();
 
 			PORTB = data;
-			/*
-			PORTB &= 0b01000000;
-			PORTB |= data;
-
-			//USART_Flush();
-			//data=USART_Recive();
-			//skicka data*/
-
 		}
 
-		while(!remote)
+		while(!remote) // autonomt
 		{
 			if(doextend)
-			{				
-							
-					sendmap();
-					//extended_wall();
-					//findfirstzero();	
-					doextend = false;
+			{
+				secondlap = true;
+				
+				cli();
+				sendmap();
+				sei();
+				doextend = false;
 			}
+			
 
 			sensorleft = frontsensor(storedValues[0]);
 			sensorright = sidesensor(storedValues[1]);
@@ -686,20 +569,21 @@ int main(void)
 			myposX = storedValues[11];
 			myposY = storedValues[12];
 
-
-			
-			//findfirstzero();
-			updatemap(25);
-
+			if(secondlap)
+			{
+				findclosestwall(); //hittar närmsta väggen till vänster och avgör om den är avsökt eller ej
+			}
+			if(updateroombool)
+			{
+				updatemap(25);
+				updateroombool = false;
+			}
 			if(bussComplete == true)
 			{
-				
-				
+				cli();
 				SendStoredVal();
-				findclosestwall();
-				//sendmap();
+				sei();
 				bussComplete = false;
-				
 			}
 		}
 
@@ -710,53 +594,54 @@ int main(void)
 }
 
 
-			/*******************************INTERRUPTS*************************/
+/*******************************INTERRUPTS*************************/
 
-			ISR(SPI_STC_vect) // Answer to call from Master
-			{
+ISR(SPI_STC_vect) // Answer to call from Master
+{
 
-				if(arrayontheway)
-				{
-					storedValues[indexvalue] = SPDR;
-					indexvalue++;
+	if(arrayontheway) //fyll på storedValues
+	{
+		storedValues[indexvalue] = SPDR;
+		indexvalue++;
+		
+		if(indexvalue > 14)
+		{
+			indexvalue = 0;
+			senddataval++;
+			arrayontheway = false;
+			
+		}
+		if(senddataval > 4) // skickar data till PC-klienten
+		{
+			bussComplete = true;
+			
+			senddataval = 0;
+		}
+	}
+	else
+	{
+		selection = SPDR;
+		if(selection == arraytransmit)
+		{
+			arrayontheway = true;
+		}
+		else if(selection == firstdone) //Roboten har åkt ett varv , rita ut området utanför till väggar
+		{
+			doextend = true;
+			SPDR = dummy;
+		}
+		else if(selection == updateroom)
+		{
+			updateroombool = true;
+		}
+		else if(selection == alrdydone) // alrdydone , returnera true or false om segmentet till vänster är avsökt
+		{
+			SPDR = iswall;
+		}
+		else if(selection == stop)
+		{
 
-					if(indexvalue > 12)
-					{
-						indexvalue = 0;
-						senddataval++;
-						arrayontheway = false;
-					}
-					if(senddataval > 0)
-					{
-						bussComplete = true;
-						
-						senddataval = 0;
-					}
-				}
-				else
-				{
-					selection = SPDR;
-					if(selection == arraytransmit)
-					{
-						arrayontheway = true;
-					}
-					else if(selection == firstdone)
-					{
-						doextend = true;
-					}
-					else if(selection == alrdydone) // alrdydone , returnera true or false
-					{
-						SPDR = iswall;
-					}
-					else if(selection == stop)
-					{
+		}
 
-					}
-
-				}
-			}
-			/*
-			ISR(USART0_RX_vect)
-			{
-
-			}*/
+	}
+}
