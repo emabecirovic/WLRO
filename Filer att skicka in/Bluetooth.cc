@@ -1,3 +1,13 @@
+/*
+* FILNAMN: Bluetooth.cc
+* PROGRAMMERARE: Grupp 9 - WLRO
+* DATUM: 2014-06-04
+*
+* .cc-fil till klassen för Bluetooth
+*
+*
+*/
+
 #include <SFML/Graphics.hpp>
 #include <iostream>
 #include <windows.h>
