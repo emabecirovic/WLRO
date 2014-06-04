@@ -1,3 +1,13 @@
+/*
+* FILNAMN: Bluetooth_test.cc
+* PROGRAMMERARE: Grupp 9 - WLRO
+* DATUM: 2014-06-04
+*
+* .cc-fil för huvudprogrammet för kommunikation mellan Roboten och PC:n
+*
+*
+*/
+
 #include <bitset>
 #include <iostream>
 
