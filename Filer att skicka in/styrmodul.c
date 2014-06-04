@@ -1,10 +1,11 @@
 /*
-* Search.c
+* FILNAMN: styrmodul.c
+* PROGRAMMERARE: Grupp 9 - WLRO
+* DATUM: 2014-06-04
 *
-* Created: 4/29/2014 9:26 AM
-* Author: robsv107
-* patsu326
-* marek588
+* .c-fil till styrmodulens ATmega1284P
+*
+*
 */
 
 #include <avr/io.h>
