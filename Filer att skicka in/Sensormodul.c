@@ -57,11 +57,9 @@ char counter_distance = 0;
 float dummy;
 
 //Flaggor
-char start_sample = 0;
 volatile char ad_complete = 0;
 
-//Bubble sort för att kunna ta ut medianen av avståndssensorer
-
+//Initiering av variabler
 void initiate_variables()
 {
 	// Bussbeteckningar
@@ -97,10 +95,10 @@ void initiate_variables()
 	counter_distance = 0;
 
 	//Flaggor
-	start_sample = 0;
 	ad_complete = 0;
 }
 
+//Bubble sort för att kunna ta ut medianen av avståndssensorer
 void bubble_sort(unsigned char a[], int size)
 {
 	int k, l, temp;
@@ -195,34 +193,7 @@ int main(void)
 	initiate_sample_timer();
 	while(1)
 	{
-		/*
-		if (dGyro == 255)
-		{
-		dummy = 0;
-		}
-		else if(gyroref == 255)
-		{
-		dummy = 1;
-		}
-		else if(gyroflag == 255)
-		{
-		dummy = 0;
-		}
-		*/
-
-		if(start_sample == 1)
-		{
-			start_sample = 0;
-			//find_RFID();
-		}
-		else
-		{
-			dummy = 1;
-		}
-
-
 		asm("");
-
 		//När AD-omvandling är klar så sätts ad_complete och då görs dessa beräkningar
 		if(ad_complete == 1)
 		{
@@ -345,7 +316,7 @@ int main(void)
 					{
 						Distance = Distance + 1;
 					}
-					ADMUX = i; //Återgå till gammal i
+					ADMUX = i; //Återgå till gammal sensor
 					counter_distance = 0;
 				}//counter_distance >= 2
 
@@ -391,15 +362,13 @@ ISR(TIMER1_COMPB_vect)
 {
 	TCCR1B = 0x00;
 	TCNT1 = 0x00;
-	start_sample = 1;
 	ADCSRA = 0b11001011;
 }
 
 //Avbrott för knapp
-ISR(INT0_vect) //knapp ska vi inte ha irl, men ja.
+ISR(INT0_vect) //knapp ska vi inte ha irl
 {
 	dummy = 0;
-	//:)
 }
 
 //Avbortt för AD-omvandlingen är klar
@@ -410,7 +379,7 @@ ISR(ADC_vect)
 }
 
 //Avbrott för buss klar
-ISR(SPI_STC_vect) // Skicka på buss!! // Robert
+ISR(SPI_STC_vect) 
 {
 	SPDR = 0; //Dummyskrivning
 	selection = SPDR;
@@ -421,7 +390,6 @@ ISR(SPI_STC_vect) // Skicka på buss!! // Robert
 	else if (selection == rightfront)
 	{
 		SPDR = sortedValues[1];
-		//SPDR = 125;
 	}
 	else if (selection == rightback)
 	{
@@ -448,7 +416,7 @@ ISR(SPI_STC_vect) // Skicka på buss!! // Robert
 		ADMUX = 6;
 		asm("");
 	}
-	else if (selection == gyrostop) // här är den riktiga gyrostop
+	else if (selection == gyrostop)
 	{
 		SPDR = 0;
 		angle = 0;
@@ -473,6 +441,7 @@ ISR(SPI_STC_vect) // Skicka på buss!! // Robert
 	}
 }
 
+//Avbrott då en USART-kommunikation är klar
 ISR(USART0_RX_vect)
 {
 	rfid_data = UDR0;
