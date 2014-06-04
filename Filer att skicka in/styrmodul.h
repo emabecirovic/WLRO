@@ -1,3 +1,13 @@
+/*
+* FILNAMN: styrmodul.h
+* PROGRAMMERARE: Grupp 9 - WLRO
+* DATUM: 2014-06-04
+*
+* .h-fil till styrmodulens ATmega1284P
+*
+*
+*/
+
 typedef int bool;
 enum{false, true};
 
