@@ -1,3 +1,13 @@
+/*
+* FILNAMN: sensormodul.c
+* PROGRAMMERARE: Grupp 9 - WLRO
+* DATUM: 2014-06-04
+*
+* .c-fil till sensormodulens ATmega1284P
+*
+*
+*/
+
 #include <avr/io.h>
 #include <avr/interrupt.h>
 
