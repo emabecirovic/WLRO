@@ -1,8 +1,11 @@
 /*
-* Kommunikationsmodul.c
+* FILNAMN: kommunikation_.c
+* PROGRAMMERARE: Grupp 9 - WLRO
+* DATUM: 2014-06-04
 *
-* Created: 3/27/2014 8:23:02 AM
-*  Author: poner538
+* .c-fil till kommunikationsmodulens ATmega1284P
+*
+*
 */
 
 
